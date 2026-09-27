@@ -186,8 +186,8 @@ class Settings(BaseSettings):
     # This is no longer the `mid` rung of the cost presets, which still hold deepseek-v4-flash: the
     # presets drive the tier ladder (roles, cascade, orchestration), this drives the plain agent
     # turn, and the bake-off measured only the latter. Which rung luna should occupy is a separate,
-    # unmeasured decision. Its useful context is unmeasured too (`CatalogEntry.useful_k`), so
-    # compaction sizes itself from the window fraction for it until `bench/useful_context` runs.
+    # unmeasured decision. Its useful context was measured in `bench/useful_context` (≥ 256k, a
+    # lower bound; `CatalogEntry.useful_k`), so compaction spends at most that, not the window.
     #
     # It is a floor, not a ceiling: the composer's model picker changes it per conversation and
     # offers to make any pick the standing default, and `CHIMERA_DEFAULT_MODEL` still wins over
