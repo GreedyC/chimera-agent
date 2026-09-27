@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+### Fixed
+
+- **`apply_patch` no longer writes a stray conflict marker into a file.**
+  - **What went wrong:** a hunk with a second `=======` line put that line into the replacement
+    text. The marker landed in the source file, and the tool still answered "applied". This was
+    seen live, with the desktop agent editing through the app.
+  - **Now:** a hunk whose SEARCH or REPLACE holds a marker line is refused, the file is left
+    untouched, and the error points to `edit_file` for a file that really contains such a line.
 
 ## [0.63.1] - 2026-09-27
 ### Fixed
