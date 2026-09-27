@@ -32,11 +32,38 @@ import items as it  # noqa: E402
 
 MODEL = "openrouter/deepseek/deepseek-v4-flash-0731"
 PROVIDER = "DeepInfra"
-TEMPERATURE = 0.0
+TEMPERATURE: float | None = 0.0
 MAX_TOKENS = 8_000
 #: DeepInfra's quote for this model on the OpenRouter endpoints listing, read 2026-09-25 (per M tokens).
 PRICE_IN, PRICE_CACHED, PRICE_OUT = 0.060, 0.015, 0.180
 RETRIES = 2
+#: The lengths a run climbs. The default profile's is the registered `items.LADDER`.
+LADDER: tuple[int, ...] = it.LADDER
+#: A row billed at a price this far from the quoted one came from another tier of the same provider
+#: (OpenAI serves flex, standard and fast under one provider name). ``None``: not checked.
+TIER_BAND: tuple[float, float] | None = None
+
+#: Everything a run's model identity changes. ``v4flash`` is the registered 2026-09-25 run and must
+#: stay byte-for-byte what produced `results/main.json`; ``luna`` is PREREGISTRATION_luna.md.
+PROFILES: dict[str, dict[str, Any]] = {
+    "v4flash": {},
+    "luna": {
+        "MODEL": "openrouter/openai/gpt-6-luna",
+        "PROVIDER": "OpenAI",
+        # The model takes no temperature (catalogue note); sending one is refused, so none is sent.
+        "TEMPERATURE": None,
+        # OpenAI's standard route on the endpoints listing, read 2026-09-27, below its 272k price step.
+        "PRICE_IN": 0.10, "PRICE_CACHED": 0.01, "PRICE_OUT": 0.50,
+        "LADDER": (4_000, 16_000, 32_000, 64_000, 128_000, 256_000),
+        "TIER_BAND": (0.8, 1.25),
+    },
+}
+
+
+def use_profile(name: str) -> None:
+    for key, value in PROFILES[name].items():
+        globals()[key] = value
+
 
 _lock = threading.Lock()
 _spent = 0.0
@@ -51,14 +78,15 @@ def _call(request: dict[str, Any]) -> dict[str, Any]:
 
     from chimera.providers.thinking import strip_think
 
+    sampling: dict[str, Any] = {} if TEMPERATURE is None else {"temperature": TEMPERATURE}
     raw = litellm.completion(
         model=MODEL,
         messages=request["messages"],
         tools=request["tools"],
-        temperature=TEMPERATURE,
         max_tokens=MAX_TOKENS,
         timeout=900,
         extra_body={"provider": {"order": [PROVIDER], "allow_fallbacks": False}, "usage": {"include": True}},
+        **sampling,
     )
     payload = raw.model_dump() if hasattr(raw, "model_dump") else dict(raw)
     choice = payload["choices"][0]
@@ -125,6 +153,12 @@ def _one(item: it.Item, length: int, arm: str, cpt: float, cap: float) -> dict[s
     if got["provider"] and got["provider"] != PROVIDER:
         row["error"] = f"misrouted: {got['provider']}"
         return row
+    if TIER_BAND is not None and got["cost_reported"]:
+        ratio = got["cost_reported"] / max(1e-12, _cost(got["prompt_tokens"], got["cached_tokens"], got["completion_tokens"]))
+        row["billed_ratio"] = round(ratio, 3)
+        if not TIER_BAND[0] <= ratio <= TIER_BAND[1]:
+            row["error"] = f"misrouted: billed at {ratio:.2f}x the quoted tier"
+            return row
     row["grade"] = it.grade(item, got["content"], got["tool_calls"], got["finish_reason"])
     return row
 
@@ -383,7 +417,7 @@ def check() -> int:
     item = it.items("M", 1)[0]
     print(f"\nitem {item.id}: rule={item.rule} pos={item.rule_pos} depth={item.depth} target={item.target} "
           f"country={item.country} expected={item.expected!r}")
-    for n in it.LADDER:
+    for n in LADDER:
         req = it.render(item, n)
         print(f"  {n:>7}: est_chars {req['est_chars']:>8}  ~{req['est_chars'] / it.DEFAULT_CHARS_PER_TOKEN:>9.0f} tok  "
               f"units {req['filler_units']:>3}  runbook positions {req['positions']}  sha {req['sha']}")
@@ -411,7 +445,9 @@ def main() -> int:
     ap.add_argument("--cap", type=float, default=0.0, help="US$ this invocation may spend")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--out", default="")
+    ap.add_argument("--profile", choices=sorted(PROFILES), default="v4flash")
     args = ap.parse_args()
+    use_profile(args.profile)
     if args.check:
         return check()
     if args.report:
@@ -422,7 +458,7 @@ def main() -> int:
         return 0
     if args.pilot:
         pilot = it.items("P", 20)
-        plan = [(item, _plan(item, [it.CONTROL] + ([it.LADDER[-1]] if k < 6 else []), replay=False))
+        plan = [(item, _plan(item, [it.CONTROL] + ([LADDER[-1]] if k < 6 else []), replay=False))
                 for k, item in enumerate(pilot)]
         execute(plan, args.cpt, args.cap or 0.15, args.workers, Path(args.out or HERE / "results" / "pilot.json"),
                 {"phase": "pilot"})
@@ -431,7 +467,7 @@ def main() -> int:
         if not args.n:
             raise SystemExit("--n is fixed in PREREGISTRATION.md after the pilot; pass it")
         main_items = it.items("M", args.n)
-        plan = [(item, _plan(item, list(it.LADDER), replay=True)) for item in main_items]
+        plan = [(item, _plan(item, list(LADDER), replay=True)) for item in main_items]
         execute(plan, args.cpt, args.cap, args.workers, Path(args.out or HERE / "results" / "main.json"),
                 {"phase": "main", "n": args.n})
         return 0
