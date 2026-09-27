@@ -448,6 +448,12 @@ def main() -> int:
     ap.add_argument("--profile", choices=sorted(PROFILES), default="v4flash")
     args = ap.parse_args()
     use_profile(args.profile)
+    if args.pilot or args.run:
+        # litellm's own .env lookup starts from this script's folder, which in a git worktree has no
+        # .env: the key is read from the working directory's instead, never printed.
+        from dotenv import load_dotenv
+
+        load_dotenv(Path.cwd() / ".env", override=False)
     if args.check:
         return check()
     if args.report:

@@ -65,3 +65,13 @@ lower bound of (replay − 4k) is below −10 pp, the useful length is **not res
   unpaired in time. Each is read against its own 4k, never against the other.
 - Anything past 256k, or past the 272k price step, where the route bills double.
 - Other task shapes. The limits in `PREREGISTRATION.md` still apply.
+
+## Amendment 1 — 2026-09-27, before any answered call
+
+- **First pilot launch: 26 calls, all refused with a 401, US$ 0.00.** Launched from a git worktree,
+  litellm's own `.env` lookup started from the script's folder, which has no `.env`, so no key was
+  sent. No model answered; nothing was seen. The runner now loads the working directory's `.env`
+  itself before a pilot or a run, and the key is never printed. The failed pilot file was deleted:
+  it held only the 401s.
+- **The pilot is 26 calls, not 32:** 20 at 4k and 6 at 256k. The count above was an arithmetic
+  slip; the design is unchanged.
