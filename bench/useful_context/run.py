@@ -55,7 +55,8 @@ PROFILES: dict[str, dict[str, Any]] = {
         # OpenAI's standard route on the endpoints listing, read 2026-09-27, below its 272k price step.
         "PRICE_IN": 0.10, "PRICE_CACHED": 0.01, "PRICE_OUT": 0.50,
         "LADDER": (4_000, 16_000, 32_000, 64_000, 128_000, 256_000),
-        "TIER_BAND": (0.8, 1.25),
+        # Amendment 2: the standard route bills a prompt as a cache write (1.25x); flex would read <= 0.63x, fast >= 2x.
+        "TIER_BAND": (0.8, 1.35),
     },
 }
 

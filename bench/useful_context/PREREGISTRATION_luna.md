@@ -75,3 +75,32 @@ lower bound of (replay − 4k) is below −10 pp, the useful length is **not res
   it held only the 401s.
 - **The pilot is 26 calls, not 32:** 20 at 4k and 6 at 256k. The count above was an arithmetic
   slip; the design is unchanged.
+
+## Amendment 2 and addendum — 2026-09-27, after the pilot, before the main run
+
+**Pilot (`results/pilot_luna.json`):** 26/26 rows ok, 20/20 at 4k (gate ≥ 18: PASS), 6/6 at 256k,
+0 errors, 0 tool-call answers, every `finish_reason` = `stop`, median 30 reasoning tokens (max 142
+completion tokens against `max_tokens` 8,000). **US$ 0.1727.** As registered, its outcomes do not
+enter the analysis.
+
+**A design defect it found, fixed here:** every row was billed at **1.20–1.25×** the input quote.
+The listing explains it: OpenAI's standard route bills a prompt as a **cache write**, at 0.125/M,
+1.25× the 0.10 input price. That sits on the edge of the 0.8–1.25 band, so correct rows would have
+been refused as mis-routed. By the same arithmetic, flex bills at ≤ 0.63× and fast at ≥ 2.0×. The
+band becomes **0.8–1.35**, which still separates the three tiers. No row was dropped in the pilot.
+
+**Registered recalibrations:**
+
+- **chars per token = 4.43**, the median of `est_chars / prompt_tokens` over the six 256k rows
+  (4.420–4.456). At 4.43 the 256k cell projects to at most ~257k provider tokens, under the 272k
+  price step. The 4k cell lands under 4k (4k renders are prose-heavy at 5.1 chars/token) and is
+  reported at its realised count, as in the v4-flash run.
+- **n = 72.**
+  - Cost is linear in prompt tokens, fitted through the pilot's two cells: US$ 0.000026 per call
+    plus 1.2496e-7 per token.
+  - That puts an item, its six rungs plus the 4k replay (~504k tokens), at **US$ 0.0632**.
+  - The budget is US$ 6.00 − 0.1727 − 0.20 = US$ 5.63, which covers 89 items. The largest
+    multiple of 18 under that is 72.
+  - The precomputed table in `PREREGISTRATION.md` gives the rule at n = 72: a length passes with at
+    most two net losses against 4k and little noise.
+- **Main-run cap: US$ 6.00.**
