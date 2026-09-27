@@ -454,3 +454,69 @@ Committed before any spend. Nothing below was read off a model's output: no mode
 5. **Cost.** The gateway returns tokens but not OpenRouter's billed figure for chat calls; the harness records the catalogue-computed price (`price_completion`) and, where the route returns a billed cost (the Decisions API does), the billed one, and admission counts the larger. A per-generation billed lookup is not added, because it is another call per call.
 6. **A graded draft on which the number check fires is labelled wrong without a grader call** (§5.2: "first and final").
 7. **V-extra** is built as §3.4 says (the reference plus the first sentence of another file's reference, same language), not from a template set.
+
+## Amendment 1 — 2026-09-27, S1 gate G: the second grader swapped as §5.3 registers
+
+**What the gate read** (`gates.json`, S1, after 269 grading calls per grader on the labelled slice):
+
+| | agreement | recall on wrong | wrong on V-gold | gate |
+|---|---:|---:|---:|---|
+| G1 `deepseek-v4-flash-0731` | 97.4% | 96.3% | 0% | passed |
+| G2 `mistral-small-3.2-24b-instruct` | 86.6% | 83.0% | 0% | **failed** (needs ≥90% and ≥85%) |
+
+G2's miss is concentrated in V-extra: the reference plus one sentence from another file's reference. G2 called 26 of 40 of those "correct". It also left 3 unreadable labels on V-fabricated. Both verifiers passed their instrument gate:
+- Jev accepts 1.2% of the 686 unsupported constructions and 100% of V-gold, with 0 flips on 100 replayed reads.
+- The local verifier accepts 22.2% of the unsupported constructions and 100% of V-gold.
+
+**The change, as §5.3 registers it:**
+- G2 is replaced by `openrouter/google/gemini-3.8-flash`, pinned to the `Google AI Studio` route (`harness.PINS`).
+- `replay.GRADERS["g2"]` now names it. The grader id stays `g2`, so the report's columns keep their names.
+
+**Data handling:**
+- Mistral's 269 grading rows are moved out of `calls.jsonl` into `discarded_g2_mistral_amendment1.jsonl`, next to it in the run directory.
+- Otherwise the ledger's resume key (`grade|g2|<target>`) would have served Mistral's labels as Gemini's.
+- The US$ 0.0412 they cost stays in the reported total spend. The admission stop (US$ 18.00) is unchanged, because 18.00 + 0.04 is still well under the US$ 20 cap.
+- The verifier reads (Jev, local) and G1's grades are kept, and S1 is re-run so that only the new G2 is called.
+
+**Cost re-estimate.**
+- Gemini on this route is listed at 0.375–0.75 per M in and 1.875–3.75 per M out, depending on the tier the route serves. That is about US$ 0.001–0.002 per grading call, against the 0.0003 assumed for Mistral.
+- Over the main run's grading calls (at most about 2,000 per grader), that adds at most about US$ 4. The projected total stays under the US$ 18 admission stop. S2's pilot re-measures the per-call means, and §10's sizing then applies as registered.
+
+**Not changed:** items, arms, thresholds, metrics, the adoption rule and every other gate. If Gemini also fails gate G, the run stops and the result is published as "no admissible second grader". A third grader would need a new amendment.
+
+## Amendment 2 — 2026-09-27, S3's 42 grader disagreements adjudicated by Claude, on the owner's delegation
+
+**Who adjudicates.** §5.2 says a human adjudicates the disagreements between G1 and G2. The owner delegated the 42 of S3 to the coordinating Claude session: *"quero que você faça isso"*.
+
+That session belongs to the family that wrote the items (Amendment 0). The risk is written down here rather than hidden: the author of an item judging answers to it could favour its own gold. To bound that risk, one rule was fixed before reading the votes' pattern, and it was applied to every case:
+- **NCR / NCP:** *correct* when every claim in the answer occurs in the excerpts the drafter received; *wrong* when it asserts anything they do not contain. A decline that cites excerpt facts beside the decline is *correct*.
+- **ANS:** *correct* when the central fact the question asks for is right; *incomplete* when a part the question asks for is missing.
+- The check was mechanical: each asserted fragment was searched in the case's own excerpts (`vc_support.py` in the coordinator's scratchpad), and 5 misses of phrasing were re-checked by hand.
+
+**Result.** 42 of 42 are *correct*: every claim luna made is in its excerpts.
+- On NCR and NCP, G2 (gemini) called "wrong" any answer that was not a bare decline. G1 (deepseek) called "wrong" declines that cited a neighbouring fact.
+- The labels are in `adjudications.jsonl`, and the owner's review page carries the same rows.
+
+**An item defect found on the way (reported, not repaired).**
+- In **12 NCR items** luna did not decline. It answered from another excerpt that still carried the removed fact (e.g. `viz-vega`, `hello()` with `pytest -q`, the split-flow monitor, `--verify` exit 0).
+- Removing the gold excerpt did not remove the information, so the correct behaviour on those items was to answer. They count as *correct* for the primary metric (supported content shipped).
+- The report must name them and give NCR's hand-off and decline rates both with and without them. This is the §2n lesson: a gold that runs is not proof that the item is derivable only from its gold.
+- No item is changed or dropped. The item set stays frozen at manifest `d1b4bba0…`.
+
+**Not changed:** arms, thresholds, metrics, gates and the adoption rule.
+
+## Amendment 3 — 2026-09-27, after the run: the report misread a hand-off rate of zero
+
+The first full report printed `default: False` for both B and D. The §8 rule as registered reads "hand-offs on answerable items ≤ 5%", but `report.verdict` wrote it as `(handoff_rate or 1.0) <= 0.05`. `or` takes 0.0 as a missing value, so the best possible rate, zero hand-offs on 141 answerable items, failed the condition.
+
+**The fix and its test:**
+- The code now reads the rate the way `c3` already did (`rate is not None and rate <= 0.05`).
+- `tests/test_the_cascade_verdict_reads_zero_handoffs_as_zero.py` covers three cases: a zero rate can make the default, a missing rate cannot, and the cost ceiling still holds B back.
+- Sabotage check: putting `or 1.0` back turns the test red.
+
+**Nothing registered changed.** The rule, the thresholds and the data are the same. Only the reading of zero was wrong.
+
+| | before the fix | after |
+|---|---|---|
+| B | opt-in, not default | opt-in, not default (cost 3.74× > 3×) |
+| D | opt-in, not default | **opt-in and default** (cost 1.87×, 0 hand-offs on answerable items, useful answers non-inferior) |
