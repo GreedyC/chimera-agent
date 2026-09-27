@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+### Changed
+
+- **Compaction on the default model now starts at the context it was measured to read.**
+  - **Before:** `gpt-6-luna` had no measured useful context. The Code screen's budget was therefore
+    0.6 of its advertised 1,050k window, and it compacted at about 504k tokens.
+  - **Now:** `bench/useful_context` held an agent's context on 72 paired transcripts up to its 256k
+    rung, at a median of 255,474 tokens, with every rung within −10 pp of 4k. The catalogue now
+    carries `useful_k = 255`, a lower bound, so the budget is 255k and compaction lands at 204,000
+    tokens.
+  - **Cost of the run:** US$ 4.67.
 
 ## [0.63.0] - 2026-09-27
 ### Added

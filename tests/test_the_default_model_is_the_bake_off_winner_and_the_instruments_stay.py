@@ -51,8 +51,11 @@ def test_the_cost_presets_keep_their_rungs() -> None:
     }
 
 
-def test_the_new_default_has_no_invented_useful_context() -> None:
-    # Nobody has measured what luna still reads well, so compaction falls back to the window
-    # fraction for it — the honest behaviour until `bench/useful_context` runs on it.
-    assert useful_tokens(LUNA) is None
-    assert ContextBudget.for_model(LUNA, fraction=0.6).budget == int(window_tokens(LUNA) * 0.6)
+def test_the_new_default_spends_the_context_it_was_measured_to_read() -> None:
+    # This asserted "no useful_k" until `bench/useful_context` ran on luna (RESULTS_luna.md): every
+    # rung to 256k within the margin, 255,474 tokens at the top. The budget is now that floor rather
+    # than 0.6 of the 1,050k window, and compaction lands at the bench's proposed 204,000 trigger.
+    assert useful_tokens(LUNA) == 255_000
+    budget = ContextBudget.for_model(LUNA, fraction=0.6)
+    assert budget.budget == 255_000 < int(window_tokens(LUNA) * 0.6)
+    assert budget.threshold == 204_000
