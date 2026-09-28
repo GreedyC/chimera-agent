@@ -3,22 +3,12 @@ import { Check, X, Wrench, Cpu, Brain, CircleDollarSign } from "lucide-react";
 import { Fusion } from "@/components/Fusion";
 import { JobsPanel } from "@/components/JobsPanel";
 import { MachinePanel } from "@/components/MachinePanel";
+import { FoldableSection } from "@/components/ui/foldable";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAgent } from "@/lib/agent-context";
 
 export type Status = "idle" | "thinking" | "streaming" | "done";
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="border-t border-hairline px-4 py-3">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-}
 
 /** What the agent is doing, read from the shared state rather than handed down.
  *
@@ -34,6 +24,28 @@ export function Activity() {
       : report.usd == null
         ? t("activity.costUnavailable")
         : `~ $${report.usd.toFixed(4)}`;
+
+  // What each section answers while folded: the one line that says whether it is worth opening.
+  // The count of calls, and beside it the count that went wrong — folding Tools must not hide that
+  // three of them failed, which is the one thing in that list a person would want the section open
+  // for. Both numbers come off the turn's own events rather than a second source, so the summary
+  // cannot drift from the body it summarises.
+  const failed = tools.filter((e) => !e.ok).length;
+  const toolsSummary = (
+    <>
+      {tools.length === 0 ? t("activity.noTools") : t("activity.toolsSummary", { n: tools.length })}
+      {failed > 0 ? (
+        <span className="text-bad-foreground"> · {t("activity.toolsFailed", { n: failed })}</span>
+      ) : null}
+    </>
+  );
+  // Absent is not zero, exactly as in the body below: a surface that never looked recalls nothing
+  // and a summary saying "0 recalled" would be a measurement nobody took.
+  const memorySummary =
+    report != null && report.memory_facts_used != null
+      ? t("activity.factsRecalled", { n: report.memory_facts_used })
+      : undefined;
+
   return (
     <aside className="flex h-full w-72 shrink-0 flex-col overflow-y-auto border-l border-hairline bg-card/40">
       <div className="flex items-center gap-2 px-4 py-3.5">
@@ -49,7 +61,7 @@ export function Activity() {
         <span className="text-sm font-medium">{t(`activity.${status}`)}</span>
       </div>
 
-      <Section title={t("activity.tools")}>
+      <FoldableSection id="tools" title={t("activity.tools")} summary={toolsSummary}>
         {tools.length === 0 ? (
           <div className="text-sm text-muted-foreground">{t("activity.noTools")}</div>
         ) : (
@@ -74,9 +86,9 @@ export function Activity() {
             ))}
           </ul>
         )}
-      </Section>
+      </FoldableSection>
 
-      <Section title={t("activity.tokens")}>
+      <FoldableSection id="tokens" title={t("activity.tokens")} summary={cost ?? undefined}>
         <div className="flex items-center gap-2 text-sm">
           <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
           {report ? (
@@ -95,9 +107,9 @@ export function Activity() {
             <span className="text-xs text-muted-foreground">{t("activity.exclCache")}</span>
           )}
         </div>
-      </Section>
+      </FoldableSection>
 
-      <Section title={t("activity.memory")}>
+      <FoldableSection id="memory" title={t("activity.memory")} summary={memorySummary}>
         <div className="flex items-center gap-2 text-sm">
           <Brain className="h-3.5 w-3.5 text-muted-foreground" />
           {/* An absent count is NOT zero: a surface that does not report recall would otherwise
@@ -113,7 +125,7 @@ export function Activity() {
             <span className="text-muted-foreground">—</span>
           )}
         </div>
-      </Section>
+      </FoldableSection>
 
       {/* The routing breakdown for this same turn. Renders nothing unless the turn used fusion or
           the cascade, so it never leaves an empty box behind. */}
@@ -127,9 +139,9 @@ export function Activity() {
       {/* What the machine is spending, beside what the agent is doing — the two questions someone
           watching a long run actually alternates between. Every reading is nullable and an absent
           one says so; see MachinePanel for why 0% would be the wrong answer. */}
-      <Section title={t("machine.title")}>
+      <FoldableSection id="machine" title={t("machine.title")}>
         <MachinePanel />
-      </Section>
+      </FoldableSection>
     </aside>
   );
 }

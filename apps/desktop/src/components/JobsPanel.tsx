@@ -4,6 +4,7 @@ import { Square } from "lucide-react";
 import { listJobs, stopJob } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import type { BackgroundJob } from "@/lib/types";
+import { FoldableSection } from "@/components/ui/foldable";
 import { cn } from "@/lib/utils";
 
 /**
@@ -33,11 +34,18 @@ export function JobsPanel() {
   const list = jobs.data?.jobs ?? [];
   if (list.length === 0) return null;
 
+  // The one number worth reading before deciding to open this list. Jobs outlive the turn that
+  // started them and pile up across a whole session, so a count of the rows is a count of history;
+  // the count of the ones still running is the count that asks for anything. A section summary that
+  // reported "24 jobs" alone would bury the two somebody might need to stop.
+  const running = list.filter((job) => job.state === "running").length;
+  const summary =
+    running > 0
+      ? `${t("jobs.runningCount", { n: running })} · ${t("jobs.count", { n: list.length })}`
+      : t("jobs.count", { n: list.length });
+
   return (
-    <div className="border-t border-hairline px-4 py-3">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {t("jobs.title")}
-      </div>
+    <FoldableSection id="jobs" title={t("jobs.title")} summary={summary}>
       <ul className="space-y-2">
         {list.map((job) => (
           <JobRow
@@ -48,7 +56,7 @@ export function JobsPanel() {
           />
         ))}
       </ul>
-    </div>
+    </FoldableSection>
   );
 }
 
