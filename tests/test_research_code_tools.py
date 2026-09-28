@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -78,11 +79,40 @@ def test_youtube_id_extraction() -> None:
     assert _youtube_id("not a video") is None
 
 
-def test_youtube_transcript_bad_id_and_missing_lib() -> None:
+def test_youtube_transcript_bad_id_and_missing_lib(monkeypatch: pytest.MonkeyPatch) -> None:
     assert YouTubeTranscriptTool().run(video="not a video").startswith("error:")
-    # lib not installed (or transcript unavailable) -> a handled error, never a crash
+    # The `youtube` extra is absent in CI and present on a dev box, so the missing-lib path is
+    # SIMULATED rather than assumed. The old version of this test called a real video id and asserted
+    # `startswith("error:")` — which was true only because the tool was dead (it called the 0.x
+    # classmethod `get_transcript`, removed in 1.0, and its own `except` turned the AttributeError
+    # into "transcript unavailable"). With the tool fixed, that assertion is false: it fetched the
+    # real transcript. A test whose outcome depends on which extras happen to be installed is not
+    # testing the tool, it is testing the machine.
+    monkeypatch.setitem(sys.modules, "youtube_transcript_api", None)
     out = YouTubeTranscriptTool().run(video="dQw4w9WgXcQ")
-    assert out.startswith("error:")
+    assert out.startswith("error: youtube_transcript needs the extra")
+
+
+def test_youtube_transcript_reads_the_1x_api(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The tool must speak youtube-transcript-api 1.x, where `fetch` is an instance method.
+
+    This is the regression the old test could not see: it only asserted `startswith("error:")`, and
+    the removed 0.x classmethod `get_transcript` raised AttributeError, which the tool's own
+    `except` turned into "transcript unavailable". A dead tool and a flaky network looked identical.
+    """
+    import youtube_transcript_api as yt
+
+    class Snippet:
+        def __init__(self, text: str) -> None:
+            self.text = text
+
+    class FakeApi:
+        def fetch(self, video_id: str) -> list[Snippet]:
+            assert video_id == "dQw4w9WgXcQ"
+            return [Snippet("hello"), Snippet("world")]
+
+    monkeypatch.setattr(yt, "YouTubeTranscriptApi", FakeApi)
+    assert YouTubeTranscriptTool().run(video="dQw4w9WgXcQ") == "hello world"
 
 
 def test_reference_tools_registered() -> None:
