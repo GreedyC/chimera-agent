@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -99,8 +100,15 @@ def test_youtube_transcript_reads_the_1x_api(monkeypatch: pytest.MonkeyPatch) ->
     This is the regression the old test could not see: it only asserted `startswith("error:")`, and
     the removed 0.x classmethod `get_transcript` raised AttributeError, which the tool's own
     `except` turned into "transcript unavailable". A dead tool and a flaky network looked identical.
+
+    The 1.x API is SIMULATED, for the same reason the missing-lib test above simulates its absence:
+    CI's `uv sync --extra dev --extra desktop` does not install the `youtube` extra, so importing the
+    real module here was ModuleNotFoundError — the fix was red in CI and green on a dev box, which
+    is precisely the "testing the machine" failure this file's docstring warns about. The tool does
+    its import inside `run()`, so a fake module in `sys.modules` exercises the real 1.x code path
+    (instance `fetch`, snippet iteration) without the extra.
     """
-    import youtube_transcript_api as yt
+    types = ModuleType("youtube_transcript_api")
 
     class Snippet:
         def __init__(self, text: str) -> None:
@@ -111,7 +119,8 @@ def test_youtube_transcript_reads_the_1x_api(monkeypatch: pytest.MonkeyPatch) ->
             assert video_id == "dQw4w9WgXcQ"
             return [Snippet("hello"), Snippet("world")]
 
-    monkeypatch.setattr(yt, "YouTubeTranscriptApi", FakeApi)
+    types.YouTubeTranscriptApi = FakeApi  # type: ignore[attr-defined]  # fake module by design
+    monkeypatch.setitem(sys.modules, "youtube_transcript_api", types)
     assert YouTubeTranscriptTool().run(video="dQw4w9WgXcQ") == "hello world"
 
 
