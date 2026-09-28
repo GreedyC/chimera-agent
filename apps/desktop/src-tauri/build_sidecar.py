@@ -82,6 +82,16 @@ def main() -> int:
         "--collect-all", "faster_whisper",
         "--collect-all", "ctranslate2",
         "--collect-all", "onnxruntime",
+        # The browser tool drives Playwright, and both of its one-time needs are package DATA rather
+        # than Python: `driver/node.exe` and `driver/package/cli.js`, which `python -m playwright`
+        # execs and `chimera/tools/browser.py` now runs directly to fetch Chromium. PyInstaller
+        # collects the modules an import names and none of the data sitting beside them, so without
+        # this the frozen sidecar can neither launch the browser nor repair it — and the desktop has
+        # a browser panel, so that is a shipped feature rather than a convenience.
+        #
+        # ~36 MB per platform (the wheel's size, most of it the bundled node), against the ~300 MB of
+        # speech tooling deliberately left out above. Same kind of trade, smaller side of it.
+        "--collect-all", "playwright",
         "--collect-data", "chimera",
         # The package's own .dist-info. `--collect-data` gathers files INSIDE the package and this is
         # not one of them: it lives beside it in site-packages, and without it

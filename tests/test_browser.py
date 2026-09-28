@@ -371,3 +371,62 @@ def test_a_failed_auto_install_keeps_the_real_cause_and_the_remedy(
     assert out.startswith("error:")
     assert "Executable doesn't exist" in out, "the original cause was thrown away"
     assert "playwright install chromium" in out, "no remedy on the line"
+
+
+def test_the_install_argv_never_routes_through_this_process() -> None:
+    """`sys.executable -m playwright` is not runnable everywhere — and "everywhere" includes us.
+
+    The desktop app ships a PyInstaller-frozen sidecar whose ``sys.executable`` is
+    ``chimera-backend.exe``: a typer CLI, not an interpreter. That argv was read as a chimera
+    command and died with ``Got unexpected extra argument(s) (install chromium)``, so the one
+    install that could never fetch its own browser was the packaged one. ``python -m playwright``
+    only execs Playwright's bundled node + CLI anyway, so calling the driver directly needs no
+    interpreter and works in a source checkout and a frozen build alike.
+
+    Recovered from an uncommitted draft of 2026-09-22 (the #531 work), which #531 left out — the
+    same omission as the freeze recipe below, and the reason both are asserted rather than trusted.
+    """
+    import sys
+
+    cmd = browser_mod._install_command("chromium")
+
+    assert cmd[-2:] == ["install", "chromium"]
+    assert cmd[0] != sys.executable, (
+        f"{cmd} routes the install through this process — which is the app binary in a frozen "
+        f"build, not an interpreter, so the packaged app cannot fetch its browser"
+    )
+    assert "-m" not in cmd and "playwright" not in cmd, (
+        f"{cmd} still asks a Python interpreter to run `-m playwright`; the driver is `node cli.js`, "
+        f"which is what this has to exec"
+    )
+    assert cmd[0].endswith(("node.exe", "node")), (
+        f"{cmd} does not start at Playwright's bundled driver — that is the one executable a freeze "
+        f"is guaranteed to carry, and the launch path already uses it"
+    )
+
+
+def test_the_frozen_sidecar_ships_the_browser_runtime() -> None:
+    """Auto-provisioning is one half of this; the freeze recipe is the other, and it fails silently.
+
+    ``driver/node.exe`` and ``driver/package/cli.js`` are package DATA sitting beside Playwright's
+    Python, and PyInstaller collects the modules an import names with none of the data beside them.
+    A freeze that does not collect Playwright whole ships a desktop app whose browser can neither
+    start nor repair itself — and nothing errors until someone opens a page.
+
+    Asserted against the recipe rather than against a build, because the build is a release job:
+    this is the line that would be dropped by someone tidying the collect list. Read as parsed
+    arguments rather than as a substring, so reformatting the list does not break the test.
+    """
+    import re
+    from pathlib import Path
+
+    recipe = (
+        Path(__file__).resolve().parents[1] / "apps" / "desktop" / "src-tauri" / "build_sidecar.py"
+    ).read_text(encoding="utf-8")
+    collected = set(re.findall(r"""["']--collect-all["']\s*,\s*["']([\w.]+)["']""", recipe))
+
+    assert "playwright" in collected, (
+        f"build_sidecar.py collects {sorted(collected)} whole but not playwright, so the frozen "
+        f"sidecar ships without Playwright's driver — the browser cannot launch or self-repair "
+        f"there. Add '--collect-all', 'playwright' beside the others."
+    )
