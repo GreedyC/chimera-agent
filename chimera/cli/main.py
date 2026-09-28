@@ -6344,9 +6344,52 @@ def cron_doctor(
     import time
 
     from chimera.scheduler.engine import Scheduler
+    from chimera.scheduler.watchdog import (
+        default_heartbeat_path,
+        infer_max_gap,
+        watch_daemon,
+        watch_tick_seconds,
+    )
 
     sched = Scheduler(_cron_store())
     now = time.time()
+
+    # The daemon's own sign of life, read BEFORE the jobs: a dead daemon with a daily job looks
+    # healthy for ~23 hours from the jobs alone (the job is not yet late), and that window is
+    # exactly what the heartbeat closes. The ceiling is derived from the beat's own tick
+    # interval — three ticks of headroom — and printed, so a reader can disagree with the
+    # number rather than wonder where it came from. No beat at all is "nothing to say", not
+    # "dead": a daemon that has never run left no evidence either way.
+    beat_path = default_heartbeat_path(get_settings().home)
+    # The ceiling is derived from the beat's own tick interval BEFORE the verdict — the verdict
+    # is judged against it, not shown beside it. A beat without an interval yields 0, which
+    # reads as "no number": the verdict is `unknown`, and the CLI says so in words.
+    intervalo = watch_tick_seconds(beat_path)
+    teto = infer_max_gap(intervalo) if intervalo > 0 else None
+    watch = watch_daemon(beat_path, now=now, max_gap_seconds=teto)
+    if watch.verdict == "none":
+        console.print("[dim]daemon: no heartbeat on record — `chimera serve --cron` may never "
+                      "have run here, so there is nothing to say about it.[/dim]")
+    elif watch.verdict == "unknown":
+        console.print(
+            f"[dim]daemon: heartbeat {watch.age_seconds:.0f}s old (no tick interval on record, "
+            f"so freshness cannot be judged).[/dim]"
+        )
+    elif watch.verdict == "stale":
+        console.print(
+            f"[red]daemon: heartbeat is {watch.age_seconds:.0f}s old — older than "
+            f"{teto:.0f}s (3 ticks of its own {intervalo:.0f}s interval). "
+            f"The daemon is very likely dead.[/red]"
+        )
+        console.print(
+            "[dim]This is about the daemon, not the jobs: check that `chimera serve --cron` "
+            "(or the app) is up and has been.[/dim]"
+        )
+    else:
+        console.print(
+            f"[green]daemon: alive[/green] [dim](heartbeat {watch.age_seconds:.0f}s old, "
+            f"ceiling {teto:.0f}s)[/dim]"
+        )
 
     atrasados = sched.overdue(now, grace=grace_minutes * 60)
     falhando = sched.failing(at_least=1)
@@ -6379,6 +6422,14 @@ def cron_doctor(
         # The exit code is what a watcher outside Chimera reads (chimera-agent#26). Without it the
         # host-cron line in docs/deploy.md mailed the same report every thirty minutes whether or
         # not anything was wrong, which trains the reader to stop opening it.
+        raise typer.Exit(1)
+
+    # A stale heartbeat is a daemon verdict, and the exit code is the watcher's only ear: a dead
+    # daemon with a daily job produces no overdue row for ~23 hours, so without this the
+    # host-cron line in docs/deploy.md stays silent through exactly the outage it exists to
+    # catch. Checked after the job exit so a job problem is not masked by a daemon one — both
+    # exit 1, and the report above already names both.
+    if check and watch.verdict == "stale":
         raise typer.Exit(1)
 
 
