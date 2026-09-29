@@ -1243,6 +1243,21 @@ class CronFailingOut(BaseModel):
     last_error: str | None = None
 
 
+class CronDaemonWatchOut(BaseModel):
+    """What the daemon's heartbeat says, as of the moment the question was asked.
+
+    Three-valued on purpose: ``alive`` and ``stale`` are judged against ``max_gap_seconds``
+    (three ticks of the beat's own interval); ``unknown`` means a beat exists but carried no
+    tick interval, so freshness cannot be judged without inventing a number — and the reader
+    refuses to invent one. ``none`` is "no signal", not "dead": a daemon that has never run
+    left no evidence either way.
+    """
+
+    verdict: Literal["alive", "stale", "unknown", "none"]
+    age_seconds: float | None = None
+    max_gap_seconds: float | None = None
+
+
 class CronSilenceOut(BaseModel):
     """What the schedule is not telling you: what never ran, and what ran and lost.
 
@@ -1251,10 +1266,15 @@ class CronSilenceOut(BaseModel):
     usual cause is that the app was closed when the job was due. ``failing`` means the job ran, on
     time, and lost every time; that is about the job. A single "problems" list would merge the one
     you fix by opening the app with the one you fix by rewriting the action.
+
+    ``daemon`` is the third answer, from the heartbeat the daemon writes every tick: it can say
+    "the daemon is dead" while both lists are still empty, which is the window a daily job leaves
+    open for ~23 hours after a crash.
     """
 
     overdue: list[CronLateOut]
     failing: list[CronFailingOut]
+    daemon: CronDaemonWatchOut
     grace_seconds: float
     """How far past its time a job may be before it counts as missed.
 

@@ -995,6 +995,12 @@ export interface paths {
          *     crashed process cannot log its own crash — so this is a question, not a watcher, and it is
          *     answered the moment anything asks.
          *
+         *     ``daemon`` is the third answer, and the one the jobs could not give: the daemon's own
+         *     heartbeat (:mod:`chimera.scheduler.watchdog`), written every tick. A dead daemon with a
+         *     daily job looks healthy from the jobs alone for ~23 hours — the job is not yet late — and
+         *     the beat closes that window. ``unknown`` is the honest default when the beat carries no
+         *     tick interval to judge freshness against; ``none`` is "no signal", not "dead".
+         *
          *     Declared BEFORE `/api/cron/{job_id}`: FastAPI matches in declaration order, and the
          *     parameterised route would otherwise take `silence` for a job id and 404 a path that exists.
          */
@@ -4491,6 +4497,27 @@ export interface components {
             /** Workspace */
             workspace?: string | null;
         };
+        /**
+         * CronDaemonWatchOut
+         * @description What the daemon's heartbeat says, as of the moment the question was asked.
+         *
+         *     Three-valued on purpose: ``alive`` and ``stale`` are judged against ``max_gap_seconds``
+         *     (three ticks of the beat's own interval); ``unknown`` means a beat exists but carried no
+         *     tick interval, so freshness cannot be judged without inventing a number — and the reader
+         *     refuses to invent one. ``none`` is "no signal", not "dead": a daemon that has never run
+         *     left no evidence either way.
+         */
+        CronDaemonWatchOut: {
+            /** Age Seconds */
+            age_seconds?: number | null;
+            /** Max Gap Seconds */
+            max_gap_seconds?: number | null;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "alive" | "stale" | "unknown" | "none";
+        };
         /** CronFailingOut */
         CronFailingOut: {
             /** Consecutive Failures */
@@ -4593,8 +4620,13 @@ export interface components {
          *     usual cause is that the app was closed when the job was due. ``failing`` means the job ran, on
          *     time, and lost every time; that is about the job. A single "problems" list would merge the one
          *     you fix by opening the app with the one you fix by rewriting the action.
+         *
+         *     ``daemon`` is the third answer, from the heartbeat the daemon writes every tick: it can say
+         *     "the daemon is dead" while both lists are still empty, which is the window a daily job leaves
+         *     open for ~23 hours after a crash.
          */
         CronSilenceOut: {
+            daemon: components["schemas"]["CronDaemonWatchOut"];
             /** Failing */
             failing: components["schemas"]["CronFailingOut"][];
             /** Grace Seconds */
