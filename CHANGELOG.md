@@ -16,6 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     tokens.
   - **Cost of the run:** US$ 4.67.
 
+### Fixed
+
+- **Portuguese advice and appraisal requests on attached documents are no longer checked as if
+  they were questions.**
+  - **What went wrong:** on a fresh set written by another model family, the grounded-question
+    classifier read 5 of 80 tasks as questions. Four were Portuguese, and their English twins passed.
+    Examples: "Será que dá pra reescrever…", "O que você mudaria…", "Me ajuda a decidir…",
+    "parece adequada… Justifique".
+  - **The fix:** these frames now read as tasks, and courtesy questions ("você poderia me dizer…")
+    are still questions.
+  - **The stake is small.** Forced through the check, 60 tasks lost one real attempt
+    (`bench/grounded_task_declines`).
+
 ## [0.63.1] - 2026-09-27
 ### Fixed
 
@@ -30,7 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - **Same fences as the foreground:** the same approval card, the same workspace jail, the same scrubbed environment and the same taint marking.
   - **Timeout hint:** a timeout now points to `background=true`.
   - **Where to see it:** a "Background jobs" panel on the Code screen and a new MCP bridge area, `desktop_shell_jobs` (list, read, stop). (#658)
-
 ## [0.63.0] - 2026-09-27
 ### Added
 
