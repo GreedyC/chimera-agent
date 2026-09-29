@@ -78,6 +78,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     keeps the window-share budget it was measured with. The 64k is a precaution and not a
     measurement; the bench that would replace it (`bench/useful_context`, larger models) is
     pre-registered and waiting on a budget.
+- **The background-job limits (3 at once, 6 hours) are advice until the owner sets them.**
+  - **Before:** a fourth job was refused, and a job still running at hour six was killed with
+    everything it started. Both read as the agent giving up on something it was handed on purpose.
+  - **Now:** with `CHIMERA_JOBS_MAX_RUNNING` and `CHIMERA_JOBS_MAX_RUNTIME` unset, the fourth job
+    starts and its start message says it is past the usual three, and no job gets a deadline.
+    Setting either one makes it a hard limit again, exactly as before: the cap refuses, and the
+    runtime kills the tree and records `timed_out`.
+  - **What did not change:** a registry built directly with numbers (a bench, a test) is a caller
+    that meant them, so it stays hard.
 
 ### Fixed
 
