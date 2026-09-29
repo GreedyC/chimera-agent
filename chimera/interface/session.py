@@ -495,11 +495,15 @@ class ChatSession:
         *,
         on_token: Callable[[str], None] | None = None,
         on_tool: Callable[[ToolActivity], None] | None = None,
+        on_notice: Callable[[str, str, dict[str, Any]], None] | None = None,
         documents: Sequence[tuple[str, str]] = (),
     ) -> TurnReport:
         """Like :meth:`send`, but returns a :class:`TurnReport` (answer + tools/tokens/cost/memory)
         and forwards live ``on_token``/``on_tool`` callbacks to the agent. Recall runs once here and
         is reused for both the prompt and the report's fact count (no double search).
+
+        ``on_notice`` gets (code, text, data) for a warning that does not stop the turn, and only
+        reaches an agent whose ``run`` declares it.
 
         ``documents`` are ``(name, text)`` pairs attached to THIS message, folded into it the way
         the coding turn folds them. With :attr:`grounded_answers` set, the answer is checked against
@@ -528,12 +532,19 @@ class ChatSession:
         messages: list[dict[str, Any]] | None = None
         if self._real_history_ready():
             result = self._run_with_history(
-                turn_message, facts, on_token=on_token, on_tool=watch, note=note
+                turn_message, facts, on_token=on_token, on_tool=watch, on_notice=on_notice,
+                note=note,
             )
             messages = _turn_messages(result, turn_message)
         else:
+            extra: dict[str, Any] = {}
+            if on_notice is not None and _accepts(self.agent.run, "on_notice"):
+                extra["on_notice"] = on_notice
             result = self.agent.run(
-                self._assemble(turn_message, facts, note=note), on_token=on_token, on_tool=watch
+                self._assemble(turn_message, facts, note=note),
+                on_token=on_token,
+                on_tool=watch,
+                **extra,
             )
         answer, grounded, extra_usd = self._check_grounded(grounded_turn, result)
         if messages and answer != result.answer and messages[-1].get("role") == "assistant":
@@ -715,19 +726,24 @@ class ChatSession:
         *,
         on_token: Callable[[str], None] | None = None,
         on_tool: Callable[[ToolActivity], None] | None = None,
+        on_notice: Callable[[str, str, dict[str, Any]], None] | None = None,
         note: str = "",
     ) -> AgentResult:
         run = cast(SupportsHistoryRun, self.agent).run
-        if on_token is None and on_tool is None:
+        if on_token is None and on_tool is None and on_notice is None:
             # `send` has never passed callbacks, and an agent that takes history is not thereby
             # promised to take them as well.
             return run(message, history=self._history(), turn_notes=self._turn_notes(facts, note))
+        extra: dict[str, Any] = {}
+        if on_notice is not None and _accepts(run, "on_notice"):
+            extra["on_notice"] = on_notice
         return run(
             message,
             on_token=on_token,
             on_tool=on_tool,
             history=self._history(),
             turn_notes=self._turn_notes(facts, note),
+            **extra,
         )
 
     def reset(self) -> None:

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **A run can now warn without stopping.** The loop's limits were silent until they were a stop; there is a third thing now, a `notice`.
+  - **What it says:** `tool_loop_warn` when the same call has repeated three times (the breaker used to compute this level and drop it), `steps_low` two steps before the step limit, and `compacted` when the conversation was compacted to keep going.
+  - **Where it shows:** the desktop turn stream gets a `notice` frame, drawn as one warning line per code under the task list, in all ten languages. The terminal REPL prints the same warnings live.
+  - **What it does not do:** change how any run ends. This is the channel only: the same run ends the same way with or without a listener, and a listener that raises is ignored. An agent written before the channel is never handed the keyword.
 - **Two new question-lint rules.** `duplicate_criteria` (error) refuses a question whose options share one criterion, since nothing in the rubric tells them apart. `negated_true` (warning) flags a yes/no question whose "true" criterion is itself a negation, the double negative that breaks P(X) + P(not X) = 1.
 
 ### Fixed

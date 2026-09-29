@@ -200,6 +200,18 @@ def _looks_like_unexecuted_plan(text: str) -> bool:
     )
 
 
+def _notice(
+    on_notice: Callable[[str, str, dict[str, Any]], None] | None, code: str, text: str, **data: Any
+) -> None:
+    """Tell the caller something that is not a stop. A broken callback must never break a run."""
+    if on_notice is None:
+        return
+    try:
+        on_notice(code, text, data)
+    except Exception:  # noqa: BLE001 - a warning channel must not be able to fail the run
+        _log.debug("on_notice callback raised for %s", code, exc_info=True)
+
+
 def _default_compact_schemas() -> bool:
     from chimera.config import get_settings
 
@@ -858,6 +870,7 @@ class Agent:
         on_tool: Callable[[ToolActivity], None] | None = None,
         on_edit: Callable[[str, str], None] | None = None,
         on_todo: Callable[[list[dict[str, str]]], None] | None = None,
+        on_notice: Callable[[str, str, dict[str, Any]], None] | None = None,
         history: list[MessageLike] | None = None,
         images: list[str] | None = None,
         should_stop: Callable[[], bool] | None = None,
@@ -887,6 +900,10 @@ class Agent:
         is the agent's own claim about its progress — unlike ``on_edit``, which reports a diff read
         off disk — so a consumer that renders it owes the reader that distinction.
 
+        ``on_notice`` fires with (code, text, data) for a warning that does not stop the run: a tool
+        loop near its break, a compaction, the last steps before max_steps. It never changes what
+        the run does; a callback that raises is ignored.
+
         ``turn_notes`` is :attr:`AgentConfig.turn_notes` for this run only, for a caller that keeps
         one agent across turns (``ChatSession`` under real history). Setting the config instead
         would leave one turn's recalled facts on the agent for the next. None reads the config."""
@@ -909,7 +926,7 @@ class Agent:
         try:
             return self._run(
                 task, usage=usage, spend=spend, on_token=on_token, on_tool=on_tool,
-                on_edit=on_edit, on_todo=on_todo, history=history, images=images,
+                on_edit=on_edit, on_todo=on_todo, on_notice=on_notice, history=history, images=images,
                 should_stop=should_stop, turn_notes=turn_notes,
             )
         finally:
@@ -925,6 +942,7 @@ class Agent:
         on_tool: Callable[[ToolActivity], None] | None,
         on_edit: Callable[[str, str], None] | None,
         on_todo: Callable[[list[dict[str, str]]], None] | None,
+        on_notice: Callable[[str, str, dict[str, Any]], None] | None,
         history: list[MessageLike] | None,
         images: list[str] | None,
         should_stop: Callable[[], bool] | None,
@@ -1009,6 +1027,8 @@ class Agent:
         contexto_travado: str | None = None
 
         for step in range(1, self.config.max_steps + 1):
+            if self.config.max_steps > 4 and step == self.config.max_steps - 2:
+                _notice(on_notice, "steps_low", "2 steps left before this turn stops", steps_left=2)
             # Cooperative cancel, checked once per step. A model call in flight cannot be
             # interrupted, so a step boundary is the finest grain available — and it is much finer
             # than what the caller had before. `AutonomousLoop` checked its stop flag only BETWEEN
@@ -1133,6 +1153,10 @@ class Agent:
                 )
                 if compacted:
                     record.compacted = True
+                    _notice(
+                        on_notice, "compacted", "the conversation was compacted to keep going",
+                        prompt_tokens=result.prompt_tokens,
+                    )
                     _log.info(
                         "compacted at %d tokens (threshold %d of %d-token window)",
                         result.prompt_tokens, self._budget.threshold, self._budget.window,
@@ -1251,6 +1275,11 @@ class Agent:
                         break
                 if loop_detector is not None:
                     verdict = loop_detector.record(call.name, call.arguments, observation, ok=ran)
+                    if verdict.level == "warn":
+                        _notice(
+                            on_notice, "tool_loop_warn",
+                            verdict.reason or f"{call.name} is repeating", tool=call.name,
+                        )
                     if verdict.tripped:
                         tripped = verdict.reason
                         # A batch that ran together has already run: its remaining observations

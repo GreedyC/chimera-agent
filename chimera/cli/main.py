@@ -1258,16 +1258,24 @@ def _run_turn(
     ``send_verbose`` rather than ``send``: the refusals, the token count and the price are on the
     report and were being thrown away by both REPLs.
     """
+    from chimera.core.code_session import _accepts
     from chimera.interface import render
     from chimera.providers import MissingCredentialsError
+
+    def say_notice(code: str, text: str, data: dict[str, Any]) -> None:
+        console.print(render.notice_line(code, text))
 
     try:
         with console.status("[dim]thinking…[/dim]"):
             # Passed only when there are documents: a session written against the older signature
             # (a test double, a published `SupportsRun` surface) is never handed a keyword it lacks.
+            # The same goes for `on_notice`.
+            extra: dict[str, Any] = (
+                {"on_notice": say_notice} if _accepts(session.send_verbose, "on_notice") else {}
+            )
             if documents:
-                return session.send_verbose(message, documents=documents), "ok"
-            return session.send_verbose(message), "ok"
+                return session.send_verbose(message, documents=documents, **extra), "ok"
+            return session.send_verbose(message, **extra), "ok"
     except MissingCredentialsError as exc:
         console.print(f"[red]{escape(str(exc))}[/red]")
         return None, "stop"

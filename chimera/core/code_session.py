@@ -156,6 +156,7 @@ class CodeSession:
         on_tool: Callable[[ToolActivity], None] | None = None,
         on_edit: Callable[[str, str], None] | None = None,
         on_todo: Callable[[list[dict[str, str]]], None] | None = None,
+        on_notice: Callable[[str, str, dict[str, Any]], None] | None = None,
         images: list[str] | None = None,
         should_stop: Callable[[], bool] | None = None,
     ) -> AgentResult:
@@ -186,6 +187,9 @@ class CodeSession:
         extra: dict[str, Any] = {"images": images} if images else {}
         if on_todo is not None and _accepts(self.agent.run, "on_todo"):
             extra["on_todo"] = on_todo
+        # Same reason as on_todo above: only an agent whose run declares it can be handed it.
+        if on_notice is not None and _accepts(self.agent.run, "on_notice"):
+            extra["on_notice"] = on_notice
         if should_stop is not None and _accepts(self.agent.run, "should_stop"):
             extra["should_stop"] = should_stop
         result = self.agent.run(
