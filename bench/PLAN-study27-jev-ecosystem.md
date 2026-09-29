@@ -313,7 +313,7 @@ Not a phase of work — a phase of **record**, so the next study does not have t
 |---|---|---|---|---|---|
 | 0 | cli, decisions/lint, api | exit-code contract; 3 linter rules; compat suite | tests + sabotage | — | US$ 0 |
 | 1 | scheduler | wake gate (shadow) — **ran: NULL** | ≥30 labelled cron scenarios, 0 false skips | bench + a week of shadow log read | ~US$ 0 |
-| 2 | core agent | stop gate (shadow) | 3-arm ablation, AUROC CI, threshold sweep | beat wording ≥ +0.08, wrong-blocks ≤ 2% | ~US$ 1 |
+| 2 | core agent | stop gate (shadow) — **ran: NULL** | 3-arm ablation, AUROC CI, threshold sweep | beat wording ≥ +0.08, wrong-blocks ≤ 2% | ~US$ 1 |
 | 3 | desktop, factory | Decisions v2, drift alerts, spend gate, redaction doc | table tests, no live API | — (infra) | US$ 0 |
 | 4 | attachments, fusion | field battery + coarse-when-unsure | ≥200 records, paired wrong-fields-shipped | significant fix, no broken-answer regressions | ~US$ 2–5 |
 | 5 | rag, context, web | fused rerank; literal compaction; injection screen | 3 separate pre-registrations | per-mechanism kill criteria above | ~US$ 10–15 |
@@ -336,6 +336,43 @@ prediction, §2q):
 
 Both run local-only (Ollama `qwen3:4b`), US$ 0, and both ship shadow at most — nothing sleeps and
 nothing is nudged by these benches; each enforce question gets its own registration.
+
+## 3b. Review after phases 1–2 ran (2026-09-29)
+
+Both benches that ran came back **NULL**, and both nulls say more about the apparatus than about
+the mechanism. The premises they rested on did not hold on this project:
+
+- **Phase 1 assumed a daemon that wakes on events. Ours does not.**
+  - `chimera/scheduler/` dispatches on timers. The only webhooks it knows are *outbound*
+    (`delivery.py` posts answers).
+  - 17 of the 36 scenarios were inbound webhook events the daemon cannot receive.
+  - All 36 were about one job, which runs once a day on the desktop.
+  - The mechanism that could exist here is a narrower "skip this tick?" question, and the money it
+    could save is on the VPS, where ~15 LLM jobs run daily, not on a desktop with one.
+  - Any successor registration starts from the VPS `cron_results.jsonl`, over timer ticks only.
+- **Phase 2's labels are the wording it was meant to see past.**
+  - 118 of 120 edited turns ran no check, so `false_done` reduced to "claims done", which is arm
+    A1's own question.
+  - AUROC 0.98 in every arm is agreement between two readers of the final message.
+  - Ground truth has to come from what happened after each turn; see `bench/stop_gate/RESULTS.md`.
+- **Both corpora were built and labelled by the same model family that wrote the questions.** The
+  pre-registrations declared this. After seeing the results, it is the main risk to carry into any
+  later phase: every later bench needs labels that come from outcomes, not from reading.
+
+**Recommended order for what remains:**
+
+1. **Phase 0** (US$ 0: exit codes, 3 lint rules, compat suite). It needs no corpus, and both runs
+   above tripped on lint problems it would have caught.
+2. **Phase 3**, the observability half (Decisions v2, drift alerts, spend/rate gate, redaction page).
+   It is infrastructure the later phases need, and it has no measurement premise to fail.
+3. **Phase 4, only with an outcome-labelled corpus.** The field-extraction battery can reuse
+   `bench/verified_cascade`'s machinery, where truth per field is known by construction. That is
+   the one phase whose ground truth does not come from a reader.
+4. **Phase 5 last, one mechanism at a time.** The fused rerank has the strongest prior (the
+   ecosystem's jevsearch, our own −7.8 pp note on the unfused arm). Compaction and injection
+   screening need the corpora the plan names, and neither exists yet.
+5. **Phases 1 and 2 are reopened only as new registrations,** on the corpora named above (VPS ticks;
+   turns with outcomes).
 
 ## 4. What this study cannot show (§2q)
 
