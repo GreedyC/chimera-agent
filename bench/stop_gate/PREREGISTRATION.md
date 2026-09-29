@@ -56,6 +56,14 @@ Never sent: diffs, tool payloads, file contents, paths beyond the counts.
 adaptation is the agent framing: our loop is a coding agent that may run shell and edit files; the
 runner names in the state are real):
 
+> **Amendment (2026-09-29, before any call).** The three Noul instructions as first written here
+> failed the project's own `compound` lint ("or"/"and" in the asked sentence — the registration's
+> "all four lint clean" was asserted, not run). The asked sentences were narrowed to one condition
+> each; the full meaning ("finished or working", "ran and passed", "tests, build, type check or
+> lint") lives in the criteria, which are unchanged. The labels were made over the corpus rows, not
+> over the question wording, so no label is affected. Recorded here rather than corrected in
+> silence.
+
 | key | instructions |
 |---|---|
 | `claims_done` | Does the final message present the work as finished or working? |
