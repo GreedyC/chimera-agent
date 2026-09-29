@@ -314,6 +314,10 @@ Not a phase of work — a phase of **record**, so the next study does not have t
 | 0 | cli, decisions/lint, api | exit-code contract; 3 linter rules; compat suite | tests + sabotage | — | US$ 0 |
 | 1 | scheduler | wake gate (shadow) — **ran: NULL** | ≥30 labelled cron scenarios, 0 false skips | bench + a week of shadow log read | ~US$ 0 |
 | 2 | core agent | stop gate (shadow) | 3-arm ablation, AUROC CI, threshold sweep | beat wording ≥ +0.08, wrong-blocks ≤ 2% | ~US$ 1 |
+| 3 | desktop, factory | Decisions v2, drift alerts, spend gate, redaction doc | table tests, no live API | — (infra) | US$ 0 |
+| 4 | attachments, fusion | field battery + coarse-when-unsure | ≥200 records, paired wrong-fields-shipped | significant fix, no broken-answer regressions | ~US$ 2–5 |
+| 5 | rag, context, web | fused rerank; literal compaction; injection screen | 3 separate pre-registrations | per-mechanism kill criteria above | ~US$ 10–15 |
+| 6 | docs | closed verdicts recorded | — | — | US$ 0 |
 
 **Pre-registrations written with this plan** (each in its own directory, the house format —
 question, instrument byte-for-byte, arms, items, metrics, decision rule fixed before any call,
@@ -332,10 +336,6 @@ prediction, §2q):
 
 Both run local-only (Ollama `qwen3:4b`), US$ 0, and both ship shadow at most — nothing sleeps and
 nothing is nudged by these benches; each enforce question gets its own registration.
-| 3 | desktop, factory | Decisions v2, drift alerts, spend gate, redaction doc | table tests, no live API | — (infra) | US$ 0 |
-| 4 | attachments, fusion | field battery + coarse-when-unsure | ≥200 records, paired wrong-fields-shipped | significant fix, no broken-answer regressions | ~US$ 2–5 |
-| 5 | rag, context, web | fused rerank; literal compaction; injection screen | 3 separate pre-registrations | per-mechanism kill criteria above | ~US$ 10–15 |
-| 6 | docs | closed verdicts recorded | — | — | US$ 0 |
 
 ## 4. What this study cannot show (§2q)
 

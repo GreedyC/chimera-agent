@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT))
 
 from bench.jev_decisions.report import auroc  # noqa: E402
 from chimera.core.redact import redact  # noqa: E402
-from chimera.decisions import Noul, Score  # noqa: E402
+from chimera.decisions import Noul, Score, as_choice  # noqa: E402
 from chimera.decisions.lint import errors  # noqa: E402
 from chimera.decisions.local import LocalLogprobBackend  # noqa: E402
 
@@ -300,7 +300,10 @@ def cmd_ask(args: list[str]) -> None:
         answers: dict[str, Any] = {}
         t0 = time.perf_counter()
         for question in QUESTIONS:
-            body = backend.body(state, question)
+            # body()/read() take the Choice view (a Noul/Score converts; the backend's own ask()
+            # does this conversion — the bench reads the response body directly, so it converts).
+            choice = as_choice(question)
+            body = backend.body(state, choice)
             body["options"]["num_ctx"] = NUM_CTX
             response = client.post("http://127.0.0.1:11434/api/chat", json=body)
             response.raise_for_status()
@@ -308,7 +311,7 @@ def cmd_ask(args: list[str]) -> None:
             prompt_tokens = int(data.get("prompt_eval_count") or 0)
             if not 0 < prompt_tokens < NUM_CTX:
                 raise SystemExit(f"{row['turn_id']}: prompt_eval_count {prompt_tokens} — truncated or unread")
-            reading = backend.read(data, question)
+            reading = backend.read(data, choice)
             answers[question.key] = {"p": reading.p, "choice": reading.choice,
                                      "expectation": (sum((reading.shares or {}).get(o, 0.0) * i
                                                          for i, o in enumerate(question.levels))
