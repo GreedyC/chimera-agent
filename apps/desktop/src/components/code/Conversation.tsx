@@ -64,6 +64,7 @@ import { BrowserView } from "@/components/code/BrowserView";
 import { SharePanel } from "@/components/code/SharePanel";
 import { WorksPanel } from "@/components/code/WorksPanel";
 import { TodoPanel, type TodoEntry } from "@/components/code/TodoPanel";
+import { NoticeList, type NoticeEntry } from "@/components/code/NoticeList";
 import { VoiceMode, type SpokenAnswer, type SpokenAnnouncement } from "@/components/code/VoiceMode";
 import {
   EMPTY_CAST,
@@ -154,6 +155,8 @@ interface Exchange {
    *  Replaced wholesale on every frame, because the frame carries the whole list: merging
    *  would build a list out of two snapshots and show one that never existed. */
   todos: TodoEntry[];
+  /** Warnings that did not stop the turn, one per code (a repeat replaces, it does not stack). */
+  notices?: NoticeEntry[];
   /** The agent's browser after its last action of this turn, or null. Replaced on every frame
    *  (a picture of a moment), and never replayed. */
   browser?: CodeBrowserFrame | null;
@@ -783,6 +786,17 @@ export function Conversation({
       case "todo":
         patch((e) => ({ ...e, todos: ((data.items ?? []) as TodoEntry[]) }));
         break;
+      case "notice": {
+        const code = String(data.code ?? "");
+        patch((e) => ({
+          ...e,
+          notices: [
+            ...(e.notices ?? []).filter((x) => x.code !== code),
+            { code, text: String(data.text ?? "") },
+          ],
+        }));
+        break;
+      }
       case "approval":
         setPendingApproval(data as unknown as CodeApprovalEvent);
         break;
@@ -1145,6 +1159,13 @@ export function Conversation({
         onTodo: (items) => {
           // Replaced, not appended. Unlike `edits`, each frame is the complete list.
           patchLast((e) => ({ ...e, todos: items }));
+        },
+        onNotice: (n) => {
+          // One line per code: a repeat replaces, it does not stack.
+          patchLast((e) => ({
+            ...e,
+            notices: [...(e.notices ?? []).filter((x) => x.code !== n.code), n],
+          }));
         },
         onBrowser: (frame) => {
           // Replaced too: the panel shows where the browser IS, and the previous frame is a page
@@ -1520,6 +1541,7 @@ export function Conversation({
                 </div>
               ) : null}
               <TodoPanel items={e.todos} />
+              <NoticeList items={e.notices} />
               <BrowserView frame={e.browser} />
               {e.edits.map((edit, j) => (
                 <div key={j} className="space-y-1">

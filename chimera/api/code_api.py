@@ -1782,6 +1782,10 @@ def register_code_api(
             """
             emit("todo", {"items": items, "claimed": True})
 
+        def on_notice(code: str, text: str, data: dict[str, Any]) -> None:
+            """A warning that does not stop the turn. Its own frame, so it replays like the rest."""
+            emit("notice", {"code": code, "text": text, **data})
+
         def work() -> None:
             from chimera.orchestration.metering import MeteredBackend as _Meter
 
@@ -2064,6 +2068,7 @@ def register_code_api(
                         on_tool=on_tool,
                         on_edit=on_edit,
                         on_todo=on_todo,
+                        on_notice=on_notice,
                         images=images or None,
                         should_stop=works.should_stop(background.id) if background is not None else None,
                     )

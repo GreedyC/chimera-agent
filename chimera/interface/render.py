@@ -143,6 +143,24 @@ _CUT_SHORT = {
 }
 
 
+#: The warnings a turn can send while it runs (`Agent._run`, `on_notice`). Anything else is said with
+#: the words the agent sent, so a code this module was not taught is still shown, never dropped.
+_NOTICE_WORDS = {
+    "steps_low": "2 steps left before this turn stops",
+    "compacted": "the conversation was compacted to keep going",
+    "tool_loop_warn": "it is repeating the same call — a stop may follow",
+}
+
+
+def notice_line(code: str, text: str) -> str:
+    """One live warning that does not stop the turn, printed the moment it is sent.
+
+    The sibling of :func:`cut_short_line` for what happens BEFORE a stop: that one explains a reply
+    that was cut off, this one says a limit is near while there is still time to act on it.
+    """
+    return f"[yellow]⚠ {escape(_NOTICE_WORDS.get(code, text))}[/yellow]"
+
+
 def cut_short_line(report: TurnReport) -> str:
     """Why this reply is not a finished one, or ``""`` when it is.
 
