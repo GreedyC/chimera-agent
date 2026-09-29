@@ -1631,7 +1631,7 @@ class ApprovalOut(BaseModel):
 
     band: str = ""
     """Which band of the REVIEW band it fell in — ``review`` | ``uncertain`` | ``allow`` |
-    ``uncalibrated`` | ``halt`` | ``none``. Empty when no band was consulted.
+    ``uncalibrated`` | ``halt`` | ``gate`` | ``none``. Empty when no band was consulted.
 
     Sent beside ``p`` because the two are only readable together: 0.45 is a confident ALLOW below
     ``allow_below`` and an uncertain one between the thresholds, and the card is where a person has
