@@ -5,7 +5,8 @@ Compaction had never fired: 0 of 137 traced runs. The Code screen spends 0.6 of 
 503,040 tokens, against a largest-ever-observed prompt of 64,067. `bench/useful_context` measured
 that model, deepseek-v4-flash-0731, on 90 paired agent transcripts: 90/90 at 4k, 87/90 at 128k,
 every rung within −10 pp. The catalogue row now carries that floor as `useful_k`, and the budget
-spends at most it. gpt-6-luna, the default since 2026-09-26, has no such row yet.
+spends at most it. gpt-6-luna, the default since 2026-09-26, was measured the same way on
+2026-09-27: every rung to 256k within the margin, so its row carries 255 as a lower bound.
 """
 
 from __future__ import annotations

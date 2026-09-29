@@ -1,0 +1,107 @@
+openrouter/openai/gpt-6-luna via OpenAI  T=None  US$4.5014  rows 504  halted 0
+
+PER LENGTH (all valid rows)
+    arm    n   ok    acc       Wilson 95%   fact  rule|1  break forget  med tok  cache   reas    sec     US$
+   4000   72   72  1.000 [0.949, 1.000]  1.000 72/72         0      0     3592   0.55     32    2.1  0.0179
+        kinds: {'ok': 72}   no reasoning: 0 rows, 0 failed; with reasoning: 72 rows, 0 failed
+  16000   72   72  1.000 [0.949, 1.000]  1.000 72/72         0      0    15717   0.00     32    2.1  0.1438
+        kinds: {'ok': 72}   no reasoning: 0 rows, 0 failed; with reasoning: 72 rows, 0 failed
+  32000   72   72  1.000 [0.949, 1.000]  1.000 72/72         0      0    31749   0.00     34    2.3  0.2886
+        kinds: {'ok': 72}   no reasoning: 0 rows, 0 failed; with reasoning: 72 rows, 0 failed
+  64000   72   71  0.986 [0.925, 0.998]  1.000 71/72         0      1    63653   0.00     35    2.5  0.5756
+        kinds: {'ok': 71, 'rule_forgotten': 1}   no reasoning: 0 rows, 0 failed; with reasoning: 72 rows, 1 failed
+ 128000   72   70  0.972 [0.904, 0.992]  0.972 72/72         0      2   127628   0.00     36    3.1  1.1517
+        kinds: {'ok': 70, 'wrong_service': 2}   no reasoning: 0 rows, 0 failed; with reasoning: 72 rows, 2 failed
+ 256000   72   71  0.986 [0.925, 0.998]  0.986 72/72         0      1   255474   0.00     39    4.3  2.3026
+        kinds: {'ok': 71, 'wrong_service': 1}   no reasoning: 0 rows, 0 failed; with reasoning: 72 rows, 1 failed
+ replay   72   70  0.972 [0.904, 0.992]  1.000 70/72         0      2     3592   0.44     32    2.0  0.0214
+        kinds: {'ok': 70, 'rule_forgotten': 2}   no reasoning: 0 rows, 0 failed; with reasoning: 72 rows, 2 failed
+
+FLOOR 4k replay vs 4k: both 70, replay-only 0, 4k-only 2, neither 0 -> 2/72 discordant; exact McNemar p = 0.5; Newcombe [-0.096, +0.027] -> FLOOR GATE PASS; byte-identical answers 70/72
+
+POSITIVE CONTROL 4k: 72/72 = 1.000 -> PASS
+
+PAIRED vs 4k (Newcombe method 10, 95%; exact McNemar)
+    16000: n=72  both 72  long-only 0  4k-only 0  neither 0  delta +0.000 [-0.051, +0.051]  p=1  within -0.10
+    32000: n=72  both 72  long-only 0  4k-only 0  neither 0  delta +0.000 [-0.051, +0.051]  p=1  within -0.10
+    64000: n=72  both 71  long-only 0  4k-only 1  neither 0  delta -0.014 [-0.075, +0.038]  p=1  within -0.10
+   128000: n=72  both 70  long-only 0  4k-only 2  neither 0  delta -0.028 [-0.096, +0.027]  p=0.5  within -0.10
+   256000: n=72  both 71  long-only 0  4k-only 1  neither 0  delta -0.014 [-0.075, +0.038]  p=1  within -0.10
+
+USEFUL LENGTH (largest L with every tested L' <= L within margin): the 256,000 cell, median 255,474 provider tokens  -- the top of the ladder: a lower bound
+PROPOSED TRIGGER = floor(0.8 x 255,474, to 1,000) = 204,000 provider tokens
+
+BY TARGET DEPTH (ok/n)
+     4000  d=0.1: 24/24   d=0.5: 24/24   d=0.9: 24/24
+    16000  d=0.1: 24/24   d=0.5: 24/24   d=0.9: 24/24
+    32000  d=0.1: 24/24   d=0.5: 24/24   d=0.9: 24/24
+    64000  d=0.1: 23/24   d=0.5: 24/24   d=0.9: 24/24
+   128000  d=0.1: 24/24   d=0.5: 23/24   d=0.9: 23/24
+   256000  d=0.1: 24/24   d=0.5: 24/24   d=0.9: 23/24
+   replay  d=0.1: 23/24   d=0.5: 23/24   d=0.9: 24/24
+
+BY RULE (ok/n)
+     4000  snake: 12/12  prefix: 12/12  suffix: 12/12  camel: 12/12  bracket: 12/12  dots: 12/12
+    16000  snake: 12/12  prefix: 12/12  suffix: 12/12  camel: 12/12  bracket: 12/12  dots: 12/12
+    32000  snake: 12/12  prefix: 12/12  suffix: 12/12  camel: 12/12  bracket: 12/12  dots: 12/12
+    64000  snake: 12/12  prefix: 12/12  suffix: 11/12  camel: 12/12  bracket: 12/12  dots: 12/12
+   128000  snake: 12/12  prefix: 11/12  suffix: 12/12  camel: 11/12  bracket: 12/12  dots: 12/12
+   256000  snake: 12/12  prefix: 12/12  suffix: 12/12  camel: 12/12  bracket: 11/12  dots: 12/12
+   replay  snake: 12/12  prefix: 12/12  suffix: 10/12  camel: 12/12  bracket: 12/12  dots: 12/12
+
+RAW OUTPUTS: every failure, and 6 random passes per length
+--- 4000: 0 failures
+  M041             ok  want 'svc:garnet-pipe'              got 'svc:garnet-pipe'  finish=stop tools=0
+  M019             ok  want 'OSPREY_LEDGER'                got 'OSPREY_LEDGER'  finish=stop tools=0
+  M050             ok  want '[lichen-post]'                got '[lichen-post]'  finish=stop tools=0
+  M006             ok  want 'sorrel-grid@ops'              got 'sorrel-grid@ops'  finish=stop tools=0
+  M009             ok  want 'tallowGate'                   got 'tallowGate'  finish=stop tools=0
+  M012             ok  want '[quartz-shuttle]'             got '[quartz-shuttle]'  finish=stop tools=0
+--- 16000: 0 failures
+  M046             ok  want 'zinniaTally'                  got 'zinniaTally'  finish=stop tools=0
+  M007             ok  want 'lumen-forge@ops'              got 'lumen-forge@ops'  finish=stop tools=0
+  M064             ok  want 'garnetPipe'                   got 'garnetPipe'  finish=stop tools=0
+  M027             ok  want 'velvetScout'                  got 'velvetScout'  finish=stop tools=0
+  M004             ok  want 'svc:heron-batch'              got 'svc:heron-batch'  finish=stop tools=0
+  M011             ok  want 'sorrelGrid'                   got 'sorrelGrid'  finish=stop tools=0
+--- 32000: 0 failures
+  M055             ok  want 'QUILL_SORTER'                 got 'QUILL_SORTER'  finish=stop tools=0
+  M053             ok  want 'marrow.sync'                  got 'marrow.sync'  finish=stop tools=0
+  M008             ok  want 'garnet-pipe@ops'              got 'garnet-pipe@ops'  finish=stop tools=0
+  M030             ok  want '[basalt-hook]'                got '[basalt-hook]'  finish=stop tools=0
+  M011             ok  want 'sorrelGrid'                   got 'sorrelGrid'  finish=stop tools=0
+  M054             ok  want 'TUNDRA_PRESS'                 got 'TUNDRA_PRESS'  finish=stop tools=0
+--- 64000: 1 failures
+  M024 rule_forgotten  want 'tamarind-mesh@ops'            got 'tamarind-mesh@growth-team@ops'  finish=stop tools=0
+  M007             ok  want 'lumen-forge@ops'              got 'lumen-forge@ops'  finish=stop tools=0
+  M015             ok  want 'harbor.vane'                  got 'harbor.vane'  finish=stop tools=0
+  M029             ok  want 'basaltHook'                   got 'basaltHook'  finish=stop tools=0
+  M071             ok  want 'raven.ticket'                 got 'raven.ticket'  finish=stop tools=0
+  M051             ok  want 'cinder.loom'                  got 'cinder.loom'  finish=stop tools=0
+  M006             ok  want 'sorrel-grid@ops'              got 'sorrel-grid@ops'  finish=stop tools=0
+--- 128000: 2 failures
+  M023  wrong_service  want 'svc:flint-harvest'            got 'svc:walnut-beacon'  finish=stop tools=0
+  M046  wrong_service  want 'zinniaTally'                  got 'quillSorter'  finish=stop tools=0
+  M029             ok  want 'basaltHook'                   got 'basaltHook'  finish=stop tools=0
+  M005             ok  want 'svc:marrow-sync'              got 'svc:marrow-sync'  finish=stop tools=0
+  M017             ok  want 'lichen.post'                  got 'lichen.post'  finish=stop tools=0
+  M038             ok  want 'WALNUT_BEACON'                got 'WALNUT_BEACON'  finish=stop tools=0
+  M055             ok  want 'QUILL_SORTER'                 got 'QUILL_SORTER'  finish=stop tools=0
+  M018             ok  want 'COPPER_TIDE'                  got 'COPPER_TIDE'  finish=stop tools=0
+--- 256000: 1 failures
+  M068  wrong_service  want '[cobalt-drift]'               got '[bramble-wire]'  finish=stop tools=0
+  M070             ok  want 'meadow.flare'                 got 'meadow.flare'  finish=stop tools=0
+  M015             ok  want 'harbor.vane'                  got 'harbor.vane'  finish=stop tools=0
+  M039             ok  want 'svc:nettle-stamp'             got 'svc:nettle-stamp'  finish=stop tools=0
+  M023             ok  want 'svc:flint-harvest'            got 'svc:flint-harvest'  finish=stop tools=0
+  M013             ok  want '[marrow-sync]'                got '[marrow-sync]'  finish=stop tools=0
+  M024             ok  want 'tamarind-mesh@ops'            got 'tamarind-mesh@ops'  finish=stop tools=0
+--- replay: 2 failures
+  M024 rule_forgotten  want 'tamarind-mesh@ops'            got 'tamarind-mesh@growth'  finish=stop tools=0
+  M043 rule_forgotten  want 'meadow-flare@ops'             got 'meadow-flare@growth@ops'  finish=stop tools=0
+  M049             ok  want '[lumen-forge]'                got '[lumen-forge]'  finish=stop tools=0
+  M012             ok  want '[quartz-shuttle]'             got '[quartz-shuttle]'  finish=stop tools=0
+  M008             ok  want 'garnet-pipe@ops'              got 'garnet-pipe@ops'  finish=stop tools=0
+  M007             ok  want 'lumen-forge@ops'              got 'lumen-forge@ops'  finish=stop tools=0
+  M027             ok  want 'velvetScout'                  got 'velvetScout'  finish=stop tools=0
+  M065             ok  want 'walnutBeacon'                 got 'walnutBeacon'  finish=stop tools=0
