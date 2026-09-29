@@ -2955,6 +2955,48 @@
         "title": "CronCreateIn",
         "type": "object"
       },
+      "CronDaemonWatchOut": {
+        "description": "What the daemon's heartbeat says, as of the moment the question was asked.\n\nThree-valued on purpose: ``alive`` and ``stale`` are judged against ``max_gap_seconds``\n(three ticks of the beat's own interval); ``unknown`` means a beat exists but carried no\ntick interval, so freshness cannot be judged without inventing a number \u2014 and the reader\nrefuses to invent one. ``none`` is \"no signal\", not \"dead\": a daemon that has never run\nleft no evidence either way.",
+        "properties": {
+          "age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Seconds"
+          },
+          "max_gap_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Gap Seconds"
+          },
+          "verdict": {
+            "enum": [
+              "alive",
+              "stale",
+              "unknown",
+              "none"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "verdict"
+        ],
+        "title": "CronDaemonWatchOut",
+        "type": "object"
+      },
       "CronFailingOut": {
         "properties": {
           "consecutive_failures": {
@@ -3204,8 +3246,11 @@
         "type": "object"
       },
       "CronSilenceOut": {
-        "description": "What the schedule is not telling you: what never ran, and what ran and lost.\n\nTwo lists rather than one, because the responses have nothing in common. ``overdue`` means\nnothing dispatched \u2014 that is about the daemon, and on the desktop the daemon is the app, so the\nusual cause is that the app was closed when the job was due. ``failing`` means the job ran, on\ntime, and lost every time; that is about the job. A single \"problems\" list would merge the one\nyou fix by opening the app with the one you fix by rewriting the action.",
+        "description": "What the schedule is not telling you: what never ran, and what ran and lost.\n\nTwo lists rather than one, because the responses have nothing in common. ``overdue`` means\nnothing dispatched \u2014 that is about the daemon, and on the desktop the daemon is the app, so the\nusual cause is that the app was closed when the job was due. ``failing`` means the job ran, on\ntime, and lost every time; that is about the job. A single \"problems\" list would merge the one\nyou fix by opening the app with the one you fix by rewriting the action.\n\n``daemon`` is the third answer, from the heartbeat the daemon writes every tick: it can say\n\"the daemon is dead\" while both lists are still empty, which is the window a daily job leaves\nopen for ~23 hours after a crash.",
         "properties": {
+          "daemon": {
+            "$ref": "#/components/schemas/CronDaemonWatchOut"
+          },
           "failing": {
             "items": {
               "$ref": "#/components/schemas/CronFailingOut"
@@ -3228,6 +3273,7 @@
         "required": [
           "overdue",
           "failing",
+          "daemon",
           "grace_seconds"
         ],
         "title": "CronSilenceOut",
@@ -12316,7 +12362,7 @@
     },
     "/api/cron/silence": {
       "get": {
-        "description": "Ask the schedule what it is not telling you.\n\nEvery other honesty mechanism in this project sits downstream of a run having happened \u2014\nthe verifier judges a result, the receipt names who approved it. None of them gets a turn\nwhen the run never occurred, and a schedule that produced no result reads exactly like a\nschedule with nothing due. That distinction matters more now that the app shows results:\nan empty row for a job that never fired and one for a job that answered nothing look the\nsame, and only one of them is a problem.\n\nOn the desktop the daemon IS the app, so the common cause of an overdue job is that the\nwindow was closed when its time came. Nothing can watch while the process is down \u2014 a\ncrashed process cannot log its own crash \u2014 so this is a question, not a watcher, and it is\nanswered the moment anything asks.\n\nDeclared BEFORE `/api/cron/{job_id}`: FastAPI matches in declaration order, and the\nparameterised route would otherwise take `silence` for a job id and 404 a path that exists.",
+        "description": "Ask the schedule what it is not telling you.\n\nEvery other honesty mechanism in this project sits downstream of a run having happened \u2014\nthe verifier judges a result, the receipt names who approved it. None of them gets a turn\nwhen the run never occurred, and a schedule that produced no result reads exactly like a\nschedule with nothing due. That distinction matters more now that the app shows results:\nan empty row for a job that never fired and one for a job that answered nothing look the\nsame, and only one of them is a problem.\n\nOn the desktop the daemon IS the app, so the common cause of an overdue job is that the\nwindow was closed when its time came. Nothing can watch while the process is down \u2014 a\ncrashed process cannot log its own crash \u2014 so this is a question, not a watcher, and it is\nanswered the moment anything asks.\n\n``daemon`` is the third answer, and the one the jobs could not give: the daemon's own\nheartbeat (:mod:`chimera.scheduler.watchdog`), written every tick. A dead daemon with a\ndaily job looks healthy from the jobs alone for ~23 hours \u2014 the job is not yet late \u2014 and\nthe beat closes that window. ``unknown`` is the honest default when the beat carries no\ntick interval to judge freshness against; ``none`` is \"no signal\", not \"dead\".\n\nDeclared BEFORE `/api/cron/{job_id}`: FastAPI matches in declaration order, and the\nparameterised route would otherwise take `silence` for a job id and 404 a path that exists.",
         "operationId": "cron_silence_api_cron_silence_get",
         "parameters": [
           {
