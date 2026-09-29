@@ -289,7 +289,8 @@ def cmd_ask(args: list[str]) -> None:
         bad = [q.key for q in QUESTIONS if errors(q)]
         raise SystemExit(f"the questions do not lint clean: {bad}")
     rows = [json.loads(line) for line in CANDIDATES.read_text(encoding="utf-8").splitlines() if line.strip()]
-    labels = json.loads(LABELS.read_text(encoding="utf-8"))
+    if not LABELS.exists():  # the registration's order: labels are committed before any call
+        raise SystemExit(f"{LABELS} is missing — label and commit before running ask")
     eligible = [r for r in rows if r["belts"]["eligible"]]
     gated_out = len(rows) - len(eligible)
     backend = LocalLogprobBackend("http://127.0.0.1:11434", "qwen3:4b", timeout_s=300.0)
