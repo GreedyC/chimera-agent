@@ -3,6 +3,13 @@
 **Written 2026-09-27, before any paid call of this design. No outcome of it has been seen. Not run
 until the owner approves the budget below.**
 
+**Budget decision, 2026-09-29 (the owner, in the session), recorded before any call:** `glm-5.3-flash`
+only, to 900k, capped at **US$ 8**. `glm-5.3` is **not** approved and is not run; its column stays
+here as the registration for whenever it is. Nothing in the design below changed after this
+decision. The conservative rule for unmeasured models that "Why these two" says was being proposed
+shipped as #684 (`AgentConfig.unmeasured_context_tokens`, 64k); what this run measures is what would
+replace it for this model.
+
 Owner-assigned (2026-09-27, task 5: "256k context and bigger models, without the tasks stalling").
 The same bench, task, items, grader, gates and decision rule as [`PREREGISTRATION.md`](PREREGISTRATION.md)
 and [`PREREGISTRATION_luna.md`](PREREGISTRATION_luna.md). Only what is listed here changes.
