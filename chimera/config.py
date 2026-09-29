@@ -186,8 +186,8 @@ class Settings(BaseSettings):
     # This is no longer the `mid` rung of the cost presets, which still hold deepseek-v4-flash: the
     # presets drive the tier ladder (roles, cascade, orchestration), this drives the plain agent
     # turn, and the bake-off measured only the latter. Which rung luna should occupy is a separate,
-    # unmeasured decision. Its useful context is unmeasured too (`CatalogEntry.useful_k`), so
-    # compaction sizes itself from the window fraction for it until `bench/useful_context` runs.
+    # unmeasured decision. Its useful context was measured in `bench/useful_context` (≥ 256k, a
+    # lower bound; `CatalogEntry.useful_k`), so compaction spends at most that, not the window.
     #
     # It is a floor, not a ceiling: the composer's model picker changes it per conversation and
     # offers to make any pick the standing default, and `CHIMERA_DEFAULT_MODEL` still wins over
@@ -678,6 +678,14 @@ class Settings(BaseSettings):
     #   deny            — never run on the host; require CHIMERA_SANDBOX=docker.
     # Ignored when the sandbox is an isolated container (nothing to confirm).
     host_exec: str = Field(default="ask", validation_alias="CHIMERA_HOST_EXEC")
+    # Background shell jobs (`run_shell` with `background: true`, `chimera/core/jobs.py`): how many
+    # may run at once, and how long one may run before it is killed with everything it started and
+    # recorded as `timed_out`. Generous by default — the case they exist for is a benchmark stage
+    # that takes tens of minutes — and bounded, because a job outlives the turn that started it and
+    # nobody may be watching. A value below 1 means the default, not "off": turning the tool off is
+    # `CHIMERA_TOOL_DENYLIST=run_shell`.
+    jobs_max_running: int = Field(default=3, validation_alias="CHIMERA_JOBS_MAX_RUNNING")
+    jobs_max_runtime: int = Field(default=21600, validation_alias="CHIMERA_JOBS_MAX_RUNTIME")
 
     # The deployment's own posture — how far the agent may reach, and when it stops to ask. Both
     # empty by default, and that emptiness is load-bearing: "" means "this deployment states no

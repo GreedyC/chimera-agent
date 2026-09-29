@@ -208,6 +208,10 @@ CATALOG: tuple[CatalogEntry, ...] = (
     CatalogEntry(
         "openrouter/openai/gpt-6-luna", "mid", "OpenAI",
         0.10, 0.50, tools=True, context_k=1050,
+        # bench/useful_context (2026-09-27, RESULTS_luna.md): 72 paired agent transcripts on the
+        # OpenAI standard route — 72/72 at 4k, 71/72 at 256k (median 255,474 tokens), every rung
+        # within −10 pp of 4k. 256 was the top of the ladder that was run, so it is a lower bound.
+        useful_k=255,
         notes="the small end of the GPT-6 line, released 2026-09-22; the default reviewer of\n"
         "        `chimera review` since `bench/review_reviewer` (2026-09-26): 39 of 40 seeded\n"
         "        reviews showed the defect and none came back incomplete, at US$ 0.0010 a review,\n"
@@ -216,8 +220,8 @@ CATALOG: tuple[CatalogEntry, ...] = (
         "        fast one at double. It takes no temperature, so it samples. The row is here so a\n"
         "        review's cost is known from a cold start. The product default since 2026-09-26:\n"
         "        123/154 resolved on the partial SWE-bench django run of\n"
-        "        `bench/default-model-bakeoff` against 92/150 for deepseek-v4-flash-0731, unpaired.\n"
-        "        No useful_k: nobody has measured the context it still reads well",
+        "        `bench/default_model` against 92/150 for deepseek-v4-flash-0731, unpaired.\n"
+        "        useful_k from `bench/useful_context`, a lower bound at the 256k rung",
     ),
     CatalogEntry(
         "openrouter/qwen/qwen3-coder", "mid", "Qwen (Alibaba)",
