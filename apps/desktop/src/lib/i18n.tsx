@@ -758,6 +758,7 @@ const en: Dict = {
   "runs.planning": "planning…",
   "runs.verifying": "verifying…",
   "runs.folderBusy": "Waiting: another conversation or run is working in this folder",
+  "runs.alsoRunning": "+{n} more running",
   "runs.doneOk": "done: passed",
   "runs.doneFail": "done: failed",
   "runs.pauseOnTaint":
@@ -1169,7 +1170,7 @@ const en: Dict = {
   "code.chat.verdict.revertedExceptChanged": "Edits undone, except {n} file(s) that changed after this turn, left as they are: {files}",
   "code.chat.verdict.revertFailed": "Could not undo — that snapshot is gone.",
   "code.chat.verdict.fix": "Let the agent try to fix it",
-  "code.chat.verdict.fixBusy": "A run is already working; the fix can start when it ends",
+  "code.chat.verdict.fixBusy": "A run is already working in this project; the fix can start when it ends",
   "code.window.open": "Open in a new window",
   "code.window.openHint": "Keep this conversation in a window of its own and start another one here",
   "code.window.unreadable": "This conversation could not be read. It may have been deleted.",
@@ -2422,6 +2423,7 @@ const pt: Dict = {
   "runs.planning": "planejando…",
   "runs.verifying": "verificando…",
   "runs.folderBusy": "Aguardando: outra conversa ou run está trabalhando nesta pasta",
+  "runs.alsoRunning": "+{n} rodando em outros projetos",
   "runs.doneOk": "concluído: aprovada",
   "runs.doneFail": "concluído: falhou",
   "runs.pauseOnTaint":
@@ -2836,7 +2838,7 @@ const pt: Dict = {
   "code.chat.verdict.revertFailed":
     "Não deu para desfazer — aquele instantâneo já não existe.",
   "code.chat.verdict.fix": "Deixar o agente tentar corrigir",
-  "code.chat.verdict.fixBusy": "Um run já está trabalhando; a correção pode começar quando ele terminar",
+  "code.chat.verdict.fixBusy": "Um run já está trabalhando neste projeto; a correção pode começar quando ele terminar",
   "code.window.open": "Abrir em nova janela",
   "code.window.openHint": "Deixar esta conversa numa janela própria e começar outra aqui",
   "code.window.unreadable": "Não foi possível ler esta conversa. Ela pode ter sido apagada.",
@@ -4098,6 +4100,7 @@ const es: Dict = {
   "runs.planning": "planificando…",
   "runs.verifying": "verificando…",
   "runs.folderBusy": "Esperando: otra conversación o ejecución está trabajando en esta carpeta",
+  "runs.alsoRunning": "+{n} en curso en otros proyectos",
   "runs.doneOk": "listo: aprobada",
   "runs.doneFail": "listo: fallida",
   "runs.pauseOnTaint":
@@ -4513,7 +4516,7 @@ const es: Dict = {
   "code.chat.verdict.revertFailed":
     "No se pudo deshacer: esa instantánea ya no existe.",
   "code.chat.verdict.fix": "Dejar que el agente intente arreglarlo",
-  "code.chat.verdict.fixBusy": "Ya hay una ejecución en curso; el arreglo podrá empezar cuando termine",
+  "code.chat.verdict.fixBusy": "Ya hay una ejecución en curso en este proyecto; el arreglo podrá empezar cuando termine",
   "code.window.open": "Abrir en una ventana nueva",
   "code.window.openHint": "Dejar esta conversación en su propia ventana y empezar otra aquí",
   "code.window.unreadable": "No se pudo leer esta conversación. Puede que se haya borrado.",
@@ -5784,6 +5787,7 @@ const fr: Dict = {
   "runs.planning": "planification…",
   "runs.verifying": "vérification…",
   "runs.folderBusy": "En attente : une autre conversation ou exécution travaille dans ce dossier",
+  "runs.alsoRunning": "+{n} en cours ailleurs",
   "runs.doneOk": "terminé : réussie",
   "runs.doneFail": "terminé : échouée",
   "runs.pauseOnTaint":
@@ -6204,7 +6208,7 @@ const fr: Dict = {
   "code.chat.verdict.revertFailed":
     "Impossible d'annuler — cet instantané n'existe plus.",
   "code.chat.verdict.fix": "Laisser l'agent essayer de corriger",
-  "code.chat.verdict.fixBusy": "Une exécution est déjà en cours ; la correction pourra commencer quand elle se terminera",
+  "code.chat.verdict.fixBusy": "Une exécution est déjà en cours dans ce projet ; la correction pourra commencer quand elle se terminera",
   "code.window.open": "Ouvrir dans une nouvelle fenêtre",
   "code.window.openHint": "Garder cette conversation dans sa propre fenêtre et en commencer une autre ici",
   "code.window.unreadable": "Impossible de lire cette conversation. Elle a peut-être été supprimée.",
@@ -7476,6 +7480,7 @@ const de: Dict = {
   "runs.planning": "plane…",
   "runs.verifying": "verifiziere…",
   "runs.folderBusy": "Wartet: Ein anderes Gespräch oder ein anderer Lauf arbeitet in diesem Ordner",
+  "runs.alsoRunning": "+{n} laufen anderswo",
   "runs.doneOk": "fertig: bestanden",
   "runs.doneFail": "fertig: fehlgeschlagen",
   "runs.pauseOnTaint":
@@ -7895,7 +7900,7 @@ const de: Dict = {
   "code.chat.verdict.revertFailed":
     "Zurücknehmen nicht möglich — dieser Schnappschuss ist weg.",
   "code.chat.verdict.fix": "Den Agenten es reparieren lassen",
-  "code.chat.verdict.fixBusy": "Ein Lauf arbeitet bereits; die Reparatur kann beginnen, wenn er endet",
+  "code.chat.verdict.fixBusy": "In diesem Projekt arbeitet bereits ein Lauf; die Reparatur kann beginnen, wenn er endet",
   "code.window.open": "In neuem Fenster öffnen",
   "code.window.openHint": "Dieses Gespräch in einem eigenen Fenster behalten und hier ein neues beginnen",
   "code.window.unreadable": "Dieses Gespräch konnte nicht gelesen werden. Es wurde vielleicht gelöscht.",
@@ -9131,6 +9136,7 @@ const zh: Dict = {
   "runs.planning": "规划中…",
   "runs.verifying": "验证中…",
   "runs.folderBusy": "等待中：另一个对话或运行正在这个文件夹中工作",
+  "runs.alsoRunning": "另有 {n} 个在运行",
   "runs.doneOk": "完成：通过",
   "runs.doneFail": "完成：失败",
   "runs.pauseOnTaint": "若运行读取了不可信内容，暂停并等待我批准",
@@ -9525,7 +9531,7 @@ const zh: Dict = {
   "code.chat.verdict.revertedExceptChanged": "已撤销修改，但有 {n} 个文件在本轮之后又被改动，保持原样：{files}",
   "code.chat.verdict.revertFailed": "无法撤销——那份快照已经没有了。",
   "code.chat.verdict.fix": "让智能体试着修好",
-  "code.chat.verdict.fixBusy": "已有一个运行正在进行；它结束后才能开始修复",
+  "code.chat.verdict.fixBusy": "此项目中已有一个运行正在进行；它结束后才能开始修复",
   "code.window.open": "在新窗口中打开",
   "code.window.openHint": "把这个对话放在单独的窗口里，在这里开始另一个",
   "code.window.unreadable": "无法读取此对话，它可能已被删除。",
@@ -10774,6 +10780,7 @@ const ja: Dict = {
   "runs.planning": "計画中…",
   "runs.verifying": "検証中…",
   "runs.folderBusy": "待機中：別の会話または実行がこのフォルダで作業中です",
+  "runs.alsoRunning": "ほかに {n} 件実行中",
   "runs.doneOk": "完了：合格",
   "runs.doneFail": "完了：失敗",
   "runs.pauseOnTaint": "信頼できない内容を読んだ場合は承認のために一時停止する",
@@ -11186,7 +11193,7 @@ const ja: Dict = {
   "code.chat.verdict.revertFailed":
     "取り消せません — そのスナップショットはもうありません。",
   "code.chat.verdict.fix": "エージェントに直させる",
-  "code.chat.verdict.fixBusy": "すでに実行が動いています。終わってから修正を始められます",
+  "code.chat.verdict.fixBusy": "このプロジェクトではすでに実行が動いています。終わってから修正を始められます",
   "code.window.open": "新しいウィンドウで開く",
   "code.window.openHint": "この会話を別ウィンドウに移し、ここで別の会話を始めます",
   "code.window.unreadable": "この会話を読み込めませんでした。削除された可能性があります。",
@@ -12452,6 +12459,7 @@ const it: Dict = {
   "runs.planning": "pianificazione…",
   "runs.verifying": "verifica…",
   "runs.folderBusy": "In attesa: un'altra conversazione o esecuzione sta lavorando in questa cartella",
+  "runs.alsoRunning": "+{n} in corso altrove",
   "runs.doneOk": "fatto: superata",
   "runs.doneFail": "fatto: fallita",
   "runs.pauseOnTaint":
@@ -12868,7 +12876,7 @@ const it: Dict = {
   "code.chat.verdict.revertFailed":
     "Non è stato possibile annullare — quello snapshot non c'è più.",
   "code.chat.verdict.fix": "Lascia che l'agente provi a correggere",
-  "code.chat.verdict.fixBusy": "Un'esecuzione è già in corso; la correzione potrà partire quando finisce",
+  "code.chat.verdict.fixBusy": "Un'esecuzione è già in corso in questo progetto; la correzione potrà partire quando finisce",
   "code.window.open": "Apri in una nuova finestra",
   "code.window.openHint": "Tieni questa conversazione in una finestra a parte e iniziane un'altra qui",
   "code.window.unreadable": "Impossibile leggere questa conversazione. Potrebbe essere stata eliminata.",
@@ -14132,6 +14140,7 @@ const pl: Dict = {
   "runs.planning": "planowanie…",
   "runs.verifying": "weryfikacja…",
   "runs.folderBusy": "Czeka: inna rozmowa lub uruchomienie pracuje w tym folderze",
+  "runs.alsoRunning": "+{n} działa gdzie indziej",
   "runs.doneOk": "gotowe: zaliczony",
   "runs.doneFail": "gotowe: nieudany",
   "runs.pauseOnTaint":
@@ -14547,7 +14556,7 @@ const pl: Dict = {
   "code.chat.verdict.revertFailed":
     "Nie udało się cofnąć — tamtego zrzutu już nie ma.",
   "code.chat.verdict.fix": "Niech agent spróbuje to naprawić",
-  "code.chat.verdict.fixBusy": "Jedno uruchomienie już trwa; naprawa może ruszyć, gdy się skończy",
+  "code.chat.verdict.fixBusy": "W tym projekcie trwa już uruchomienie; naprawa może ruszyć, gdy się skończy",
   "code.window.open": "Otwórz w nowym oknie",
   "code.window.openHint": "Przenieś tę rozmowę do osobnego okna i zacznij tu kolejną",
   "code.window.unreadable": "Nie udało się odczytać tej rozmowy. Mogła zostać usunięta.",
@@ -15814,6 +15823,7 @@ const ru: Dict = {
   "runs.planning": "планирует…",
   "runs.verifying": "проверяет…",
   "runs.folderBusy": "Ждёт: в этой папке работает другой разговор или запуск",
+  "runs.alsoRunning": "+{n} идут в других проектах",
   "runs.doneOk": "готово: пройден",
   "runs.doneFail": "готово: провален",
   "runs.pauseOnTaint":
@@ -16230,7 +16240,7 @@ const ru: Dict = {
   "code.chat.verdict.revertFailed":
     "Не удалось отменить — этого снимка больше нет.",
   "code.chat.verdict.fix": "Дать агенту попробовать это починить",
-  "code.chat.verdict.fixBusy": "Один запуск уже идёт; исправление начнётся, когда он закончится",
+  "code.chat.verdict.fixBusy": "В этом проекте уже идёт запуск; исправление начнётся, когда он закончится",
   "code.window.open": "Открыть в новом окне",
   "code.window.openHint": "Оставить этот разговор в отдельном окне и начать здесь другой",
   "code.window.unreadable": "Не удалось прочитать этот разговор. Возможно, он был удалён.",

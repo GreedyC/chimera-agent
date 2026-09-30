@@ -356,7 +356,8 @@ export function Code() {
   // This is strictly WIDER than what it replaces: the session also sees runs launched from the Work
   // screen, which the local flag never did — so the conversation now refuses to send while ANY run
   // is writing in this workspace, not just one started here.
-  const run = useRunSession();
+  // This project's run: runs work in several projects at once, one per project.
+  const run = useRunSession(workspace);
   // Only when the run is in THIS project. A run elsewhere cannot race this workspace, and
   // blocking on it would be a lie about why. A run with no workspace still blocks: not
   // knowing which directory it is editing is a reason to be careful, not a reason to allow.
@@ -652,7 +653,7 @@ export function Code() {
             onBatch={(tasks) => setBatch({ tasks, at: Date.now() })}
             onEdited={refreshOpenFile}
             busyElsewhere={runBusy}
-            runLive={run.running}
+            runLive={runBusy}
             posture={posture}
             provider={provider}
             model={model}

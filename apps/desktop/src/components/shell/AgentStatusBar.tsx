@@ -60,6 +60,12 @@ export function AgentStatusBar({ onOpenUsage }: { onOpenUsage?: () => void }) {
         <>
           <Separator />
           <span className="truncate">{run.task}</span>
+          {/* Runs work in several projects at once: the bar names the latest, and counts the rest. */}
+          {run.alsoRunning > 0 ? (
+            <span className="shrink-0 text-muted-foreground">
+              {t("runs.alsoRunning", { n: String(run.alsoRunning) })}
+            </span>
+          ) : null}
         </>
       ) : (
         lastTool && (

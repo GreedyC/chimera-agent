@@ -48,7 +48,8 @@ export function RunLauncher({
 }) {
   const t = useT();
   const qc = useQueryClient();
-  const run = useRunSession();
+  // This project's run: another project's run no longer stands in the way of starting one here.
+  const run = useRunSession(workspace);
   // The plan the user has read, and possibly rewritten. Empty means "plan for yourself", which is
   // what every run did before this and still does when nobody asks to see it first.
   const [plan, setPlan] = useState("");

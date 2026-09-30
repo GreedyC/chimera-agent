@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **Autonomous runs in parallel, one per project.** A run in one project no longer blocks starting a run, or
+  the verdict's fix, in another. A second run in the same project is still refused, and the status bar names
+  the latest run with a count of the others.
+- **A conversation can open in a window of its own, so two are worked at once.** "Open in a new window" in
+  the conversation's header draws that one conversation in its own window, in its own project, with its own
+  composer. The window reads the layout and writes none of it, offers no further window, and a second click
+  focuses it. Checked live in the desktop shell.
+- **Turns running at once warn about what they spend together.** Each turn already warned at its own
+  US$ 1; five running at once could spend five times that without a word. When two or more running turns
+  together cross a multiple of the warning amount, each says so. It is a warning, not a stop; a ceiling the
+  person typed is still that turn's own.
+- **Opening the desktop app again brings the open window forward.** A second launch hands over to the
+  running app instead of starting a second backend on the same data folder.
 - **The dynamic screen, phase 7: any panel of the right panel opens in a window of its own.**
   - **How:** "To a window of its own" in a panel's move menu. The panel leaves its dock while the window is
     open and comes back however the window goes: its own "Bring back" button, the tray in the status bar
@@ -35,8 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     - with no server, the local copy keeps working.
   - **The editor's sidebar** follows the left region like the conversation list: it hides from its own
     button, leaves a tab on its edge and slides back in.
-- **Opening the desktop app again brings the open window forward.** A second launch hands over to the
-  running app instead of starting a second backend on the same data folder.
 - **The dynamic screen, phase 5: maximise any panel, focus mode, and layouts one command away.**
   - **Maximise:** the file viewer and the tools, fusion, background-jobs and machine panels maximise from a
     button in their header, or with ⌘⇧M / Ctrl+Shift+M on the panel that holds focus. Escape restores from
@@ -66,14 +77,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     note, with the no-sandbox warning, is outside them and stays on screen.
   - A panel whose content has nothing to say (Fusion without a fused turn, no background jobs) hides its frame
     too. The machine panel keeps its old title. Eleven translation keys in all ten languages.
-- **Turns running at once warn about what they spend together.** Each turn already warned at its own
-  US$ 1; five running at once could spend five times that without a word. When two or more running turns
-  together cross a multiple of the warning amount, each says so. It is a warning, not a stop; a ceiling the
-  person typed is still that turn's own.
-- **A conversation can open in a window of its own, so two are worked at once.** "Open in a new window" in
-  the conversation's header draws that one conversation in its own window, in its own project, with its own
-  composer. The window reads the layout and writes none of it, offers no further window, and a second click
-  focuses it. Checked live in the desktop shell.
 - **The dynamic screen, phase 3: every card of the conversation minimises, closes and comes back.**
   - **What:** the tool list, the task list, warnings, the browser view, each file's changes, the verification
     verdict, the receipt, a failed turn's error and the approval card each carry three controls in their corner
@@ -310,18 +313,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- **Two catalogue rows caught up with what the provider serves.**
-  - **What was wrong:** the live check on main had been red since 2026-09-29. `deepseek-v4-flash-0731` was priced
-    0.022/0.32 while the index quotes 0.0045/1.28, and `llama-3.3-70b-instruct` promised a 131k window its provider
-    serves at 65,536. Both reach the user: the price prices a turn's receipt, and the window sets when a conversation
-    compacts.
-  - **What happens now:** both rows carry the live figures; the old price stays in `also_seen`.
-- **A conversation deleted while one of its turns runs stays deleted.**
-  - **What was wrong:** deleting a conversation (or a project's conversations) did not look at running turns.
-    The turn went on and, when it finished, saved the conversation again, so a conversation the person had
-    deleted came back.
-  - **What happens now:** deleting stops the turn with the same signal as Stop. That turn writes nothing more
-    of the conversation: no transcript, no receipt, no history index entry.
+- **An autonomous run waits for its folder the way a coding turn does.**
+  - **What was wrong:** turns took one lock per folder; runs took none, so another window or client could
+    start a run beside a turn, or a second run, in the same folder.
+  - **What happens now:** turns and runs share one lock per folder. A run whose folder is busy says so on
+    its feed and waits; Stop still reaches it while it waits.
+- **"Let the agent try to fix it" says why it cannot start.** With a run already working, the button handed
+  the fix to a session that refused it without a word, and the click did nothing. It is now disabled, with
+  a line saying why.
+- **A conversation holds at most four turns running or waiting.** A share link reaches the guest route over
+  the network, and nothing bounded how many turns a guest could pile onto one conversation, each a thread
+  waiting on its lock. A fifth is refused with 429 before anything is built or announced.
+- **The Code screen comes back to the conversation you were in, per project.**
+  - **What was wrong:** leaving the Code screen and coming back, or switching project and back, landed on a
+    blank new conversation. The conversation was still in the list; the screen had forgotten it.
+  - **What happens now:** the last conversation of each project is remembered and reopened. New
+    conversation forgets it, and so does deleting it from the sidebar.
+- **One Chimera Desktop server per data folder.**
+  - **What was wrong:** a second copy of the app (a second click on the icon, or `chimera app` in a terminal)
+    could serve the same data folder. Each server keeps in memory the turns it runs and the folders they
+    edit, so two of them each believed they were alone: the one-writer-per-folder rule held only inside
+    each, and Stop in one window could not reach a turn the other ran.
+  - **What happens now:** the server claims its data folder before building anything, with a lock the OS
+    drops when the process ends. A second server on the same folder says where the first one is and exits
+    with code 3.
+- **A long turn followed late comes back whole, and idle conversations stop holding frames.**
+  - **What was wrong:** each conversation kept its last 4000 live frames, and a coding turn streams a frame
+    per token. A screen that came back to a long turn got its tail: no opening frame to draw the row on,
+    and the answer without its start. Every conversation opened in the process also kept its frames until
+    the app closed.
+  - **What happens now:** a replay that asks for frames the buffer dropped gets, for each turn still in it,
+    the opening and the missing frames back from the run log, which records the session number of every
+    frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
+    goes on), and a deleted conversation's are dropped.
 - **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
   - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
     closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
@@ -356,6 +380,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **A conversation holds at most four turns running or waiting.** A share link reaches the guest route over
   the network, and nothing bounded how many turns a guest could pile onto one conversation, each a thread
   waiting on its lock. A fifth is refused with 429 before anything is built or announced.
+- **A conversation deleted while one of its turns runs stays deleted.**
+  - **What was wrong:** deleting a conversation (or a project's conversations) did not look at running turns.
+    The turn went on and, when it finished, saved the conversation again, so a conversation the person had
+    deleted came back.
+  - **What happens now:** deleting stops the turn with the same signal as Stop. That turn writes nothing more
+    of the conversation: no transcript, no receipt, no history index entry.
 - **A question waiting for a person says which project and conversation asked it.**
   - **What was wrong:** the status bar's list of waiting questions showed every conversation's questions in
     one dialog, and each said only what it would run and why. With two turns in two projects both asking to
@@ -387,15 +417,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - **What turns in one folder do now:** they take turns, background works included, as works already did
     among themselves. A turn that waits is told why. Stop still reaches it while it waits, and it never
     starts. Different folders still run at once.
-- **A long turn followed late comes back whole, and idle conversations stop holding frames.**
-  - **What was wrong:** each conversation kept its last 4000 live frames, and a coding turn streams a frame
-    per token. A screen that came back to a long turn got its tail: no opening frame to draw the row on,
-    and the answer without its start. Every conversation opened in the process also kept its frames until
-    the app closed.
-  - **What happens now:** a replay that asks for frames the buffer dropped gets, for each turn still in it,
-    the opening and the missing frames back from the run log, which records the session number of every
-    frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
-    goes on), and a deleted conversation's are dropped.
 - **Two turns on the same conversation both stay in it.**
   - **What was wrong:** the coding route loaded the conversation before taking its lock and saved it inside
     the lock. A second turn on the same conversation (the owner and a guest on a shared link, or two tabs)
@@ -418,9 +439,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     reached nothing.
   - **Where it applies:** the Stop button uses it for a turn the screen started and for one it was following
     after coming back to the conversation.
-- **"Let the agent try to fix it" says why it cannot start.** With a run already working, the button handed
-  the fix to a session that refused it without a word, and the click did nothing. It is now disabled, with
-  a line saying why.
 - **External links open in the system browser in the desktop app.**
   - **What was wrong:** the links that open a new window (the repository, the releases, the MCP and skill
     catalogues) did nothing in the desktop app. The runtime refuses every new window unless told otherwise, and
@@ -433,20 +451,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - **New dependency:** the `open` crate, 5.4.4. It is what Tauri's own opener plugin uses underneath, used
     here from Rust only; the plugin would add webview commands this app does not grant.
 - **The local decider no longer judges a truncated state.** Ollama keeps only half of its context window for the prompt and cuts the rest with no error. The default window here was 4,096 tokens, so the local System One model read at most ~2,050 tokens (about 11,000 characters of prose), while the verified-answers check sends attached sources of up to 14,000 characters. Every call now asks for a 16,384-token window (8,192 tokens of prompt), and a prompt that still fills it is a halt: the answer ships unverified, never judged on text the model did not see. Measured before the change on this backend (`bench/jevbench_local`): 231 of 231 answers identical with the larger window.
-- **One Chimera Desktop server per data folder.**
-  - **What was wrong:** a second copy of the app (a second click on the icon, or `chimera app` in a terminal)
-    could serve the same data folder. Each server keeps in memory the turns it runs and the folders they
-    edit, so two of them each believed they were alone: the one-writer-per-folder rule held only inside
-    each, and Stop in one window could not reach a turn the other ran.
-  - **What happens now:** the server claims its data folder before building anything, with a lock the OS
-    drops when the process ends. A second server on the same folder says where the first one is and exits
-    with code 3.
 - **`chimera decide` exits 1 when a question fails.** It exited 0 even when the backend was down or the state overflowed, so a CI step or a script could not tell "answered" from "failed". Now: 0 every question answered; 1 at least one failed, after the JSON is printed (or every JSONL line written) in full; 2 usage, or a question the linter refuses.
-- **An autonomous run waits for its folder the way a coding turn does.**
-  - **What was wrong:** turns took one lock per folder; runs took none, so another window or client could
-    start a run beside a turn, or a second run, in the same folder.
-  - **What happens now:** turns and runs share one lock per folder. A run whose folder is busy says so on
-    its feed and waits; Stop still reaches it while it waits.
 
 ### Changed
 
