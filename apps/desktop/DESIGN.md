@@ -236,6 +236,13 @@ stays mounted and can tell "shown again" from "the screen just opened".
 from the layout, dragged on `shell/Splitter.tsx` (the WAI-ARIA window splitter: arrows move 16px,
 Home and a double click restore the starting width). One drag is one step to undo.
 
+**Phase 3: cards.** Every card of the conversation carries the same three controls in its corner
+(`code/CardChrome.tsx`), rather than a new title bar that would repeat the heading each card already
+has: minimise to one line, minimise the whole kind (kept in the layout), close. Closing is for this
+screen only, with an Undo (the toast's one action) and a "hidden in this turn" chip where the card was.
+The approval card, spend warnings and a failed turn's error keep a disabled close button whose tooltip
+says why.
+
 **Dependencies.** `@dnd-kit` (phase 4: dragging between zones by keyboard, with announcements) was
 approved to join the four Radix packages, for the reason given above: it buys something harder than a
 hundred lines. `react-resizable-panels` was approved for phase 2 and **not adopted**: it sizes sibling

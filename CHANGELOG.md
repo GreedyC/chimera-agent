@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **The dynamic screen, phase 3: every card of the conversation minimises, closes and comes back.**
+  - **What:** the tool list, the task list, warnings, the browser view, each file's changes, the verification
+    verdict, the receipt, a failed turn's error and the approval card each carry three controls in their corner
+    (`code/CardChrome.tsx`): minimise to one line, "always minimise this kind" (kept in the layout), and close.
+  - **Closing is for this screen only:** the card disappears from that turn with an Undo in a toast, and the turn
+    shows "Hidden in this turn: N · show" where it was. Nothing is deleted or stored; reopening the conversation
+    shows its cards.
+  - **Three kinds minimise and never close:** the approval card, spend and limit warnings, and a failed turn's
+    error. Their close button stays, disabled, with the reason as its tooltip. A new approval always opens,
+    whatever the last one was left as.
+  - The toast gained one optional action, for undoing what the person just did, and `useOptionalToast`, which does
+    nothing where no provider is mounted: the Undo is a shortcut on top of the chip, not the only way back.
+    Twenty-two translation keys in all ten languages.
 - **The dynamic screen, phase 2: drag the widths of the conversation list, the right panel and the file viewer.**
   - **How:** a thin line between the columns (`shell/Splitter.tsx`) that can be dragged, moved 16 px at a time
     with the arrow keys once focused, and put back to its starting width with Home or a double click. It is
