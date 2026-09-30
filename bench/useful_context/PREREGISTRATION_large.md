@@ -180,6 +180,33 @@ items already run stay in `results/glm53flash_main_stopped.json` and are not mer
   about the lower rungs either, so going on to option B (512k as the top) is then a new decision for the owner.
 - The relaunch writes `results/glm53flash_main.json`; the stopped run's three items are not reused.
 
+## Amendment — 2026-09-30, option A did not reach the cause; option C was probed and fails too
+
+**The relaunch under option A** (`results/glm53flash_main.json`, 36 rows, US$ 0.3166 recorded) ran four items
+and was ended by the registered stop rule (4/36 errored). Every rung from 4k to 512k answered in all four;
+**every 900k call errored after 302–303 s**, not after the 2,400 s this side now waits.
+
+**What that showed.** Our timeout was never the one that fired. A 4k call with `timeout=1` failed after 1 s
+with *"Connection timed out after 1.0 seconds"*: the client honours what it is given. The 900k calls fail
+with a different message, *"A Timeout Occurred"*, always at ~300 s. The cut is on the server side (the router
+or the provider), and it also explains the earlier 953–955 s errors: three attempts of ~300 s each plus the
+15 s and 30 s pauses between them. The pilot's five fast 900k answers were cache hits that began answering
+inside those 300 s (see the amendment above). **The prediction written for option A** ("if an uncached 900k
+prefill outlasts 2,400 s…") named the wrong mechanism, and is corrected here rather than left standing.
+
+**Option C, probed once** (owner's choice, 2026-09-29; `results/glm53flash_stream_probe.json`): the same
+uncached 900k prompt (pilot item P000 at 4.35 chars/token, never sent before), **streamed**. It failed after
+302.9 s with **zero chunks** received, the router reporting `error_type: timeout`. So this route sends nothing
+while it prefills, streamed or not, and an uncached 900k prompt cannot be served on it at all.
+
+**Reading for the 900k rung: not measurable on this route.** It is not a finding about the model's useful
+context; it is a finding about this endpoint's server-side limit (~300 s to the first byte).
+
+**What is left, for the owner to decide:** option B, 512k as the top rung, reading the answer as a lower bound
+at 512k. Every call to 512k answered in both main runs (174–207 s). Spend so far: pilot US$ 0.1161, probes
+≈ US$ 0.0227 + the stream probe, main runs US$ 0.1366 + US$ 0.3166 recorded; the abandoned top-rung calls
+(at most ~14 by now) are the part the files cannot show.
+
 ## What this cannot show
 
 - Other task shapes; the limits of `PREREGISTRATION.md` apply.
