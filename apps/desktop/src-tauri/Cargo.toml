@@ -32,3 +32,8 @@ sys-locale = "0.3"
 # origin is handed to the OS from there. `open` is what tauri-plugin-opener itself uses underneath;
 # the plugin would add webview commands this app does not grant.
 open = "5.4.4"
+# One app per machine account. A second copy started a second backend on the same data folder, which
+# that backend now refuses (exit 3, `chimera/core/instance.py`), leaving the second click with an
+# error dialog. With the plugin the second launch never gets that far: it hands over to the running
+# app, which brings its window forward.
+tauri-plugin-single-instance = "2"

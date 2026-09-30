@@ -811,6 +811,28 @@ mod tests {
         format!("{antes}{depois}")
     }
 
+    /// A second launch hands over to the running app, and it does so before anything else: the
+    /// single-instance plugin is the first one registered, and what it does is bring the main
+    /// window forward. Without it a second click started a second backend on the same data folder,
+    /// which the backend now refuses — so the second click ended in an error dialog.
+    #[test]
+    fn a_second_launch_hands_over_before_anything_else_runs() {
+        let fonte = producao();
+        let (_, main) = fonte.split_once("fn main() {").expect("main exists");
+        let primeiro = main
+            .find(".plugin(")
+            .expect("main registers plugins");
+        assert!(
+            main[primeiro..].starts_with(".plugin(tauri_plugin_single_instance::init("),
+            "the single-instance plugin is not the first one registered"
+        );
+        let (_, trazer) = fonte.split_once("fn bring_forward(").expect("bring_forward exists");
+        let corpo = trazer.split_once("\n}\n").map_or("", |(c, _)| c);
+        for passo in ["get_webview_window(\"main\")", "unminimize()", "show()", "set_focus()"] {
+            assert!(corpo.contains(passo), "bring_forward no longer calls {passo}");
+        }
+    }
+
     use std::net::TcpListener;
     use std::path::{Path, PathBuf};
     use std::process::{Child, Command, Stdio};
@@ -2288,8 +2310,22 @@ async fn check_for_update(
     app.restart();
 }
 
+/// Bring the main window forward: what a second launch of the app does instead of starting a
+/// second backend on the same data folder.
+fn bring_forward(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
 fn main() {
     tauri::Builder::default()
+        // First, as the plugin requires: a second launch must hand over before anything else runs,
+        // the backend above all. Two backends on one data folder each believed they were alone
+        // (R12 of the review of 2026-09-30), and the backend now refuses the second one.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| bring_forward(app)))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {

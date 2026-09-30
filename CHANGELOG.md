@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **Opening the desktop app again brings the open window forward.** A second launch hands over to the
+  running app instead of starting a second backend on the same data folder.
 - **The dynamic screen, phase 7: any panel of the right panel opens in a window of its own.**
   - **How:** "To a window of its own" in a panel's move menu. The panel leaves its dock while the window is
     open and comes back however the window goes: its own "Bring back" button, the tray in the status bar
@@ -306,6 +308,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     serves at 65,536. Both reach the user: the price prices a turn's receipt, and the window sets when a conversation
     compacts.
   - **What happens now:** both rows carry the live figures; the old price stays in `also_seen`.
+- **One Chimera Desktop server per data folder.**
+  - **What was wrong:** a second copy of the app (a second click on the icon, or `chimera app` in a terminal)
+    could serve the same data folder. Each server keeps in memory the turns it runs and the folders they
+    edit, so two of them each believed they were alone: the one-writer-per-folder rule held only inside
+    each, and Stop in one window could not reach a turn the other ran.
+  - **What happens now:** the server claims its data folder before building anything, with a lock the OS
+    drops when the process ends. A second server on the same folder says where the first one is and exits
+    with code 3.
+- **A long turn followed late comes back whole, and idle conversations stop holding frames.**
+  - **What was wrong:** each conversation kept its last 4000 live frames, and a coding turn streams a frame
+    per token. A screen that came back to a long turn got its tail: no opening frame to draw the row on,
+    and the answer without its start. Every conversation opened in the process also kept its frames until
+    the app closed.
+  - **What happens now:** a replay that asks for frames the buffer dropped gets, for each turn still in it,
+    the opening and the missing frames back from the run log, which records the session number of every
+    frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
+    goes on), and a deleted conversation's are dropped.
+- **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
+  - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
+    closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
+    sweep had the same blind spot for a turn longer than an hour.
+  - **What happens now:** a turn is busy while it prompts, and only idle agents are closed. When every agent
+    is busy, the registry goes over the limit for a while, and logs it, rather than killing work.
 - **A conversation deleted while one of its turns runs stays deleted.**
   - **What was wrong:** deleting a conversation (or a project's conversations) did not look at running turns.
     The turn went on and, when it finished, saved the conversation again, so a conversation the person had
