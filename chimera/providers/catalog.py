@@ -163,6 +163,11 @@ CATALOG: tuple[CatalogEntry, ...] = (
     CatalogEntry(
         "openrouter/z-ai/glm-5.3-flash", "mid", "Zhipu (GLM)",
         0.045, 0.60, tools=True, context_k=1048, also_seen=((0.075, 0.25), (0.15, 0.50)),
+        # bench/useful_context (2026-09-30, RESULTS_glm53flash.md): 54 paired agent transcripts on the
+        # Novita fp8 route — 54/54 at 4k, 53/54 at 512k (median 512,041 tokens), every rung within −10 pp
+        # of 4k. 512 was the top of the ladder that was run, so it is a lower bound. The registered
+        # route (Sail Research) could not serve the run: it cuts at ~300 s and refused 512k under load.
+        useful_k=512,
         notes="a third-party agentic index of 58.2, within a point of claude-opus-5 at 33x the\n"
         "        input price. Read 0.075/0.25 here until the live check on 2026-09-10 found it\n"
         "        DOUBLED to 0.15/0.50 — still the best price-to-index in this tier, by half the\n"

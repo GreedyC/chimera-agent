@@ -193,6 +193,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **`glm-5.3-flash` now compacts at the context it was measured to read, 512k, instead of the 64k kept for
+  unmeasured models.**
+  - **The measurement:** `bench/useful_context` (`RESULTS_glm53flash.md`) ran 54 paired agent transcripts on the
+    Novita route. It read 54/54 at 4k and 53/54 at 512k, with every rung within the registered margin. 512k was
+    the top of the ladder, so the value is a lower bound.
+  - **What changes:** the catalogue row carries `useful_k = 512`. A surface that caps unmeasured models (the
+    coding route) now budgets this model at 512,000 tokens rather than 64,000, and compacts near 409,000.
+  - **Adopted in its own change,** as the pre-registration requires.
 - **A decision the spend/rate gate refused now raises an approval card instead of falling to the default.**
   - **Before:** a halt of any kind left the REVIEW band without a verdict and the kernel went on to
     its default, which is ALLOW. That is right for a model that was down (it said nothing about the
