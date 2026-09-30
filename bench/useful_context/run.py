@@ -58,12 +58,33 @@ PROFILES: dict[str, dict[str, Any]] = {
         # Amendment 2: the standard route bills a prompt as a cache write (1.25x); flex would read <= 0.63x, fast >= 2x.
         "TIER_BAND": (0.8, 1.35),
     },
+    # PREREGISTRATION_large.md. Both route to the cheapest fp8 endpoint serving 1,048,576 tokens on
+    # the listing read 2026-09-27; both take a temperature, so 0.0 is sent as in the v4-flash run.
+    "glm53flash": {
+        "MODEL": "openrouter/z-ai/glm-5.3-flash",
+        "PROVIDER": "Sail Research",
+        "PRICE_IN": 0.045, "PRICE_CACHED": 0.0285, "PRICE_OUT": 0.60,
+        "LADDER": (4_000, 16_000, 32_000, 64_000, 128_000, 256_000, 512_000, 900_000),
+        "TIER_BAND": (0.8, 1.35),
+        "CORPUS_ROOTS": ("chimera", "tests"),
+    },
+    "glm53": {
+        "MODEL": "openrouter/z-ai/glm-5.3",
+        "PROVIDER": "Baidu",
+        "PRICE_IN": 0.3556, "PRICE_CACHED": 0.06604, "PRICE_OUT": 1.1176,
+        "LADDER": (4_000, 16_000, 32_000, 64_000, 128_000, 256_000, 512_000),
+        "TIER_BAND": (0.8, 1.35),
+        "CORPUS_ROOTS": ("chimera", "tests"),
+    },
 }
 
 
 def use_profile(name: str) -> None:
     for key, value in PROFILES[name].items():
-        globals()[key] = value
+        if key == "CORPUS_ROOTS":
+            it.CORPUS_ROOTS = value  # the filler's source, which lives in items.py
+        else:
+            globals()[key] = value
 
 
 _lock = threading.Lock()
