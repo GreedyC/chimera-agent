@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import hljs from "highlight.js";
 import {
@@ -37,6 +37,7 @@ import {
 } from "@/components/code/RolesBar";
 import { SessionSidebar } from "@/components/code/SessionSidebar";
 import { EdgeTab, useRegionEnter } from "@/components/shell/RegionToggle";
+import { Splitter } from "@/components/shell/Splitter";
 import { HtmlPreview } from "@/components/code/HtmlPreview";
 import { ProjectPicker } from "@/components/code/ProjectPicker";
 import { useRunSession } from "@/lib/run-session";
@@ -535,7 +536,13 @@ export function Code() {
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {showSessions ? (
-        <div className={cn("flex min-h-0 shrink-0", sessionsEnter.className)} onAnimationEnd={sessionsEnter.onAnimationEnd}>
+        <>
+        {/* The width is the layout's (phase 2), dragged on the line beside it. */}
+        <div
+          className={cn("flex min-h-0 shrink-0", sessionsEnter.className)}
+          style={{ width: layout.regions.left.size ?? undefined }}
+          onAnimationEnd={sessionsEnter.onAnimationEnd}
+        >
         <SessionSidebar
           workspace={workspace}
           activeSession={sessionId}
@@ -557,6 +564,9 @@ export function Code() {
           onProject={switchProject}
         />
         </div>
+        {/* Only side by side: stacked below `lg`, there is no width between them to drag. */}
+        <Splitter region="left" grows="right" className="hidden lg:block" />
+        </>
         ) : (
           // Hidden, the list leaves a tab on the edge it was on. A running turn stays findable from
           // the status bar and, the moment the list is back, by its dot.
@@ -682,12 +692,20 @@ export function Code() {
         </main>
         {/* The viewer is a consequence of opening a file, not a permanent third of the window. */}
         {/* `min-w-0` for the same reason as the conversation column beside it: a fixed
-            `lg:w-md` is a BASIS, not a ceiling, and a flex child without it will not shrink —
+            width is a BASIS, not a ceiling, and a flex child without it will not shrink —
             it overflowed the row instead and painted across the activity panel. */}
         {openFile ? (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col border-hairline lg:w-md lg:flex-none lg:shrink-0 lg:border-l">
+          <>
+          <Splitter region="viewer" grows="left" className="hidden lg:block" />
+          {/* The width comes from the layout through a variable, because it applies only side by side:
+              below `lg` the viewer REPLACES the conversation and takes the whole column. */}
+          <div
+            className="flex min-h-0 min-w-0 flex-1 flex-col border-hairline lg:w-(--viewer-w) lg:flex-none lg:shrink-0 lg:border-l"
+            style={{ "--viewer-w": `${layout.regions.viewer.size ?? 448}px` } as CSSProperties}
+          >
             <Viewer workspace={workspace} path={openFile} />
           </div>
+          </>
         ) : null}
       </div>
     </div>

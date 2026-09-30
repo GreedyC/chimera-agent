@@ -5,7 +5,7 @@ import { focusRing } from "@/components/ui/focus";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout/context";
-import type { Region } from "@/lib/layout/model";
+import type { HideableRegion } from "@/lib/layout/model";
 import { cn } from "@/lib/utils";
 
 /**
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
  * Focus is handed to the tab when its region is hidden: the button that was focused has just been
  * removed from the page, and a keyboard user left on `<body>` starts again from the top.
  */
-type Side = Exclude<Region, "bottom">;
+type Side = Exclude<HideableRegion, "bottom">;
 
 const HIDE_KEY: Record<Side, string> = {
   left: "layout.hide.left",

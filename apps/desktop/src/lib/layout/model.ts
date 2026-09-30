@@ -21,8 +21,15 @@
 /** Where a panel can sit. `center` holds the conversation and the file viewer. */
 export type Zone = "left" | "center" | "right" | "bottom" | "composer";
 
-/** The regions that can be shown or hidden as a whole. */
-export type Region = "rail" | "left" | "right" | "bottom";
+/** The regions of the screen. All but `viewer` can be shown or hidden as a whole; the file viewer
+ *  comes and goes with the file that is open, so the layout keeps only its width. */
+export type Region = "rail" | "left" | "right" | "bottom" | "viewer";
+
+/** The regions the layout itself hides and shows. */
+export type HideableRegion = Exclude<Region, "viewer">;
+
+/** The regions with a width the person can drag. */
+export type SizedRegion = Exclude<Region, "rail">;
 
 export type Mode = "open" | "minimized" | "closed";
 
@@ -85,10 +92,12 @@ export const NEVER_CLOSED: ReadonlySet<CardKind> = new Set<CardKind>(["approval"
 const DROP_ZONES: ReadonlySet<Zone> = new Set<Zone>(["left", "right", "bottom"]);
 
 /** Sizes in pixels, clamped so a region can neither vanish by dragging nor swallow the window. */
-export const SIZE_LIMITS: Record<Exclude<Region, "rail">, { min: number; max: number; initial: number }> = {
+export const SIZE_LIMITS: Record<SizedRegion, { min: number; max: number; initial: number }> = {
   left: { min: 180, max: 420, initial: 240 },
   right: { min: 220, max: 480, initial: 288 },
   bottom: { min: 96, max: 400, initial: 160 },
+  // `initial` is Tailwind's `w-md`, the width the viewer had before it could be dragged.
+  viewer: { min: 280, max: 900, initial: 448 },
 };
 
 export interface PanelState {
@@ -118,8 +127,8 @@ export interface Layout extends LayoutCore {
 
 export type LayoutAction =
   | { type: "set-mode"; panel: PanelId; mode: Mode }
-  | { type: "set-region"; region: Region; visible: boolean }
-  | { type: "resize"; region: Exclude<Region, "rail">; size: number }
+  | { type: "set-region"; region: HideableRegion; visible: boolean }
+  | { type: "resize"; region: SizedRegion; size: number }
   | { type: "move"; panel: PanelId; zone: Zone; index: number }
   | { type: "maximize"; panel: PanelId | null }
   | { type: "toggle-focus" }
@@ -146,6 +155,7 @@ export function defaultLayout(): Layout {
       right: { visible: true, size: SIZE_LIMITS.right.initial },
       // Empty until something is dragged to it; the region itself is on.
       bottom: { visible: true, size: SIZE_LIMITS.bottom.initial },
+      viewer: { visible: true, size: SIZE_LIMITS.viewer.initial },
     },
     panels,
     cards,
@@ -232,6 +242,8 @@ export function applyLayout(layout: Layout, action: LayoutAction): Layout {
       return { ...layout, panels, maximized };
     }
     case "set-region": {
+      // The type already keeps `viewer` out; this keeps it out of a value that crossed a JSON boundary.
+      if ((action.region as Region) === "viewer") return layout;
       if (layout.regions[action.region].visible === action.visible) return layout;
       return {
         ...layout,

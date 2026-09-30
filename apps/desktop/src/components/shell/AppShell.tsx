@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import { AgentStatusBar } from "@/components/shell/AgentStatusBar";
 import { EdgeTab, useRegionEnter } from "@/components/shell/RegionToggle";
+import { Splitter } from "@/components/shell/Splitter";
 import { focusRing } from "@/components/ui/focus";
 import { useT } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout/context";
@@ -112,13 +113,18 @@ export function AppShell({
 
         {inspector &&
           (showInspector ? (
-            <div
-              {...(ignite && { "data-ignite": "inspector" })}
-              className={cn("flex shrink-0", inspectorEnter.className)}
-              onAnimationEnd={inspectorEnter.onAnimationEnd}
-            >
-              {inspector}
-            </div>
+            <>
+              <Splitter region="right" grows="left" />
+              <div
+                {...(ignite && { "data-ignite": "inspector" })}
+                className={cn("flex shrink-0", inspectorEnter.className)}
+                // The width is the layout's (phase 2); the panel inside fills it.
+                style={{ width: layout.regions.right.size ?? undefined }}
+                onAnimationEnd={inspectorEnter.onAnimationEnd}
+              >
+                {inspector}
+              </div>
+            </>
           ) : (
             // The agent's state does not go with it: the status bar below keeps showing it.
             <EdgeTab side="right" />
