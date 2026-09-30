@@ -36,7 +36,7 @@ export function Activity() {
         ? t("activity.costUnavailable")
         : `~ $${report.usd.toFixed(4)}`;
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col overflow-y-auto border-l border-hairline bg-card/40">
+    <aside className="flex h-full w-full shrink-0 flex-col overflow-y-auto border-l border-hairline bg-card/40">
       <div className="flex items-center gap-2 px-4 py-3.5">
         {/* Breathes only while something is happening. The glow is a static box-shadow and the
             pulse animates opacity — animating the shadow itself would repaint a large blurred

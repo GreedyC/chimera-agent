@@ -191,7 +191,7 @@ export function SessionSidebar({
     // this and the file viewer ate the whole row and the conversation's `flex-1` resolved to zero:
     // measured at 1000x900 it had height 0 at y=1068, off a 900px window, and the shell scrolled to
     // 1424. The list scrolls inside itself already, so a cap costs only how many rows show at once.
-    <aside className="flex max-h-40 min-h-0 w-60 shrink-0 flex-col border-r border-hairline lg:max-h-none">
+    <aside className="flex max-h-40 min-h-0 w-full shrink-0 flex-col border-r border-hairline lg:max-h-none">
       <div className="flex items-center gap-1 p-2">
         <Button size="sm" variant="ghost" className="flex-1 justify-start" onClick={onNew}>
           <Plus className="h-4 w-4" /> {t("code.sessions.new")}

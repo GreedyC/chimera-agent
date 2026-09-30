@@ -12,6 +12,9 @@ interface LayoutApi {
   dispatch: (action: LayoutAction) => boolean;
   /** Put back the layout before the last applied action. */
   undo: () => void;
+  /** Mark the start of a new gesture, so the next resize is its own step to undo rather than the tail
+   *  of the previous drag of the same region. */
+  settle: () => void;
   canUndo: boolean;
   /** What the person hid, each with the action that brings it back. */
   hidden: HiddenItem[];
@@ -31,6 +34,8 @@ export function LayoutProvider({ children, initial }: { children: ReactNode; ini
   const [canUndo, setCanUndo] = useState(false);
   // The value `dispatch` compares against, so two actions in one tick see each other.
   const current = useRef(layout);
+  // The region the last action resized. A drag is one resize per pointer move; it is ONE step to undo.
+  const resizing = useRef<string | null>(null);
 
   useEffect(() => {
     saveLayout(layout);
@@ -39,7 +44,9 @@ export function LayoutProvider({ children, initial }: { children: ReactNode; ini
   const dispatch = useCallback((action: LayoutAction) => {
     const next = applyLayout(current.current, action);
     if (next === current.current) return false;
-    past.current = [...past.current, current.current].slice(-UNDO_DEPTH);
+    const continuing = action.type === "resize" && resizing.current === action.region;
+    resizing.current = action.type === "resize" ? action.region : null;
+    if (!continuing) past.current = [...past.current, current.current].slice(-UNDO_DEPTH);
     current.current = next;
     setLayout(next);
     setCanUndo(true);
@@ -47,6 +54,7 @@ export function LayoutProvider({ children, initial }: { children: ReactNode; ini
   }, []);
 
   const undo = useCallback(() => {
+    resizing.current = null;
     const previous = past.current.pop();
     if (!previous) return;
     current.current = previous;
@@ -54,9 +62,13 @@ export function LayoutProvider({ children, initial }: { children: ReactNode; ini
     setCanUndo(past.current.length > 0);
   }, []);
 
+  const settle = useCallback(() => {
+    resizing.current = null;
+  }, []);
+
   const value = useMemo<LayoutApi>(
-    () => ({ layout, dispatch, undo, canUndo, hidden: hiddenItems(layout) }),
-    [layout, dispatch, undo, canUndo],
+    () => ({ layout, dispatch, undo, settle, canUndo, hidden: hiddenItems(layout) }),
+    [layout, dispatch, undo, settle, canUndo],
   );
   return <LayoutContext.Provider value={value}>{children}</LayoutContext.Provider>;
 }

@@ -232,10 +232,16 @@ their own header, from `⌘B` / `⌘⌥B` and from the palette. A hidden region 
 from its edge at `duration-3`, only on coming back; its parent owns the animation, because the parent
 stays mounted and can tell "shown again" from "the screen just opened".
 
-**Dependencies, approved for later phases.** `react-resizable-panels` (phase 2: resizing with
-keyboard and ARIA) and `@dnd-kit` (phase 4: dragging between zones by keyboard, with announcements)
-join the four Radix packages, for the reason given above: each buys something harder than a hundred
-lines, the accessible version of the thing. Neither is installed yet.
+**Phase 2: widths.** The conversation list, the right panel and the file viewer take their widths
+from the layout, dragged on `shell/Splitter.tsx` (the WAI-ARIA window splitter: arrows move 16px,
+Home and a double click restore the starting width). One drag is one step to undo.
+
+**Dependencies.** `@dnd-kit` (phase 4: dragging between zones by keyboard, with announcements) was
+approved to join the four Radix packages, for the reason given above: it buys something harder than a
+hundred lines. `react-resizable-panels` was approved for phase 2 and **not adopted**: it sizes sibling
+panels inside one group, while here the right panel lives in the shell and the conversation list inside
+the Code screen, and the layout already keeps the widths, their limits and their storage. The splitter
+it would have bought is one small file.
 
 ### Information architecture
 

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **The dynamic screen, phase 2: drag the widths of the conversation list, the right panel and the file viewer.**
+  - **How:** a thin line between the columns (`shell/Splitter.tsx`) that can be dragged, moved 16 px at a time
+    with the arrow keys once focused, and put back to its starting width with Home or a double click. It is
+    the WAI-ARIA window-splitter pattern: a focusable `separator` that states the width it controls and its range.
+  - **The widths are the layout's,** clamped there (the list 180–420 px, the right panel 220–480, the viewer
+    280–900) and kept across launches. One drag is one step to undo, and a second drag is a second step.
+  - **Side by side only:** below 1024 px the Code screen stacks, and there is no width to drag between rows.
+  - **Not `react-resizable-panels`.** The plan named it and the owner approved it; building the phase showed it
+    does not fit, because it sizes sibling panels inside one group while the right panel lives in the shell and
+    the list inside the Code screen, and the layout already keeps the widths, their limits and their storage.
+    What it would have bought is the one small file above. `@dnd-kit` for phase 4 is unaffected.
+  - Three translation keys in all ten languages. `columns-can-shrink.test.ts` now reads the widths from the
+    layout, with the reason in the test: the roles did not change, only where the width comes from.
 - **The dynamic screen, phase 1: hide and show the left sidebar, the right panel and the screen rail.**
   - **How:** a button in the conversation list's header and in the right panel's header, ⌘B / Ctrl+B for the
     left and ⌘⌥B / Ctrl+Alt+B for the right (read by the physical key, so AltGr on a Brazilian keyboard still
