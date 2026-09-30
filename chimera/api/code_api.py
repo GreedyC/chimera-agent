@@ -68,6 +68,7 @@ from chimera.api.schemas import (
     CodeSessionOut,
     CodeSessionRawOut,
     CodeTurnFramesOut,
+    CodeTurnStopOut,
     DeletedCountOut,
     DictationOut,
     RunningTurnOut,
@@ -2106,10 +2107,20 @@ def register_code_api(
                     # snapshot above was already taken, the verifier below still runs, and the
                     # revert offer still applies — which is the entire reason this is a branch
                     # inside the existing turn rather than a second endpoint.
-                    from chimera.api.code_acp import done_payload, run_external_turn
+                    from chimera.api import code_acp
+                    from chimera.api.code_acp import done_payload
 
+                    # A Stop pressed on this turn cancels the external agent's prompt: its loop is
+                    # not ours, so the step-by-step stop signal cannot reach it.
+                    live_turns.on_stop(
+                        turn_id,
+                        lambda: code_acp.cancel_external_turn(
+                            provider=external, command=req.provider_command,
+                            workspace=ws, session_id=session_id,
+                        ),
+                    )
                     with lock_for(session_id):
-                        acp_result = run_external_turn(
+                        acp_result = code_acp.run_external_turn(
                             provider=external,
                             command=req.provider_command,
                             message=message,
@@ -2145,7 +2156,13 @@ def register_code_api(
                         on_todo=on_todo,
                         on_notice=on_notice,
                         images=images or None,
-                        should_stop=works.should_stop(background.id) if background is not None else None,
+                        # A background work is stopped through the works registry; every other
+                        # turn through its own signal, raised by POST /api/code/turns/{id}/stop.
+                        should_stop=(
+                            works.should_stop(background.id)
+                            if background is not None
+                            else live_turns.should_stop(turn_id)
+                        ),
                     )
                     if fused:
                         agent.backend = original_backend  # type: ignore[assignment]
@@ -2368,6 +2385,23 @@ def register_code_api(
         that the question failed; an error is an error.
         """
         return [_running_out(t) for t in live_turns.running()]
+
+    @app.post(
+        "/api/code/turns/{turn_id}/stop", dependencies=[guard], response_model=CodeTurnStopOut
+    )
+    def code_turn_stop(turn_id: str) -> dict[str, Any]:
+        """Stop a running coding turn on the server.
+
+        Until this existed the Stop button only aborted the screen's request: the turn went on
+        calling the model, editing files and spending until it finished by itself, while the screen
+        said it had stopped. The agent loop polls the signal once per step, so the step in progress
+        finishes first; an external agent's prompt is cancelled at once. 404 for a turn that is not
+        running, never 200-with-nothing: a stop that reached nothing must not read as one that
+        worked.
+        """
+        if not live_turns.request_stop(turn_id):
+            raise HTTPException(status_code=404, detail="no such running turn")
+        return {"turn_id": turn_id, "stopping": True}
 
     @app.get(
         "/api/code/turns/{turn_id}", dependencies=[guard], response_model=CodeTurnFramesOut

@@ -281,6 +281,13 @@ class CodeTurnFramesOut(BaseModel):
     seq: int
 
 
+class CodeTurnStopOut(BaseModel):
+    """A stop that reached a running coding turn. The turn ends at its next step, not at once."""
+
+    turn_id: str
+    stopping: bool
+
+
 class WorkOut(BaseModel):
     """A background work of a conversation (``chimera.api.works``): a coding turn run on the
     strong model while the conversation goes on."""

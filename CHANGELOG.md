@@ -300,6 +300,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Stop ends a coding turn on the server, not only the screen's view of it.**
+  - **What was wrong:** the Stop button aborted the screen's request and nothing else. There was no route to
+    stop a coding turn, and the stop signal reached the agent loop only for background works. A turn the
+    person had stopped went on calling the model, editing files and spending until it ended by itself, while
+    the screen said it had stopped. Found reading the code while mapping how several conversations run at once.
+  - **What happens now:** `POST /api/code/turns/{turn_id}/stop` raises the turn's stop signal. Chimera's own
+    loop checks it once per step, so the step in progress finishes first. An external agent's prompt (Claude
+    Code, Gemini over ACP) is cancelled at once. A turn that is not running answers 404, never a stop that
+    reached nothing.
+  - **Where it applies:** the Stop button uses it for a turn the screen started and for one it was following
+    after coming back to the conversation.
 - **External links open in the system browser in the desktop app.**
   - **What was wrong:** the links that open a new window (the repository, the releases, the MCP and skill
     catalogues) did nothing in the desktop app. The runtime refuses every new window unless told otherwise, and

@@ -32,6 +32,7 @@ import {
   listShares,
   listWorks,
   revertCodeTurn,
+  stopCodeTurn,
   stopWork,
   streamCodeTurn,
   streamSessionLive,
@@ -647,6 +648,9 @@ export function Conversation({
   // The turns THIS screen started. Their frames arrive twice — on the turn's own stream and on
   // the conversation's — and the second copy is dropped here rather than drawn as a guest's turn.
   const ownTurns = useRef<Set<string>>(new Set());
+  // The turn this screen started and is still waiting on, so Stop can end it on the server. Until
+  // Stop called the server, it only aborted this request, and the turn went on working and spending.
+  const currentTurnRef = useRef<string | null>(null);
   // How far the live stream has been read, so a reconnect asks for what came after.
   const liveSeq = useRef(0);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -1178,7 +1182,10 @@ export function Conversation({
         // Sent on every turn, not just the first: a client that drops it silently restarts the
         // conversation, and the symptom is only that the agent seems forgetful.
         onSession: (id, turnId) => {
-          if (turnId) ownTurns.current.add(turnId);
+          if (turnId) {
+            ownTurns.current.add(turnId);
+            currentTurnRef.current = turnId;
+          }
           // Invalidate on the FIRST turn's id, not on every turn: the sidebar lists conversations,
           // and a conversation that already exists in the list has not changed by gaining a message.
           if (id !== sessionId)
@@ -1238,6 +1245,7 @@ export function Conversation({
           );
         },
         onDone: (done) => {
+          currentTurnRef.current = null;
           if (done.stopped_reason === "work_started") {
             // Not a turn's receipt: nothing ran here. The exchange keeps the sentence above.
             publish({ status: "done", busy: false, report: null });
@@ -1302,6 +1310,7 @@ export function Conversation({
         // Agents.tsx, Tasks.tsx and editor/Runner.tsx in this same app all show it. Not a design
         // choice about noise; an inconsistency nobody noticed.
         onError: (message) => {
+          currentTurnRef.current = null;
           patchLast((e) => ({ ...e, failed: true, error: message }));
           publish({ status: "idle", busy: false });
           setBusy(false);
@@ -1326,10 +1335,15 @@ export function Conversation({
   /** Abandon the turn in flight. The model call cannot be un-made, but the stream stops arriving and
    *  the composer comes back — which is the difference between waiting and being stuck. */
   function abandon() {
+    // The turn itself, on the server: the one this screen started, or the one it was following.
+    // Asked before the view lets go of it. A 404 means it had already ended, which is no failure.
+    const turn = currentTurnRef.current ?? followingRef.current;
+    currentTurnRef.current = null;
+    if (turn) void stopCodeTurn(turn).catch(() => undefined);
     abortRef.current?.abort();
     abortRef.current = null;
-    // A turn this screen was only watching: nothing of its own to abort, so stopping is to stop
-    // watching, with the same meaning it has for a turn it started. The turn goes on, on the server.
+    // A turn this screen was only watching is stopped on the server above, like one it started,
+    // and the view stops following it.
     followEndedBy.current = "person";
     followingRef.current = null;
     setFollowing(null);

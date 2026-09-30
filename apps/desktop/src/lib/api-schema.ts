@@ -699,6 +699,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/code/turns/{turn_id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Code Turn Stop
+         * @description Stop a running coding turn on the server.
+         *
+         *     Until this existed the Stop button only aborted the screen's request: the turn went on
+         *     calling the model, editing files and spending until it finished by itself, while the screen
+         *     said it had stopped. The agent loop polls the signal once per step, so the step in progress
+         *     finishes first; an external agent's prompt is cancelled at once. 404 for a turn that is not
+         *     running, never 200-with-nothing: a stop that reached nothing must not read as one that
+         *     worked.
+         */
+        post: operations["code_turn_stop_api_code_turns__turn_id__stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/code/works/{work_id}/session": {
         parameters: {
             query?: never;
@@ -4219,6 +4246,16 @@ export interface components {
             workspace?: string | null;
             /** Write Region */
             write_region?: string[] | null;
+        };
+        /**
+         * CodeTurnStopOut
+         * @description A stop that reached a running coding turn. The turn ends at its next step, not at once.
+         */
+        CodeTurnStopOut: {
+            /** Stopping */
+            stopping: boolean;
+            /** Turn Id */
+            turn_id: string;
         };
         /**
          * CompletionOut
@@ -9103,6 +9140,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CodeTurnFramesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    code_turn_stop_api_code_turns__turn_id__stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                turn_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodeTurnStopOut"];
                 };
             };
             /** @description Validation Error */
