@@ -161,6 +161,25 @@ attempt). The recorded total (pilot US$ 0.1161, probes ≈ US$ 0.0227, main US$ 
 Neither is chosen here; the owner decides, because both change what the approved budget buys. The three
 items already run stay in `results/glm53flash_main_stopped.json` and are not merged into a relaunch.
 
+## Amendment — 2026-09-29, the owner chose option A; written before the relaunch sends a call
+
+- **The top rung (900k) waits up to 2,400 s, once, and is never retried.** Every other rung keeps 900 s and
+  two retries, exactly as before. Set in the `glm53flash` profile only (`TOP_TIMEOUT`); the `v4flash`, `luna`
+  and `glm53` profiles are unchanged. The results file now carries `timeout`, `top_timeout` and `retries`, so
+  the run's configuration is read from the artifact.
+- **What does not change:** items (`M000–M071`), n = 72, chars per token 4.35, the grader, the gates, the
+  decision rule, 3 workers, and the stop rule (errors above 10% of rows after 30).
+- **Budget.** The approved total is US$ 8. Recorded so far: US$ 0.2754. Unrecorded, at most: ten abandoned
+  top-rung calls (the six of the first pilot launch, P000, M000–M002) at ≈ US$ 0.036 each, so ≈ US$ 0.36. The
+  relaunch's cap is **US$ 7.00**, so the whole study stays under US$ 7.64 even if every abandoned call was
+  billed. Projection: ≈ US$ 0.047 per item for the rungs to 512k (measured on M000–M002) plus ≈ US$ 0.036 for an
+  uncached 900k prefill, ≈ US$ 0.083 per item, **≈ US$ 6.0** for 72.
+- **How this can still fail, stated before it does.** If an uncached 900k prefill outlasts 2,400 s too, every
+  top-rung call is an error, 1 in 9 rows, and the stop rule ends the run at the fourth item. That reading is
+  published as it is: this route does not serve a 900k prompt within 40 minutes. Four items answer nothing
+  about the lower rungs either, so going on to option B (512k as the top) is then a new decision for the owner.
+- The relaunch writes `results/glm53flash_main.json`; the stopped run's three items are not reused.
+
 ## What this cannot show
 
 - Other task shapes; the limits of `PREREGISTRATION.md` apply.

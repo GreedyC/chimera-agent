@@ -37,6 +37,9 @@ MAX_TOKENS = 8_000
 #: DeepInfra's quote for this model on the OpenRouter endpoints listing, read 2026-09-25 (per M tokens).
 PRICE_IN, PRICE_CACHED, PRICE_OUT = 0.060, 0.015, 0.180
 RETRIES = 2
+#: How long one call may take, and how long the top rung's may. ``TOP_TIMEOUT`` None: the same for all.
+TIMEOUT = 900
+TOP_TIMEOUT: int | None = None
 #: The lengths a run climbs. The default profile's is the registered `items.LADDER`.
 LADDER: tuple[int, ...] = it.LADDER
 #: A row billed at a price this far from the quoted one came from another tier of the same provider
@@ -67,6 +70,10 @@ PROFILES: dict[str, dict[str, Any]] = {
         "LADDER": (4_000, 16_000, 32_000, 64_000, 128_000, 256_000, 512_000, 900_000),
         "TIER_BAND": (0.8, 1.35),
         "CORPUS_ROOTS": ("chimera", "tests"),
+        # Amendment, option A (owner, 2026-09-29): an uncached 900k prefill on this route outlasts 900 s,
+        # so the top rung alone waits 2,400 s, once. It is never retried, so a slow prefill is not sent
+        # (and billed) up to three times. Every other rung keeps 900 s and two retries.
+        "TOP_TIMEOUT": 2_400,
     },
     "glm53": {
         "MODEL": "openrouter/z-ai/glm-5.3",
@@ -95,7 +102,7 @@ def _cost(prompt: int, cached: int, completion: int) -> float:
     return ((prompt - cached) * PRICE_IN + cached * PRICE_CACHED + completion * PRICE_OUT) / 1e6
 
 
-def _call(request: dict[str, Any]) -> dict[str, Any]:
+def _call(request: dict[str, Any], timeout: int = 900) -> dict[str, Any]:
     import litellm
 
     from chimera.providers.thinking import strip_think
@@ -106,7 +113,7 @@ def _call(request: dict[str, Any]) -> dict[str, Any]:
         messages=request["messages"],
         tools=request["tools"],
         max_tokens=MAX_TOKENS,
-        timeout=900,
+        timeout=timeout,
         extra_body={"provider": {"order": [PROVIDER], "allow_fallbacks": False}, "usage": {"include": True}},
         **sampling,
     )
@@ -155,13 +162,15 @@ def _one(item: it.Item, length: int, arm: str, cpt: float, cap: float) -> dict[s
         _spent += projected  # reserved now, settled below
     started = time.time()
     got: dict[str, Any] | None = None
-    for attempt in range(RETRIES + 1):
+    top = TOP_TIMEOUT is not None and length == LADDER[-1]
+    retries = 0 if top else RETRIES
+    for attempt in range(retries + 1):
         try:
-            got = _call(request)
+            got = _call(request, timeout=TOP_TIMEOUT if top and TOP_TIMEOUT else TIMEOUT)
             break
         except Exception as exc:  # noqa: BLE001 -- a failed call is a halt, counted, never a zero
             row["error"] = f"{type(exc).__name__}: {exc}"[:300]
-            if attempt < RETRIES:
+            if attempt < retries:
                 time.sleep(15 * (attempt + 1))
     row["seconds"] = round(time.time() - started, 1)
     with _lock:
@@ -233,6 +242,7 @@ def _write(out: Path, rows: list[dict[str, Any]], meta: dict[str, Any], cpt: flo
     ordered = sorted(rows, key=lambda r: (order[r["item"]], r["arm"] != "replay", r["length"]))
     payload = {
         **meta, "model": MODEL, "provider": PROVIDER, "temperature": TEMPERATURE, "max_tokens": MAX_TOKENS,
+        "timeout": TIMEOUT, "top_timeout": TOP_TIMEOUT, "retries": RETRIES,
         "chars_per_token": cpt, "prices_per_m": [PRICE_IN, PRICE_CACHED, PRICE_OUT],
         "usd": round(sum(r.get("cost", 0.0) for r in rows), 6), "wall_seconds": round(seconds, 1),
         "rows": ordered,
