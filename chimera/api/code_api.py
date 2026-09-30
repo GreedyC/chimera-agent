@@ -27,6 +27,7 @@ import asyncio
 import base64
 import itertools
 import json
+import os
 import re
 import threading
 import uuid
@@ -289,6 +290,13 @@ class CodeSeams(BaseModel):
 #: offer that outlives the app is an offer nobody remembers making, and persisting whole-workspace
 #: snapshots to disk to support one button is a much larger promise than this button makes.
 _pending_reverts: dict[str, tuple[Any, Any]] = {}
+
+
+class _StoppedWhileWaiting(Exception):
+    """A turn stopped before it started, while it waited for another turn in its folder."""
+
+    MESSAGE = "Stopped before it started: another conversation was working in this folder."
+
 _MAX_PENDING_REVERTS = 8
 
 #: FastAPI's upload marker, hoisted out of the signatures so a call in an argument default does not
@@ -1298,6 +1306,17 @@ def register_code_api(
         with locks_guard:
             return locks.setdefault(session_id, threading.Lock())
 
+    # One writer per folder, for every turn (background works included), the rule works already kept
+    # among themselves. Two conversations editing one folder at once left a snapshot, a verification
+    # and an undo each describing a mix of both, and undoing one reverted the other's edits. Different
+    # folders never wait on each other. Taken before the session lock, always, so the two can't cross.
+    folder_locks: dict[str, threading.Lock] = {}
+
+    def folder_lock(ws: Path) -> threading.Lock:
+        key = os.path.normcase(str(Path(ws).resolve()))
+        with locks_guard:
+            return folder_locks.setdefault(key, threading.Lock())
+
     def build_agent(
         req: CodeTurnRequest,
         ws: Path,
@@ -1868,6 +1887,14 @@ def register_code_api(
         def work() -> None:
             from chimera.orchestration.metering import MeteredBackend as _Meter
 
+            # A background work is stopped through the works registry; every other turn through its
+            # own signal, raised by POST /api/code/turns/{id}/stop.
+            stop_signal = (
+                works.should_stop(background.id) if background is not None else live_turns.should_stop(turn_id)
+            )
+            folder = folder_lock(ws)
+            holds_folder = False
+
             # What the plan gate's call cost, when the turn has one. Out here so the `except` below
             # can still add it to a turn that died after the plan was paid for.
             plan_meter: MeteredBackend | None = None
@@ -1885,6 +1912,22 @@ def register_code_api(
                 # one button would have made pressing Enter silently the weaker of the two, so the
                 # weaker one had to stop being weaker first.
                 from chimera.core.checkpoint import WorkspaceGuard
+
+                # The folder first: the snapshot, the run, the verification and the undo offer all
+                # describe this turn alone. A turn that waits says so, and Stop still reaches it.
+                if not folder.acquire(blocking=False):
+                    on_notice(
+                        "folder_busy",
+                        "Waiting: another conversation is working in this folder. This one starts "
+                        "when it finishes.",
+                        {"workspace": str(ws)},
+                    )
+                    while not folder.acquire(timeout=0.25):
+                        if stop_signal():
+                            raise _StoppedWhileWaiting
+                holds_folder = True
+                if stop_signal():
+                    raise _StoppedWhileWaiting
 
                 guard = WorkspaceGuard(ws)
                 before = guard.snapshot()
@@ -1943,7 +1986,9 @@ def register_code_api(
                         # question the button answers is "do I want this", which nothing else on the
                         # screen can answer for the person reading the diff.
                         token = uuid.uuid4().hex
-                        _pending_reverts[token] = (guard, before)
+                        # What THIS turn changed, measured now, before the verifier runs: an undo
+                        # puts back these files and no others (`WorkspaceGuard.restore_change`).
+                        _pending_reverts[token] = (guard, guard.diff_since(before))
                         while len(_pending_reverts) > _MAX_PENDING_REVERTS:
                             _pending_reverts.pop(next(iter(_pending_reverts)))
                         outcome["token"] = token
@@ -2175,11 +2220,7 @@ def register_code_api(
                         images=images or None,
                         # A background work is stopped through the works registry; every other
                         # turn through its own signal, raised by POST /api/code/turns/{id}/stop.
-                        should_stop=(
-                            works.should_stop(background.id)
-                            if background is not None
-                            else live_turns.should_stop(turn_id)
-                        ),
+                        should_stop=stop_signal,
                     )
                     if fused:
                         agent.backend = original_backend  # type: ignore[assignment]
@@ -2290,7 +2331,9 @@ def register_code_api(
                 from chimera.api.code_acp import failure_message
 
                 message_out = (
-                    failure_message(exc)
+                    _StoppedWhileWaiting.MESSAGE
+                    if isinstance(exc, _StoppedWhileWaiting)
+                    else failure_message(exc)
                     if (req.provider or "").strip()
                     else _native_failure(exc)
                 )
@@ -2298,6 +2341,8 @@ def register_code_api(
                 if background is not None:
                     works.fail(background.id, message_out)
             finally:
+                if holds_folder:
+                    folder.release()
                 # Every way out of a turn, so a turn that died still stops being "running".
                 live_turns.finish(turn_id)
                 if loop is not None and queue is not None:
@@ -2323,11 +2368,15 @@ def register_code_api(
         pending = _pending_reverts.pop(token, None)
         if pending is None:
             return {"ok": False, "restored": 0}
-        workspace_guard, snapshot = pending
+        workspace_guard, change = pending
+        report = workspace_guard.restore_change(change)
         return {
             "ok": True,
-            "restored": workspace_guard.restore(snapshot),
-            "left_new_files": not workspace_guard.deletes_new_files(snapshot),
+            "restored": report.restored,
+            "left_new_files": bool(report.left_new),
+            # Files that changed again after the turn, by another conversation or the person: left as
+            # they are and named, rather than overwritten with the turn's "before".
+            "kept": report.kept,
         }
 
     # ------------------------------------------------------------------ the works, from the screen

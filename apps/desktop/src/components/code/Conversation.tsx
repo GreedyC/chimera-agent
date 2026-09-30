@@ -170,7 +170,9 @@ interface Exchange {
   /** The verdict on what this turn WROTE. Absent when the turn wrote nothing. */
   verified?: CodeVerified;
   /** Set once the offered undo was taken (or refused by the server) — the offer is single-use. */
-  undone?: "ok" | "partial" | "gone";
+  undone?: "ok" | "partial" | "kept" | "gone";
+  /** Files an undo left alone because they changed again after the turn. */
+  keptFiles?: string[];
   /** Stopped by the Stop button. Distinct from `failed`: nothing went wrong, the user changed
    *  their mind — and distinct from a finished turn, which has a `done`. */
   abandoned?: boolean;
@@ -218,6 +220,7 @@ export function Verdict({
   v,
   original,
   undone,
+  keptFiles,
   onUndo,
   onFix,
   t,
@@ -225,7 +228,8 @@ export function Verdict({
   v: CodeVerified;
   /** What the user asked for. Goes back with the failure so the fix attempt knows both. */
   original: string;
-  undone?: "ok" | "partial" | "gone";
+  undone?: "ok" | "partial" | "kept" | "gone";
+  keptFiles?: string[];
   onUndo: () => void;
   onFix: (text: string) => void;
   t: TFunc;
@@ -242,16 +246,21 @@ export function Verdict({
       <p
         className={cn(
           "text-xs",
-          undone === "ok" ? "text-ok-foreground" : undone === "partial" ? "text-warn-foreground" : "text-bad-foreground",
+          undone === "ok" ? "text-ok-foreground" : undone === "gone" ? "text-bad-foreground" : "text-warn-foreground",
         )}
       >
-        {t(
-          undone === "ok"
-            ? "code.chat.verdict.reverted"
-            : undone === "partial"
-              ? "code.chat.verdict.revertedPartly"
-              : "code.chat.verdict.revertFailed",
-        )}
+        {undone === "kept"
+          ? t("code.chat.verdict.revertedExceptChanged", {
+              n: keptFiles?.length ?? 0,
+              files: (keptFiles ?? []).slice(0, 5).join(", "),
+            })
+          : t(
+              undone === "ok"
+                ? "code.chat.verdict.reverted"
+                : undone === "partial"
+                  ? "code.chat.verdict.revertedPartly"
+                  : "code.chat.verdict.revertFailed",
+            )}
       </p>
     ) : v.revert_token ? (
       <Button size="sm" variant="ghost" onClick={onUndo}>
@@ -1371,17 +1380,20 @@ export function Conversation({
     // the files this turn CREATED where they are — which is what happens inside a git repository,
     // and therefore what happens in most projects someone opens here. Reporting that as "Edits
     // undone." describes a state the workspace is not in.
-    let outcome: "ok" | "partial" | "gone" = "gone";
+    let outcome: "ok" | "partial" | "kept" | "gone" = "gone";
+    let kept: string[] = [];
     try {
       const result = await revertCodeTurn(token);
-      outcome = !result.ok ? "gone" : result.left_new_files ? "partial" : "ok";
+      kept = result.kept ?? [];
+      // A fourth: files that changed again after this turn were left as they are, not overwritten.
+      outcome = !result.ok ? "gone" : kept.length ? "kept" : result.left_new_files ? "partial" : "ok";
     } catch {
       // A failed call and a refused token mean the same thing to the user: the edits are still
       // there. Saying "gone" is the honest read of both, and it is the one that does not imply the
       // files were restored.
     }
     setExchanges((prev) =>
-      prev.map((e, j) => (j === index ? { ...e, undone: outcome } : e)),
+      prev.map((e, j) => (j === index ? { ...e, undone: outcome, keptFiles: kept } : e)),
     );
     if (outcome !== "gone") {
       void qc.invalidateQueries({ queryKey: ["fs-file"] });
@@ -1732,6 +1744,7 @@ export function Conversation({
                 <Verdict
                   v={e.verified}
                   undone={e.undone}
+                  keptFiles={e.keptFiles}
                   onUndo={() => void undo(i, e.verified?.revert_token ?? "")}
                   original={e.you}
                   onFix={onHandOff}

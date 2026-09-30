@@ -1375,7 +1375,9 @@ export async function transcribe(audio: Blob, filename = "speech.webm", language
  *  server, so a second press cannot restore a snapshot the user has since typed on top of. */
 export async function revertCodeTurn(
   token: string,
-): Promise<{ ok: boolean; restored: number; left_new_files?: boolean }> {
+): Promise<{ ok: boolean; restored: number; left_new_files?: boolean; kept?: string[] }> {
+  // `kept`: files that changed again after this turn (another conversation, or the person) and were
+  // left as they are. Undo takes back only what its own turn changed.
   // `left_new_files`: the restore put the captured content back but did NOT remove files the turn
   // created. Inside a git repository that pass is skipped unconditionally — deliberately, after a
   // path bug once let a revert wipe a repo — which is most workspaces someone opens in this app.
