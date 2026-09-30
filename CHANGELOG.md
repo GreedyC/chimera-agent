@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **A credential in a decision's state no longer reaches a hosted backend or the decision log.**
+  - **What was wrong:** nothing in `chimera/decisions/` used the redaction net. The decision log wrote
+    the first 500 characters of the state raw, and both hosted backends sent the state whole. The
+    REVIEW band's state is a shell command, which is exactly where a bearer token sits.
+  - **Now:** the state goes through `chimera.core.redact` (the net that already keeps secrets out of
+    the trace) before a hosted backend reads it, and before the log writes it. The log redacts first
+    and cuts second, so a token straddling the 500-character cut is masked rather than left as a
+    fragment. The state hash is still of the original, so a refit still joins rows on it.
+  - **What did not change:** the local backend, which sends nothing off the machine.
+  - **A new page,** `docs/decisions-redaction.md`, says per surface what the state carries, what each
+    backend sees, and what is stored. It also records what is *not* done, on purpose: opaque
+    substitution of paths (a state without its paths is a state the danger question cannot judge) and a
+    "coarse features only" mode.
+  - Study 27, phase 3, third slice.
 - **Drift alarms on the Decisions screen and in `chimera decisions report`, computed from the log alone.**
   - **What they say:** the serving build behind one instrument changed (`model_changed`, and the
     calibration map is keyed on the build); the last 50 raw answers moved away from the rest
