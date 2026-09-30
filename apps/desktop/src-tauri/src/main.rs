@@ -213,6 +213,31 @@ fn is_float_url(target: &tauri::Url, origin: &str) -> bool {
             && value.chars().all(|c| c.is_ascii_lowercase() || c == '.'))
 }
 
+/// Whether `target` is a page on the web to hand to the system browser: an external link the page
+/// asked to open in a new window (`target="_blank"`, `window.open`).
+///
+/// Until this, every such link was a silent no-op in the desktop app — the runtime refuses new windows
+/// unless told otherwise — while the same links worked in the browser build. The rule is narrow on
+/// purpose: `http` or `https`, a host, no credentials in the address, and not this backend's own origin
+/// (a page of the app itself is a panel window or nothing, never a browser tab). `file:`, `javascript:`,
+/// custom protocols and anything that does not parse stay refused, so a link cannot make the OS run
+/// something. The page gains no power from this: it cannot choose the program, only ask for an address,
+/// and the address is re-serialised by the URL parser before the OS sees it.
+fn is_external_url(target: &tauri::Url, origin: &str) -> bool {
+    if !matches!(target.scheme(), "http" | "https") || target.host_str().is_none_or(str::is_empty) {
+        return false;
+    }
+    if !target.username().is_empty() || target.password().is_some() {
+        return false;
+    }
+    let Ok(origin) = tauri::Url::parse(origin) else {
+        return false;
+    };
+    !(target.scheme() == origin.scheme()
+        && target.host_str() == origin.host_str()
+        && target.port_or_known_default() == origin.port_or_known_default())
+}
+
 /// Close every panel window. Called when the main window goes, so the app ends as it did before
 /// there were other windows (and the sidecar goes with it), and when the backend moved to another
 /// port, which leaves those windows talking to nothing. Their panels return to their docks: which
@@ -2309,8 +2334,12 @@ fn main() {
                 .inner_size(1200.0, 800.0)
                 .min_inner_size(760.0, 520.0)
                 .on_new_window(move |target, features| {
-                    let ok = allowed.lock().map(|origin| is_float_url(&target, &origin)).unwrap_or(false);
-                    if !ok {
+                    let origin = allowed.lock().map(|origin| origin.clone()).unwrap_or_default();
+                    if !is_float_url(&target, &origin) {
+                        // An external link goes to the system browser; the page itself opens nothing.
+                        if is_external_url(&target, &origin) {
+                            let _ = open::that_detached(target.as_str());
+                        }
                         return NewWindowResponse::Deny;
                     }
                     let n = FLOAT_WINDOWS.fetch_add(1, Ordering::Relaxed);
@@ -2505,6 +2534,38 @@ mod float_window_tests {
     #[test]
     fn an_origin_that_does_not_parse_allows_nothing() {
         assert!(!is_float_url(&tauri::Url::parse("http://127.0.0.1:8765/?float=activity.jobs").unwrap(), "not a url"));
+    }
+
+    #[test]
+    fn a_web_page_goes_to_the_system_browser() {
+        let external = |target: &str| is_external_url(&tauri::Url::parse(target).expect("a url"), ORIGIN);
+        assert!(external("https://github.com/brcampidelli/chimera-agent"));
+        assert!(external("http://example.com/docs?page=2#install"));
+        // A local development server is a web page too, as long as it is not this app.
+        assert!(external("http://localhost:3000/"));
+        assert!(external("http://127.0.0.1:8766/"));
+    }
+
+    #[test]
+    fn nothing_else_leaves_the_app() {
+        let external = |target: &str| is_external_url(&tauri::Url::parse(target).expect("a url"), ORIGIN);
+        for target in [
+            // The app's own pages: a panel window or nothing, never a browser tab.
+            "http://127.0.0.1:8765/",
+            "http://127.0.0.1:8765/settings",
+            "http://127.0.0.1:8765/?float=activity.jobs",
+            // Schemes that would have the OS open or run something other than a web page.
+            "file:///C:/Windows/System32/calc.exe",
+            "javascript:alert(1)",
+            "ms-settings:privacy",
+            "mailto:someone@example.com",
+            "ftp://example.com/file",
+            // Credentials in the address.
+            "https://user:secret@example.com/",
+        ] {
+            assert!(!external(target), "{target} must not reach the system browser");
+        }
+        assert!(!is_external_url(&tauri::Url::parse("https://example.com/").unwrap(), "not a url"));
     }
 
     /// The panel windows are no stronger than the main one only while the capability file grants to

@@ -27,3 +27,8 @@ tauri-plugin-dialog = "2"
 # window loads the sidecar's http origin with no IPC granted (see capabilities/default.json), so
 # the language the user picked INSIDE the app is not readable from here. See `idioma_do_dialogo`.
 sys-locale = "0.3"
+# Opens an external link in the system browser. The window grants no IPC, so a link the page asks to
+# open in a new window reaches `on_new_window` in main.rs, and only an http(s) address off this app's
+# origin is handed to the OS from there. `open` is what tauri-plugin-opener itself uses underneath;
+# the plugin would add webview commands this app does not grant.
+open = "5.4.4"
