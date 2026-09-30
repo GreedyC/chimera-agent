@@ -59,6 +59,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **A decision the spend/rate gate refused now raises an approval card instead of falling to the default.**
+  - **Before:** a halt of any kind left the REVIEW band without a verdict and the kernel went on to
+    its default, which is ALLOW. That is right for a model that was down (it said nothing about the
+    action) and wrong for a meter that ran out.
+  - **Now:** when the gate refused the ask (`gate: "budget"` or `"rate"` on the receipt), the band
+    returns REVIEW with `band: gate` and a reason that says nothing judged the action, so a person is
+    asked. An ordinary halt still goes on to the default, exactly as before, and a fixed rule still
+    beats the band.
+  - **Who this touches:** only a deployment that set `CHIMERA_DECISION_RPM`, `CHIMERA_DECISION_TPM` or
+    `CHIMERA_DECISION_DAILY_USD` (the gate does not exist without one). While the meter is out, each
+    action no rule matched is a card. That was the owner's decision on 2026-09-29.
+  - Study 27, phase 3, fourth slice.
 - **After untrusted input, a write inside the workspace is a warning, not a card.**
   - **Before:** once a run had read anything external, every `write_file`, `edit_file`,
     `apply_patch` and `edit_batch` asked for approval for the rest of the run. `bench/injection`
