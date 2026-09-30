@@ -14,12 +14,13 @@ use std::io::{BufRead, BufReader};
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
+use tauri::webview::NewWindowResponse;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_updater::UpdaterExt;
@@ -170,6 +171,58 @@ fn remembered_port(memo: &Path) -> u16 {
 /// The port out of `http://host:port`, if it parses.
 fn port_of(url: &str) -> Option<u16> {
     url.trim_end_matches('/').rsplit(':').next()?.parse().ok()
+}
+
+/// The label every panel window starts with. The capability file names `main` alone, so a window
+/// with this label is granted nothing.
+const FLOAT_LABEL: &str = "float-";
+
+/// Labels must be unique for the life of the app; a closed window's label is never reused.
+static FLOAT_WINDOWS: AtomicUsize = AtomicUsize::new(0);
+
+/// Whether the page may open `target` as a window of its own: one panel of the screen, drawn apart
+/// (dynamic screen, phase 7).
+///
+/// Without a handler, this runtime refuses every new window — wry marks WebView2's request handled
+/// and opens nothing — so this is the only door, and it opens for exactly one address: this backend's
+/// origin, the root path, and a single `float` parameter naming a panel. Another site, another port,
+/// another path, credentials, a fragment or a second parameter are refused, as everything was before.
+///
+/// The window it opens is no stronger than the one that asked. It loads the same http origin, and
+/// `capabilities/default.json` lists the window `main` alone, so a `float-` window reaches no IPC.
+fn is_float_url(target: &tauri::Url, origin: &str) -> bool {
+    let Ok(origin) = tauri::Url::parse(origin) else {
+        return false;
+    };
+    let same_origin = target.scheme() == origin.scheme()
+        && target.host_str() == origin.host_str()
+        && target.port_or_known_default() == origin.port_or_known_default();
+    if !same_origin || !target.username().is_empty() || target.password().is_some() {
+        return false;
+    }
+    if target.path() != "/" || target.fragment().is_some() {
+        return false;
+    }
+    let pairs: Vec<(String, String)> = target.query_pairs().into_owned().collect();
+    // A panel id: lowercase words joined by dots ("activity.jobs"). The page checks it names a real
+    // panel; this only keeps the address to the shape one can have.
+    matches!(pairs.as_slice(), [(key, value)]
+        if key == "float"
+            && !value.is_empty()
+            && value.len() <= 64
+            && value.chars().all(|c| c.is_ascii_lowercase() || c == '.'))
+}
+
+/// Close every panel window. Called when the main window goes, so the app ends as it did before
+/// there were other windows (and the sidecar goes with it), and when the backend moved to another
+/// port, which leaves those windows talking to nothing. Their panels return to their docks: which
+/// panels float is never stored.
+fn close_floats<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    for (label, window) in app.webview_windows() {
+        if label.starts_with(FLOAT_LABEL) {
+            let _ = window.close();
+        }
+    }
 }
 
 /// Launch the sidecar and return the running child plus the URL it reported.
@@ -2246,10 +2299,38 @@ fn main() {
             });
             app.manage(Arc::clone(&sidecar));
 
+            // The origin a panel window may load. Shared with the supervisor, which moves it when the
+            // backend comes back on another port.
+            let float_origin = Arc::new(Mutex::new(url.clone()));
+            let allowed = Arc::clone(&float_origin);
+            let opener = app.handle().clone();
             WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse()?))
                 .title("Chimera")
                 .inner_size(1200.0, 800.0)
                 .min_inner_size(760.0, 520.0)
+                .on_new_window(move |target, features| {
+                    let ok = allowed.lock().map(|origin| is_float_url(&target, &origin)).unwrap_or(false);
+                    if !ok {
+                        return NewWindowResponse::Deny;
+                    }
+                    let n = FLOAT_WINDOWS.fetch_add(1, Ordering::Relaxed);
+                    // `window_features` puts the new webview in the opener's environment, which
+                    // WebView2 requires to hand it over; it also carries the size the page asked for.
+                    match WebviewWindowBuilder::new(&opener, format!("{FLOAT_LABEL}{n}"), WebviewUrl::External(target))
+                        .window_features(features)
+                        .title("Chimera")
+                        // The page names its panel ("Tools · Chimera"); the taskbar should too,
+                        // or every panel window reads as a second copy of the app.
+                        .on_document_title_changed(|window, title| {
+                            let _ = window.set_title(&title);
+                        })
+                        .min_inner_size(280.0, 200.0)
+                        .build()
+                    {
+                        Ok(window) => NewWindowResponse::Create { window },
+                        Err(_) => NewWindowResponse::Deny,
+                    }
+                })
                 .build()?;
 
             // Tray: check for updates, and quit (which kills the sidecar via the exit hook below).
@@ -2298,6 +2379,7 @@ fn main() {
             let supervisor = app.handle().clone();
             let watched = paths.clone();
             let mut showing = url.clone();
+            let moved_origin = Arc::clone(&float_origin);
             std::thread::spawn(move || {
                 supervise(sidecar, watched, Tuning::default(), dialogo(), move |event| match event {
                     Supervised::Restarted(fresh) => {
@@ -2307,6 +2389,11 @@ fn main() {
                         // talking to nothing — so move the window, which costs a reload and the
                         // per-origin `localStorage` behind it, and is still the only way back.
                         if fresh != showing {
+                            // Panel windows point at the old port; they close and their panels return.
+                            if let Ok(mut origin) = moved_origin.lock() {
+                                origin.clone_from(&fresh);
+                            }
+                            close_floats(&supervisor);
                             if let (Some(window), Ok(target)) =
                                 (supervisor.get_webview_window("main"), fresh.parse::<tauri::Url>())
                             {
@@ -2363,7 +2450,71 @@ fn main() {
                 tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
                     kill_sidecar(app_handle);
                 }
+                // Closing the main window closes the panel windows, so the last window closing
+                // still means the app is done: without this, a floating panel kept the app (and
+                // the backend) alive after the person closed the window they think of as the app.
+                tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. }
+                    if label == "main" =>
+                {
+                    close_floats(app_handle);
+                }
                 _ => {}
             }
         });
+}
+
+#[cfg(test)]
+mod float_window_tests {
+    use super::*;
+
+    const ORIGIN: &str = "http://127.0.0.1:8765";
+
+    fn allowed(target: &str) -> bool {
+        is_float_url(&tauri::Url::parse(target).expect("a url"), ORIGIN)
+    }
+
+    #[test]
+    fn a_panel_address_at_this_origin_opens() {
+        assert!(allowed("http://127.0.0.1:8765/?float=activity.jobs"));
+        assert!(allowed("http://127.0.0.1:8765/?float=activity.tools"));
+        // The origin as the port file writes it, with or without a trailing slash.
+        assert!(is_float_url(&tauri::Url::parse("http://127.0.0.1:8765/?float=activity.jobs").unwrap(), "http://127.0.0.1:8765/"));
+    }
+
+    #[test]
+    fn anything_else_stays_refused_as_it_was() {
+        for target in [
+            "https://example.com/?float=activity.jobs",
+            "http://127.0.0.1:8766/?float=activity.jobs",
+            "http://localhost:8765/?float=activity.jobs",
+            "https://127.0.0.1:8765/?float=activity.jobs",
+            "http://127.0.0.1:8765/settings?float=activity.jobs",
+            "http://127.0.0.1:8765/",
+            "http://127.0.0.1:8765/?float=",
+            "http://127.0.0.1:8765/?float=activity.jobs&next=https://example.com",
+            "http://127.0.0.1:8765/?float=activity.jobs#x",
+            "http://127.0.0.1:8765/?float=Activity.Jobs",
+            "http://127.0.0.1:8765/?float=%3Cscript%3E",
+            "http://user:pw@127.0.0.1:8765/?float=activity.jobs",
+            "http://127.0.0.1:8765/?other=activity.jobs",
+        ] {
+            assert!(!allowed(target), "{target} must be refused");
+        }
+    }
+
+    #[test]
+    fn an_origin_that_does_not_parse_allows_nothing() {
+        assert!(!is_float_url(&tauri::Url::parse("http://127.0.0.1:8765/?float=activity.jobs").unwrap(), "not a url"));
+    }
+
+    /// The panel windows are no stronger than the main one only while the capability file grants to
+    /// `main` alone. A glob there ("*", "float-*") would hand IPC to every window this code opens.
+    #[test]
+    fn the_capability_file_grants_to_the_main_window_alone() {
+        let text = include_str!("../capabilities/default.json");
+        let json: serde_json::Value = serde_json::from_str(text).expect("the capability file parses");
+        assert_eq!(json["windows"], serde_json::json!(["main"]));
+        assert!(json.get("webviews").is_none(), "a webview grant would reach the panel windows");
+        assert!(!FLOAT_LABEL.starts_with("main"));
+    }
 }

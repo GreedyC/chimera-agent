@@ -257,6 +257,12 @@ and returns to it exactly. "Review", "monitor" and the person's own saved layout
 that, a change made before it answers wins, and no server is not an error. A screen's own left sidebar
 (the editor's, in the shell's context slot) follows the left region.
 
+**Phase 7: a panel in its own window.** A dock panel opens in a window from its move menu
+(`lib/float/host.tsx`, `components/shell/FloatWindow.tsx`). The window is the same origin asked by
+`?float=` to draw one panel, with no layout of its own; the agent's state crosses over a
+`BroadcastChannel`. Floating is state of the run, never part of the layout, so nothing stored can point
+at a window that is gone. The tray lists a floating panel with "Bring back", beside what is hidden.
+
 **Dependencies.** `@dnd-kit` (core, sortable, utilities) joined the four Radix packages in phase 4, for
 the reason given above: it buys something harder than a hundred lines, the keyboard half of dragging,
 with every step announced. `react-resizable-panels` was approved for phase 2 and **not adopted**: it sizes sibling

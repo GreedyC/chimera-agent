@@ -3,6 +3,8 @@ import { Focus, PanelsTopLeft } from "lucide-react";
 
 import { focusRing } from "@/components/ui/focus";
 import { Tooltip } from "@/components/ui/tooltip";
+import { panelTitleKey } from "@/components/shell/panels";
+import { useFloat } from "@/lib/float/host";
 import { useT, type TFunc } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout/context";
 import type { HiddenItem } from "@/lib/layout/model";
@@ -23,10 +25,14 @@ import { cn } from "@/lib/utils";
 export function HiddenTray() {
   const t = useT();
   const { hidden, dispatch } = useLayout();
-  const n = hidden.length;
+  // A panel in a window of its own is not hidden, but it is away from where it lives; the way back to
+  // its dock is listed here with the rest (phase 7).
+  const { floating, bringBack } = useFloat();
+  const away = [...floating];
+  const n = hidden.length + away.length;
   if (n === 0) return null;
 
-  const label = t("layout.hidden.label", { n });
+  const label = t(away.length > 0 ? "layout.away.label" : "layout.hidden.label", { n });
   const item = cn(
     "flex cursor-default items-center gap-2 rounded-md px-2 py-1 text-xs outline-hidden",
     "data-highlighted:bg-surface-hover",
@@ -63,8 +69,14 @@ export function HiddenTray() {
               <span className="text-accent-ink">{t("layout.hidden.show")}</span>
             </Menu.Item>
           ))}
+          {away.map((id) => (
+            <Menu.Item key={`float:${id}`} className={item} onSelect={() => bringBack(id)}>
+              <span className="min-w-0 flex-1 truncate">{t("layout.float.inWindow", { name: t(panelTitleKey(id)) })}</span>
+              <span className="text-accent-ink">{t("layout.float.bringBack")}</span>
+            </Menu.Item>
+          ))}
           <Menu.Separator className="my-1 h-px bg-hairline" />
-          {n > 1 && (
+          {hidden.length > 1 && (
             <Menu.Item className={item} onSelect={() => dispatch({ type: "show-all" })}>
               {t("layout.hidden.showAll")}
             </Menu.Item>

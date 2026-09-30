@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **The dynamic screen, phase 7: any panel of the right panel opens in a window of its own.**
+  - **How:** "To a window of its own" in a panel's move menu. The panel leaves its dock while the window is
+    open and comes back however the window goes: its own "Bring back" button, the tray in the status bar
+    (which lists it as "in a window"), closing it, or the window vanishing without a word (checked every
+    second). Closing the main window closes them all, and the app quits as before.
+  - **The window is the same page**, asked by `/?float=<panel>` to draw one panel. The agent's state
+    reaches it over a `BroadcastChannel`; the panels that ask the server themselves need nothing.
+  - **Which panels float is not stored.** A relaunch finds every panel in its dock; undo, the default
+    layout and the server copy never meet a window.
+  - **Native side:** this runtime refused every new window until now. The main window now has one
+    handler, and it opens a window for exactly one address: this backend's origin, the root path and a
+    single `float` parameter naming a panel. Everything else is still refused. The new windows get no
+    IPC: the capability file names `main` alone, and a test fails if it ever grants more.
 - **The dynamic screen, phase 6: the layout is kept by the server too, and the editor's sidebar joins in.**
   - **Why:** the layout lived only in the webview's storage, which a reinstall or a cleared WebView2 profile
     wipes. The owner chose to keep it where the project list already lives.

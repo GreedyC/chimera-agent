@@ -4,6 +4,7 @@ import { Maximize2, Minimize2 } from "lucide-react";
 import { DOCK_PANELS, isDockPanel, panelTitleKey } from "@/components/shell/panels";
 import { focusRing } from "@/components/ui/focus";
 import { Tooltip } from "@/components/ui/tooltip";
+import { useFloat } from "@/lib/float/host";
 import { useT } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout/context";
 import type { PanelId } from "@/lib/layout/model";
@@ -61,8 +62,9 @@ export function useEscapeRestores() {
 export function MaximizedPanel() {
   const t = useT();
   const { layout } = useLayout();
+  const { floating } = useFloat();
   const id = layout.maximized;
-  if (!id || !isDockPanel(id)) return null;
+  if (!id || !isDockPanel(id) || floating.has(id)) return null;
   const name = t(panelTitleKey(id));
   return (
     <section

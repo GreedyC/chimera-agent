@@ -15,6 +15,7 @@ import { AppShell } from "@/components/shell/AppShell";
 import { CommandPalette, type Command } from "@/components/shell/CommandPalette";
 import { useHotkeys } from "@/lib/hotkeys";
 import { AgentProvider } from "@/lib/agent-context";
+import { FloatHost } from "@/lib/float/host";
 import { RunSessionProvider } from "@/lib/run-session";
 import { Spinner } from "@/components/ui/panel";
 import { ErrorState } from "@/components/ui/async";
@@ -324,6 +325,8 @@ export default function App() {
           cannot live inside that screen. This is what keeps the progress and the Stop alive when
           you navigate away mid-run. */}
       <RunSessionProvider>
+      {/* Panels in windows of their own (phase 7). Inside the agent's provider: it sends that state on. */}
+      <FloatHost>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} commands={commands} />
       <Framed banner={outage}>
       <AppShell
@@ -377,6 +380,7 @@ export default function App() {
         {view === "settings" && <Settings />}
       </AppShell>
       </Framed>
+      </FloatHost>
       </RunSessionProvider>
     </AgentProvider>
   );
