@@ -119,9 +119,14 @@ class TurnChange:
     file written through the shell is part of the turn too.
     """
 
+    #: The changed paths only, as they were before the turn. Not the whole folder: an offer used to
+    #: hold a copy of every file, for as many offers as the app kept.
     before: FileSnapshot
     #: Each changed path, as the turn left it.
     after: dict[str, FileState] = field(default_factory=dict)
+    #: The snapshot before the turn hit the file cap, so "created by the turn" cannot be told from
+    #: "existed but was not captured", and nothing is deleted on an undo.
+    truncated: bool = False
 
     @property
     def paths(self) -> list[str]:
@@ -287,13 +292,17 @@ class WorkspaceGuard:
     def diff_since(self, before: FileSnapshot) -> TurnChange:
         """What changed in the workspace since ``before``: the turn that ran in between."""
         after = self.snapshot()
-        change = TurnChange(before=before)
+        changed: dict[str, FileState] = {}
         for rel in before.present | after.present:
             was: FileState = (rel in before.present, before.files.get(rel))
             now: FileState = (rel in after.present, after.files.get(rel))
             if was != now:
-                change.after[rel] = now
-        return change
+                changed[rel] = now
+        kept = FileSnapshot(
+            files={rel: before.files[rel] for rel in changed if rel in before.files},
+            present={rel for rel in changed if rel in before.present},
+        )
+        return TurnChange(before=kept, after=changed, truncated=len(before.present) >= self.max_files)
 
     def restore_change(self, change: TurnChange) -> ChangeRestore:
         """Undo one turn: put back only the files it changed, as they were before it.
@@ -308,7 +317,8 @@ class WorkspaceGuard:
         turn created.
         """
         report = ChangeRestore()
-        truncated, in_git_repo = self._skip_reasons(change.before)
+        truncated = change.truncated
+        in_git_repo = self._skip_reasons(change.before)[1]
         for rel in change.paths:
             if self._state(rel) != change.after[rel]:
                 report.kept.append(rel)
