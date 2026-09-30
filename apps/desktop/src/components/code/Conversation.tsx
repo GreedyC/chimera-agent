@@ -223,6 +223,7 @@ export function Verdict({
   keptFiles,
   onUndo,
   onFix,
+  fixBlocked = false,
   t,
 }: {
   v: CodeVerified;
@@ -232,6 +233,8 @@ export function Verdict({
   keptFiles?: string[];
   onUndo: () => void;
   onFix: (text: string) => void;
+  /** A run is already working (the app holds one at a time), so the fix could not start now. */
+  fixBlocked?: boolean;
   t: TFunc;
 }) {
   const cmd = v.command ?? "";
@@ -300,9 +303,19 @@ export function Verdict({
       ) : (
         <div className="flex flex-wrap gap-2">
           {undo}
-          <Button size="sm" variant="ghost" onClick={() => onFix(fixBrief(original, v, t))}>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={fixBlocked}
+            onClick={() => onFix(fixBrief(original, v, t))}
+          >
             <ShieldCheck className="h-3.5 w-3.5" /> {t("code.chat.verdict.fix")}
           </Button>
+          {/* The app holds one run at a time, and a second is refused rather than queued. This
+              button handed the fix to that refusal and nothing happened; now it says so. */}
+          {fixBlocked ? (
+            <p className="w-full text-xs text-muted-foreground">{t("code.chat.verdict.fixBusy")}</p>
+          ) : null}
         </div>
       )}
     </div>
@@ -567,6 +580,7 @@ export function Conversation({
   workspace,
   openFile,
   onHandOff,
+  runLive = false,
   onBatch,
   onEdited,
   busyElsewhere,
@@ -594,6 +608,8 @@ export function Conversation({
   profile: Profile;
   /** Start a verified run with this text, in the panel that owns the run machinery. */
   onHandOff: (text: string) => void;
+  /** A run is working anywhere: `onHandOff` would be refused, so the fix button is disabled. */
+  runLive?: boolean;
   /** The user confirmed a decomposition: run these in parallel, each in its own worktree. */
   onBatch: (tasks: string[]) => void;
   /** A turn changed files — refresh the tree, the viewer and git status. */
@@ -1773,6 +1789,7 @@ export function Conversation({
                   onUndo={() => void undo(i, e.verified?.revert_token ?? "")}
                   original={e.you}
                   onFix={onHandOff}
+                  fixBlocked={runLive}
                   t={t}
                 />
                 </CardChrome>

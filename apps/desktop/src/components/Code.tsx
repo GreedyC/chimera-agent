@@ -640,6 +640,7 @@ export function Code() {
             onBatch={(tasks) => setBatch({ tasks, at: Date.now() })}
             onEdited={refreshOpenFile}
             busyElsewhere={runBusy}
+            runLive={run.running}
             posture={posture}
             provider={provider}
             model={model}
