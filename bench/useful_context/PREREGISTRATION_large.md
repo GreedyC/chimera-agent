@@ -302,6 +302,37 @@ could change timing or even output (#484).
 
 The relaunch writes `results/glm53flash512_main.json`.
 
+## Result — 2026-09-30, the option-B run was ended by the stop rule; the cause is upstream rate limiting
+
+`results/glm53flash512_main.json`: 40 analysed rows over five items, plus 24 `after_stop_rows` from the three
+items in flight (M004, M006, M007). The spend is in the file for the first time: **US$ 0.1325** over the
+analysed rows and **US$ 0.1701** counted by the runner (`runner_usd`). The difference is the in-flight items'
+US$ 0.0376.
+
+**Every error was the same one:** HTTP 429, *"z-ai/glm-5.3-flash is temporarily rate-limited upstream"*, after
+three attempts each. That makes 14 of 64 calls, at every length from 64k to 512k, starting on the fourth item.
+None was a timeout, and none was a wrong answer counted as an error. The first three items answered at every
+rung. The stop rule fired at 7/40 errored rows, as registered. This is a finding about the route's capacity on
+that morning, not about the model or the length.
+
+**The cache rule was met.** Of the four 512k calls that answered (M000, M001, M002, and M006 after the stop),
+three were served almost entirely from the provider's cache:
+
+| item | cached tokens | of prompt tokens |
+|---|---:|---:|
+| M001 | 513,203 | 513,204 |
+| M002 | 513,598 | 513,599 |
+| M006 | 508,968 | 508,969 |
+
+These are prompts sent in the earlier runs. Those runs showed 12,288 and 44,032 cached tokens for M001 and M002,
+so the provider now keeps a 512k prefix for hours. More than 5% of 512k rows are cached above half, so any
+reading of these items is published twice, with and without them, as registered.
+
+**Seen, and not analysed** (the run did not reach n): every 512k call that answered was correct, including
+M000, whose 512k call was not cached. Three rungs of M000 (16k, 64k, 128k) were `no_s…`.
+
+The next step is the owner's, as written above.
+
 ## What this cannot show
 
 - Other task shapes; the limits of `PREREGISTRATION.md` apply.
