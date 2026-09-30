@@ -1157,6 +1157,7 @@ const en: Dict = {
   "code.chat.verdict.reverted": "Edits undone.",
   "code.chat.verdict.revertedPartly":
     "Edits undone. Files this turn created are still there — inside a git repository nothing is deleted on an undo, so remove them yourself if you want them gone.",
+  "code.chat.verdict.revertedExceptChanged": "Edits undone, except {n} file(s) that changed after this turn, left as they are: {files}",
   "code.chat.verdict.revertFailed": "Could not undo — that snapshot is gone.",
   "code.chat.verdict.fix": "Let the agent try to fix it",
   "code.chat.verdict.fixBrief": "The check `{cmd}` failed with this output:",
@@ -2809,6 +2810,7 @@ const pt: Dict = {
   "code.chat.verdict.reverted": "Edições desfeitas.",
   "code.chat.verdict.revertedPartly":
     "Edições desfeitas. Os arquivos que este turno criou continuam aí — dentro de um repositório git nada é apagado ao desfazer, então remova você mesmo se quiser.",
+  "code.chat.verdict.revertedExceptChanged": "Edições desfeitas, exceto {n} arquivo(s) que mudaram depois deste turno e ficaram como estão: {files}",
   "code.chat.verdict.revertFailed":
     "Não deu para desfazer — aquele instantâneo já não existe.",
   "code.chat.verdict.fix": "Deixar o agente tentar corrigir",
@@ -4472,6 +4474,7 @@ const es: Dict = {
   "code.chat.verdict.reverted": "Ediciones deshechas.",
   "code.chat.verdict.revertedPartly":
     "Ediciones deshechas. Los archivos que este turno creó siguen ahí: dentro de un repositorio git no se borra nada al deshacer, así que elimínalos tú si los quieres fuera.",
+  "code.chat.verdict.revertedExceptChanged": "Ediciones deshechas, salvo {n} archivo(s) que cambiaron después de este turno y quedaron como están: {files}",
   "code.chat.verdict.revertFailed":
     "No se pudo deshacer: esa instantánea ya no existe.",
   "code.chat.verdict.fix": "Dejar que el agente intente arreglarlo",
@@ -6149,6 +6152,7 @@ const fr: Dict = {
   "code.chat.verdict.reverted": "Modifications annulées.",
   "code.chat.verdict.revertedPartly":
     "Modifications annulées. Les fichiers créés par ce tour sont toujours là — dans un dépôt git, rien n'est supprimé lors d'une annulation ; retirez-les vous-même si vous le souhaitez.",
+  "code.chat.verdict.revertedExceptChanged": "Modifications annulées, sauf {n} fichier(s) modifié(s) après ce tour, laissé(s) tels quels : {files}",
   "code.chat.verdict.revertFailed":
     "Impossible d'annuler — cet instantané n'existe plus.",
   "code.chat.verdict.fix": "Laisser l'agent essayer de corriger",
@@ -7826,6 +7830,7 @@ const de: Dict = {
   "code.chat.verdict.reverted": "Änderungen zurückgenommen.",
   "code.chat.verdict.revertedPartly":
     "Änderungen zurückgenommen. Dateien, die dieser Zug angelegt hat, sind noch da — in einem Git-Repository wird beim Rückgängigmachen nichts gelöscht; entfernen Sie sie selbst, wenn Sie sie loswerden wollen.",
+  "code.chat.verdict.revertedExceptChanged": "Änderungen rückgängig gemacht, außer {n} Datei(en), die sich nach diesem Durchgang geändert haben und so bleiben: {files}",
   "code.chat.verdict.revertFailed":
     "Zurücknehmen nicht möglich — dieser Schnappschuss ist weg.",
   "code.chat.verdict.fix": "Den Agenten es reparieren lassen",
@@ -9443,6 +9448,7 @@ const zh: Dict = {
   "code.chat.verdict.reverted": "改动已撤销。",
   "code.chat.verdict.revertedPartly":
     "改动已撤销。这一轮新建的文件仍然在 —— 在 git 仓库里撤销不会删除任何东西，想清掉请自己删。",
+  "code.chat.verdict.revertedExceptChanged": "已撤销修改，但有 {n} 个文件在本轮之后又被改动，保持原样：{files}",
   "code.chat.verdict.revertFailed": "无法撤销——那份快照已经没有了。",
   "code.chat.verdict.fix": "让智能体试着修好",
   "code.chat.verdict.fixBrief": "检查 `{cmd}` 失败，输出如下：",
@@ -11089,6 +11095,7 @@ const ja: Dict = {
   "code.chat.verdict.reverted": "編集を取り消しました。",
   "code.chat.verdict.revertedPartly":
     "編集を取り消しました。このターンが作成したファイルはそのまま残っています — git リポジトリの中では取り消しで何も削除しないので、消したい場合はご自分でどうぞ。",
+  "code.chat.verdict.revertedExceptChanged": "変更を元に戻しました。ただし、このターンの後に変更された {n} 個のファイルはそのままです：{files}",
   "code.chat.verdict.revertFailed":
     "取り消せません — そのスナップショットはもうありません。",
   "code.chat.verdict.fix": "エージェントに直させる",
@@ -12757,6 +12764,7 @@ const it: Dict = {
   "code.chat.verdict.reverted": "Modifiche annullate.",
   "code.chat.verdict.revertedPartly":
     "Modifiche annullate. I file creati da questo turno sono ancora lì: dentro un repository git nulla viene cancellato con un annulla, quindi rimuovili tu se li vuoi via.",
+  "code.chat.verdict.revertedExceptChanged": "Modifiche annullate, tranne {n} file cambiati dopo questo turno e lasciati come sono: {files}",
   "code.chat.verdict.revertFailed":
     "Non è stato possibile annullare — quello snapshot non c'è più.",
   "code.chat.verdict.fix": "Lascia che l'agente provi a correggere",
@@ -14422,6 +14430,7 @@ const pl: Dict = {
   "code.chat.verdict.reverted": "Zmiany cofnięte.",
   "code.chat.verdict.revertedPartly":
     "Zmiany cofnięte. Pliki utworzone w tej turze nadal tam są — w repozytorium git cofnięcie niczego nie usuwa, więc skasuj je sam, jeśli mają zniknąć.",
+  "code.chat.verdict.revertedExceptChanged": "Zmiany cofnięte, poza {n} plikami zmienionymi po tej turze, które zostały bez zmian: {files}",
   "code.chat.verdict.revertFailed":
     "Nie udało się cofnąć — tamtego zrzutu już nie ma.",
   "code.chat.verdict.fix": "Niech agent spróbuje to naprawić",
@@ -16091,6 +16100,7 @@ const ru: Dict = {
   "code.chat.verdict.reverted": "Правки отменены.",
   "code.chat.verdict.revertedPartly":
     "Правки отменены. Файлы, созданные этим ходом, остались — внутри git-репозитория отмена ничего не удаляет, так что уберите их сами, если они не нужны.",
+  "code.chat.verdict.revertedExceptChanged": "Правки отменены, кроме {n} файлов, изменённых после этого хода, — они оставлены как есть: {files}",
   "code.chat.verdict.revertFailed":
     "Не удалось отменить — этого снимка больше нет.",
   "code.chat.verdict.fix": "Дать агенту попробовать это починить",

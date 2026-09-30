@@ -300,6 +300,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Undo takes back what its own turn changed, and one conversation at a time edits a folder.**
+  - **What was wrong:** undo restored the whole folder to the snapshot taken before the turn. With two
+    conversations in one folder, undoing one also reverted the other's edits and anything the person had typed
+    since; outside a git repository it deleted the other's new files. Nothing kept two turns from editing the
+    same folder at once, either, so a snapshot, a verification or an undo could describe a mix of both.
+  - **What undo does now:** a turn records what it changed: the difference between the folder before it and
+    right after it, so edits made through the shell count too. Undo puts back only those files. A file that
+    changed again after the turn is left as it is, and the screen names it ("except N file(s) that changed
+    after this turn"). The rules against deleting inside a git repository or after a truncated snapshot still
+    apply.
+  - **What turns in one folder do now:** they take turns, background works included, as works already did
+    among themselves. A turn that waits is told why. Stop still reaches it while it waits, and it never
+    starts. Different folders still run at once.
 - **Two turns on the same conversation both stay in it.**
   - **What was wrong:** the coding route loaded the conversation before taking its lock and saved it inside
     the lock. A second turn on the same conversation (the owner and a guest on a shared link, or two tabs)
