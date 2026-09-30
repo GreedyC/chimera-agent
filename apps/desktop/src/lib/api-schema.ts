@@ -2976,6 +2976,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ui/layout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ui Layout
+         * @description The screen layout the desktop stored, or null. Null is the ordinary first-run answer, and the
+         *     client then keeps what its own storage has (and sends it here), or its default.
+         */
+        get: operations["get_ui_layout_api_ui_layout_get"];
+        /**
+         * Put Ui Layout
+         * @description Keep the screen layout. 413 for one over the size cap; the shape is the client's to check.
+         */
+        put: operations["put_ui_layout_api_ui_layout_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/usage": {
         parameters: {
             query?: never;
@@ -7627,6 +7652,26 @@ export interface components {
             assistant: string;
             /** User */
             user: string;
+        };
+        /** UiLayoutIn */
+        UiLayoutIn: {
+            /** Layout */
+            layout: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * UiLayoutOut
+         * @description The desktop's stored screen layout, or null when none was stored (dynamic screen, phase 6).
+         *
+         *     Opaque to the server on purpose: the client owns the layout model and reads anything it does not
+         *     recognise as its default, so a shape checked here would be a second definition that drifts.
+         */
+        UiLayoutOut: {
+            /** Layout */
+            layout: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * UnavailableToolOut
@@ -12470,6 +12515,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TranscriberWarmOut"];
+                };
+            };
+        };
+    };
+    get_ui_layout_api_ui_layout_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UiLayoutOut"];
+                };
+            };
+        };
+    };
+    put_ui_layout_api_ui_layout_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UiLayoutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UiLayoutOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

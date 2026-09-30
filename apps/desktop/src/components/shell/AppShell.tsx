@@ -50,6 +50,10 @@ export function AppShell({
   // The inspector is the right region wherever a screen has one; a screen without one shows no tab.
   const showInspector = layout.regions.right.visible;
   const inspectorEnter = useRegionEnter(showInspector, "right");
+  // A screen's own left sidebar (the editor's) follows the left region like the conversation list
+  // does (phase 6). The Code screen draws its list itself and passes no context, so no tab doubles.
+  const showContext = layout.regions.left.visible;
+  const contextEnter = useRegionEnter(showContext, "left");
   // Escape restores whatever is maximised (phase 5), from anywhere on screen.
   useEscapeRestores();
   const mainRef = useRef<HTMLElement>(null);
@@ -97,11 +101,18 @@ export function AppShell({
             ⌘1–⌘5 and the command palette do not go through the rail. */}
         {showRail ? rail : <EdgeTab side="rail" />}
 
-        {context && (
-          <div {...(ignite && { "data-ignite": "context" })} className="flex shrink-0">
-            {context}
-          </div>
-        )}
+        {context &&
+          (showContext ? (
+            <div
+              {...(ignite && { "data-ignite": "context" })}
+              className={cn("flex shrink-0", contextEnter.className)}
+              onAnimationEnd={contextEnter.onAnimationEnd}
+            >
+              {context}
+            </div>
+          ) : (
+            <EdgeTab side="left" />
+          ))}
 
         <main
           id="main"

@@ -252,6 +252,11 @@ settings minimise to one line of chips; the posture note beside them never does.
 Escape always restores it. Focus mode (the status bar's focus button) remembers the layout it replaced
 and returns to it exactly. "Review", "monitor" and the person's own saved layout are palette commands.
 
+**Phase 6: kept by the server.** The layout also lives in `CHIMERA_HOME/ui_layout.json` through
+`/api/ui/layout` (`lib/layout/sync.tsx`): local goes up the first time, the server's is applied after
+that, a change made before it answers wins, and no server is not an error. A screen's own left sidebar
+(the editor's, in the shell's context slot) follows the left region.
+
 **Dependencies.** `@dnd-kit` (core, sortable, utilities) joined the four Radix packages in phase 4, for
 the reason given above: it buys something harder than a hundred lines, the keyboard half of dragging,
 with every step announced. `react-resizable-panels` was approved for phase 2 and **not adopted**: it sizes sibling

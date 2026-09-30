@@ -9775,6 +9775,42 @@
         "title": "TurnOut",
         "type": "object"
       },
+      "UiLayoutIn": {
+        "properties": {
+          "layout": {
+            "additionalProperties": true,
+            "title": "Layout",
+            "type": "object"
+          }
+        },
+        "required": [
+          "layout"
+        ],
+        "title": "UiLayoutIn",
+        "type": "object"
+      },
+      "UiLayoutOut": {
+        "description": "The desktop's stored screen layout, or null when none was stored (dynamic screen, phase 6).\n\nOpaque to the server on purpose: the client owns the layout model and reads anything it does not\nrecognise as its default, so a shape checked here would be a second definition that drifts.",
+        "properties": {
+          "layout": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layout"
+          }
+        },
+        "required": [
+          "layout"
+        ],
+        "title": "UiLayoutOut",
+        "type": "object"
+      },
       "UnavailableToolOut": {
         "description": "A tool the registry holds only under a condition that is not met right now.",
         "properties": {
@@ -16075,6 +16111,62 @@
           }
         },
         "summary": "Warm Transcriber Route"
+      }
+    },
+    "/api/ui/layout": {
+      "get": {
+        "description": "The screen layout the desktop stored, or null. Null is the ordinary first-run answer, and the\nclient then keeps what its own storage has (and sends it here), or its default.",
+        "operationId": "get_ui_layout_api_ui_layout_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UiLayoutOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Ui Layout"
+      },
+      "put": {
+        "description": "Keep the screen layout. 413 for one over the size cap; the shape is the client's to check.",
+        "operationId": "put_ui_layout_api_ui_layout_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UiLayoutIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UiLayoutOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Ui Layout"
       }
     },
     "/api/usage": {

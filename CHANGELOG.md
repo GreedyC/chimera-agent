@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **The dynamic screen, phase 6: the layout is kept by the server too, and the editor's sidebar joins in.**
+  - **Why:** the layout lived only in the webview's storage, which a reinstall or a cleared WebView2 profile
+    wipes. The owner chose to keep it where the project list already lives.
+  - **Server:** `GET` and `PUT /api/ui/layout` keep it as one JSON object under `CHIMERA_HOME`
+    (`chimera/core/ui_layout.py`): an object only, at most 64 KB, replaced atomically. The server does not
+    check its shape; the client owns the model and reads anything it does not recognise as its default.
+  - **Client** (`lib/layout/sync.tsx`, mounted in `main.tsx`):
+    - the first time, the local layout goes up;
+    - after that the server's is applied at start (not as a step to undo) and each change is sent once after
+      a short pause;
+    - a change made before the server answered wins;
+    - a stored value of another version is no answer, so the local layout is kept and sent;
+    - with no server, the local copy keeps working.
+  - **The editor's sidebar** follows the left region like the conversation list: it hides from its own
+    button, leaves a tab on its edge and slides back in.
 - **The dynamic screen, phase 5: maximise any panel, focus mode, and layouts one command away.**
   - **Maximise:** the file viewer and the tools, fusion, background-jobs and machine panels maximise from a
     button in their header, or with ⌘⇧M / Ctrl+Shift+M on the panel that holds focus. Escape restores from
