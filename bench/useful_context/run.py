@@ -37,6 +37,9 @@ MAX_TOKENS = 8_000
 #: DeepInfra's quote for this model on the OpenRouter endpoints listing, read 2026-09-25 (per M tokens).
 PRICE_IN, PRICE_CACHED, PRICE_OUT = 0.060, 0.015, 0.180
 RETRIES = 2
+#: Seconds to wait before retrying a call the route refused for load (HTTP 429), times the attempt
+#: number. ``None``: a refusal waits like any other error (15 s, 30 s).
+RATE_LIMIT_WAIT: int | None = None
 #: How long one call may take, and how long the top rung's may. ``TOP_TIMEOUT`` None: the same for all.
 TIMEOUT = 900
 TOP_TIMEOUT: int | None = None
@@ -86,6 +89,10 @@ PROFILES: dict[str, dict[str, Any]] = {
         "LADDER": (4_000, 16_000, 32_000, 64_000, 128_000, 256_000, 512_000),
         "TIER_BAND": (0.8, 1.35),
         "CORPUS_ROOTS": ("chimera", "tests"),
+        # Second amendment to option B (owner, 2026-09-30): the first run was ended by upstream 429s, so a
+        # call the route refuses for load waits 60 s, then 120 s, before its two retries. Run with
+        # --workers 1. Neither changes what is measured, only how hard the route is pressed.
+        "RATE_LIMIT_WAIT": 60,
     },
     "glm53": {
         "MODEL": "openrouter/z-ai/glm-5.3",
@@ -183,7 +190,9 @@ def _one(item: it.Item, length: int, arm: str, cpt: float, cap: float) -> dict[s
         except Exception as exc:  # noqa: BLE001 -- a failed call is a halt, counted, never a zero
             row["error"] = f"{type(exc).__name__}: {exc}"[:300]
             if attempt < retries:
-                time.sleep(15 * (attempt + 1))
+                refused = "RateLimit" in type(exc).__name__ or "429" in str(exc)[:200]
+                wait = RATE_LIMIT_WAIT if refused and RATE_LIMIT_WAIT else 15
+                time.sleep(wait * (attempt + 1))
     row["seconds"] = round(time.time() - started, 1)
     with _lock:
         _spent -= projected
@@ -266,7 +275,7 @@ def _write(out: Path, rows: list[dict[str, Any]], meta: dict[str, Any], cpt: flo
     ordered = sorted(rows, key=lambda r: (order[r["item"]], r["arm"] != "replay", r["length"]))
     payload = {
         **meta, "model": MODEL, "provider": PROVIDER, "temperature": TEMPERATURE, "max_tokens": MAX_TOKENS,
-        "timeout": TIMEOUT, "top_timeout": TOP_TIMEOUT, "retries": RETRIES,
+        "timeout": TIMEOUT, "top_timeout": TOP_TIMEOUT, "retries": RETRIES, "rate_limit_wait": RATE_LIMIT_WAIT,
         "chars_per_token": cpt, "prices_per_m": [PRICE_IN, PRICE_CACHED, PRICE_OUT],
         "usd": round(sum(r.get("cost", 0.0) for r in rows), 6), "wall_seconds": round(seconds, 1),
         "rows": ordered,

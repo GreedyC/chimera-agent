@@ -333,6 +333,31 @@ M000, whose 512k call was not cached. Three rungs of M000 (16k, 64k, 128k) were 
 
 The next step is the owner's, as written above.
 
+## Amendment — 2026-09-30, the owner chose to relaunch option B pressing the route less; written before it sends a call
+
+- **One worker instead of three** (`--workers 1`). Three concurrent calls of up to ~512k tokens each is where
+  the 429s began, on the fourth item.
+- **A call the route refuses for load waits 60 s, then 120 s**, before its two retries. The profile's
+  `RATE_LIMIT_WAIT` applies to HTTP 429 only. Any other error keeps 15 s and 30 s, as does every other profile.
+  The results file records it as `rate_limit_wait`. Covered by
+  `tests/test_the_useful_context_runner_waits_out_a_busy_route.py`; removing each of its three guards made a
+  test fail.
+- **Nothing else changes.** Same profile `glm53flash512`, the same M000–M071, n = 72, chars per token 4.35, the
+  same grader, gates and stop rule. The cache rule from the result above still applies. By now M000–M007 have
+  all been sent before, and those are the prompts the provider may still hold.
+- **Budget.**
+  - Recorded so far: US$ 0.4565 in the files, plus US$ 0.1355 that the option-A runner counted and dropped,
+    plus US$ 0.1701 for the stopped option-B run. That is **US$ 0.7621**.
+  - The worst case for abandoned 900k calls is unchanged, ≈ US$ 1.68: the option-B run abandoned none, and a
+    429 is refused before any work is done.
+  - This run's cap is again **US$ 4.50**, so the study stays under ≈ US$ 6.95 in the worst case, below the
+    approved US$ 8.
+- **Time.** One item is about 7.5 minutes of calls in sequence, so ~9 hours for 72, plus any waits.
+- **The stopped option-B file stays as it is.** It is not merged into this one. The relaunch writes
+  `results/glm53flash512_slow.json`.
+- **If the stop rule ends this one too,** the route cannot carry the run even at one call at a time. That
+  reading is published as it is, and the next step is again the owner's.
+
 ## What this cannot show
 
 - Other task shapes; the limits of `PREREGISTRATION.md` apply.
