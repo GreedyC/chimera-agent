@@ -1287,6 +1287,10 @@ def register_code_api(
     ui_layout = UiLayoutStore(settings.home / "ui_layout.json")
     # One lock per session: two concurrent turns on the same conversation would interleave their
     # transcripts and the last save would silently win. Different sessions never wait on each other.
+    # The lock alone did not give that: a turn loads its conversation when the request arrives, so
+    # one that waited here ran on the history it loaded before the other finished, and its save
+    # erased the other's exchange. Every use of the lock now reads the conversation again first
+    # (`store.refresh`), and a save is atomic.
     locks: dict[str, threading.Lock] = {}
     locks_guard = threading.Lock()
 
@@ -1506,6 +1510,7 @@ def register_code_api(
             )
         )
         with lock_for(parent_id):
+            store.refresh(parent)
             parent.messages.append({"role": "user", "content": req.message})
             parent.messages.append({
                 "role": "assistant",
@@ -1987,10 +1992,18 @@ def register_code_api(
                     # exactly that rather than as a name nobody gave.
                     if author:
                         receipt["author"] = author
-                    session.remember_receipt(receipt)
+                    # This turn's own messages, for the history index below, before the stored
+                    # conversation (which may by now hold a later turn) is read back.
+                    own_messages = session.to_dict()["messages"]
                     try:
-                        with live_turns.writing(turn_id):
-                            store_for.save(session)
+                        # The verification before this can take minutes, and another turn of this
+                        # conversation may have saved meanwhile: the receipt goes on top of what is
+                        # stored now, never back over it with this turn's older copy.
+                        with lock_for(session_id):
+                            store_for.refresh(session)
+                            session.remember_receipt(receipt)
+                            with live_turns.writing(turn_id):
+                                store_for.save(session)
                     except OSError as exc:  # noqa: BLE001 — a failed record must not fail the turn
                         _log.debug("could not store the turn receipt: %s", exc)
                     # The turn joins the conversation history index — the record that outlives the
@@ -2003,7 +2016,7 @@ def register_code_api(
                     try:
                         from chimera.api.code_replay import exchanges_from_messages
 
-                        exchanges = exchanges_from_messages(session.to_dict()["messages"])
+                        exchanges = exchanges_from_messages(own_messages)
                         history.record(
                             turn_id=turn_id,
                             session_id=session_id,
@@ -2120,6 +2133,7 @@ def register_code_api(
                         ),
                     )
                     with lock_for(session_id):
+                        store_for.refresh(session)
                         acp_result = code_acp.run_external_turn(
                             provider=external,
                             command=req.provider_command,
@@ -2146,6 +2160,9 @@ def register_code_api(
                     return
 
                 with lock_for(session_id):
+                    # What is stored now, not what was stored when this request arrived: a turn of
+                    # the same conversation may have finished while this one waited for the lock.
+                    store_for.refresh(session)
                     result = session.send(
                         message,
                         # Fusion has no token stream (the engine only implements `complete`), so
