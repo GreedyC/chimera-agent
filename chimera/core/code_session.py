@@ -31,12 +31,15 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from chimera.core.agent import AgentResult, ToolActivity
 from chimera.core.redact import redact
 from chimera.providers.gateway import MessageLike
 from chimera.telemetry import get_logger
+
+if TYPE_CHECKING:
+    from chimera.orchestration.budget import SpendBudget
 
 _log = get_logger("core.code_session")
 
@@ -160,8 +163,13 @@ class CodeSession:
         on_notice: Callable[[str, str, dict[str, Any]], None] | None = None,
         images: list[str] | None = None,
         should_stop: Callable[[], bool] | None = None,
+        spend: SpendBudget | None = None,
     ) -> AgentResult:
         """Run one turn with the previous turns as history, and absorb the result.
+
+        ``spend`` is the turn's meter when the caller owns it (the app's, which also sums what the
+        turns running at once spend). Forwarded like ``should_stop``: only when given, and only to
+        an agent whose ``run`` declares it.
 
         ``should_stop`` is the agent loop's own cooperative stop, polled once per step — what a
         background work is stopped by from the screen or by the voice. Forwarded only when given
@@ -193,6 +201,8 @@ class CodeSession:
             extra["on_notice"] = on_notice
         if should_stop is not None and _accepts(self.agent.run, "should_stop"):
             extra["should_stop"] = should_stop
+        if spend is not None and _accepts(self.agent.run, "spend"):
+            extra["spend"] = spend
         result = self.agent.run(
             task,
             on_token=on_token,

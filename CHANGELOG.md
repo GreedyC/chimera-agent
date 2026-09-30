@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **Turns running at once warn about what they spend together.** Each turn already warned at its own
+  US$ 1; five running at once could spend five times that without a word. When two or more running turns
+  together cross a multiple of the warning amount, each says so. It is a warning, not a stop; a ceiling the
+  person typed is still that turn's own.
+- **Opening the desktop app again brings the open window forward.** A second launch hands over to the
+  running app instead of starting a second backend on the same data folder.
 - **The dynamic screen, phase 7: any panel of the right panel opens in a window of its own.**
   - **How:** "To a window of its own" in a panel's move menu. The panel leaves its dock while the window is
     open and comes back however the window goes: its own "Bring back" button, the tray in the status bar
