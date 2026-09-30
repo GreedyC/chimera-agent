@@ -300,6 +300,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Two turns on the same conversation both stay in it.**
+  - **What was wrong:** the coding route loaded the conversation before taking its lock and saved it inside
+    the lock. A second turn on the same conversation (the owner and a guest on a shared link, or two tabs)
+    waited for the first, then ran on the history it had loaded before the first finished, and its save
+    erased the first turn's exchange. The comment above the lock promised the protection the code did not
+    give.
+  - **What happens now:** every use of the lock reads the conversation again first. The turn's receipt,
+    written after a verification that can take minutes, goes on top of what is stored, never back over a
+    later turn with an older copy. A spoken work's note in its parent conversation does the same.
+  - **Saves are atomic:** a temporary file, then a rename. A reader that met half a file used to read the
+    conversation as unreadable, and `load` starts an unreadable conversation fresh.
 - **Stop ends a coding turn on the server, not only the screen's view of it.**
   - **What was wrong:** the Stop button aborted the screen's request and nothing else. There was no route to
     stop a coding turn, and the stop signal reached the agent loop only for background works. A turn the
