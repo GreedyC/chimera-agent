@@ -119,6 +119,48 @@ model's output relative to an uncached call (the route and cache go on the recei
 the reading is of *this route with its cache behaviour*, which is how it will be used. If the errors
 concentrate at the top rung, that is a result about the rung, and it is reported as one.
 
+## Amendment — 2026-09-29, the main run stopped by hand after 3 items; the pilot's 900k reading retracted
+
+**What happened.** The main run (n = 72, 3 workers, US$ 7.50 cap) was stopped by hand after 3 items
+(27 rows, US$ 0.1366 recorded). Each of the three items answered at every rung from 4k to 512k and
+**timed out at 900k** (953–955 s against the runner's 900 s timeout). At that rate the registered stop rule
+(errors above 10% of rows after 30) would have ended the run after the fourth item; it was stopped one item
+early, before more top-rung calls were sent, for the reason below.
+
+**The cause, read from the rows.** Every 900k call that returned was a **cache hit**, and every one that was
+not a cache hit timed out:
+
+| run | item | seconds | prompt tokens | cached |
+|---|---|---:|---:|---:|
+| pilot | P000 | 953 | — | — (timeout) |
+| pilot | P001–P005 | 293–377 | 783k–788k | all but one token |
+| main | M000–M002 | 953–955 | — | — (timeout) |
+
+The pilot's five fast 900k answers were served from a cache warmed by the **first pilot launch**, the one
+stopped by hand with nothing recorded: it had already sent those exact prompts, and the provider finished
+them after this side gave up. So an uncached 900k prompt on this route takes longer than 900 s to prefill,
+and the pilot could not show it.
+
+**Retracted:** the pilot's "4 correct, 1 wrong, 1 timeout at 900k in ~300 s" is a reading of a cache the
+aborted launch warmed, not of the rung. It never entered the analysis (pilot outcomes do not), but it was
+reported, so it is retracted here with the same prominence.
+
+**Spend that is not in the files.** A call this side abandons at the timeout can still be processed, and
+billed, by the provider; the runner records a cost of zero for it. That applies to the six calls of the
+first pilot launch, to P000, and to M000–M002, each up to ~0.79M input tokens (≈ US$ 0.035 uncached, per
+attempt). The recorded total (pilot US$ 0.1161, probes ≈ US$ 0.0227, main US$ 0.1366) is therefore a
+**lower bound**; the provider's activity page is the only complete record.
+
+**Before any relaunch, one of these, registered here first:**
+
+1. **A timeout the top rung can meet** (e.g. 2,400 s for the 900k call only), with **no retry** at that rung,
+   so a slow prefill is waited for once rather than sent up to three times.
+2. **Drop the 900k rung** and keep 512k as the top (every rung up to it answered, in 174–207 s). That is a
+   change to the ladder, so the reading would be a lower bound at 512k.
+
+Neither is chosen here; the owner decides, because both change what the approved budget buys. The three
+items already run stay in `results/glm53flash_main_stopped.json` and are not merged into a relaunch.
+
 ## What this cannot show
 
 - Other task shapes; the limits of `PREREGISTRATION.md` apply.
