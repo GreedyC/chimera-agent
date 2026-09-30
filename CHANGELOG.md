@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **The dynamic screen, phase 5: maximise any panel, focus mode, and layouts one command away.**
+  - **Maximise:** the file viewer and the tools, fusion, background-jobs and machine panels maximise from a
+    button in their header, or with ⌘⇧M / Ctrl+Shift+M on the panel that holds focus. Escape restores from
+    anywhere, unless an open menu or dialog already took it. A maximised viewer takes the whole row; closing
+    the file restores the layout, so the next file does not open maximised.
+  - **Focus mode:** a button in the status bar (and ⌘⇧F / Ctrl+Shift+F, and the palette) puts the rail and
+    both side regions away and shrinks the composer's settings to their line; the same button puts back
+    exactly what was there.
+  - **Layouts:** "review" (the file viewer as wide as it goes, the list away) and "monitor" (the right panel as
+    wide as it goes) in the command palette, plus "Save this layout as mine" and "Apply my layout".
+  - **⌘⇧A / Ctrl+Shift+A** goes to the approval waiting in the conversation, minimised or not.
+  - The shifted chords are read by the physical key and leave the unshifted ones alone: Ctrl+A still
+    selects, Ctrl+F still finds. Nine translation keys in all ten languages.
 - **The dynamic screen, phase 4: the right panel's sections move between the right panel, the left sidebar and a
   bottom dock.**
   - **What moves:** tools, tokens, memory, fusion, background jobs and this machine are each a panel

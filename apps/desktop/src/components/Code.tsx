@@ -39,6 +39,7 @@ import { SessionSidebar } from "@/components/code/SessionSidebar";
 import { EdgeTab, useRegionEnter } from "@/components/shell/RegionToggle";
 import { Splitter } from "@/components/shell/Splitter";
 import { Dock } from "@/components/shell/Dock";
+import { MaximizeButton } from "@/components/shell/Maximize";
 import { ComposerSettings } from "@/components/code/ComposerSettings";
 import { HtmlPreview } from "@/components/code/HtmlPreview";
 import { ProjectPicker } from "@/components/code/ProjectPicker";
@@ -233,12 +234,13 @@ function Viewer({ workspace, path }: { workspace: string; path: string | null })
   }
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col border-hairline lg:border-r">
+    <section data-panel="viewer" className="flex min-h-0 flex-1 flex-col border-hairline lg:border-r">
       <div className="flex items-center gap-2 border-b border-hairline px-4 py-2.5">
         <FileCode2 className="h-4 w-4 shrink-0 text-accent" />
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
           {path ?? t("code.noFile")}
         </span>
+        <MaximizeButton panel="viewer" name={t("layout.panel.viewer")} />
         {dirty ? <Badge tone="warn">{t("code.dirty")}</Badge> : null}
         {q.data?.truncated ? <Badge tone="warn">{t("code.truncated")}</Badge> : null}
         {savedFlash && !editing ? (
@@ -319,10 +321,19 @@ export function Code() {
   const { layout } = useLayout();
   const showSessions = layout.regions.left.visible;
   const sessionsEnter = useRegionEnter(showSessions, "left");
+  // The file viewer maximised (phase 5): it takes the whole row, and the list and the conversation step
+  // aside until it is restored (its own button, or Escape).
+  const { dispatch: layoutDispatch } = useLayout();
+  const viewerMax = layout.maximized === "viewer";
   const qc = useQueryClient();
   // Lazy initialiser, not `useState(readWorkspace())`: the latter reads storage on every render.
   const [workspace, setWorkspace] = useState(readWorkspace);
   const [openFile, setOpenFile] = useState<string | null>(null);
+  // A maximised viewer with no file is a blank screen: closing the file restores the layout, so the next
+  // file does not open maximised without anyone asking.
+  useEffect(() => {
+    if (!openFile && viewerMax) layoutDispatch({ type: "maximize", panel: null });
+  }, [openFile, viewerMax, layoutDispatch]);
   const [projectDraft, setProjectDraft] = useState(readWorkspace);
   // Which stored conversation is on screen, and a key that remounts the transcript when it
   // changes — the conversation holds its exchanges in state, so switching sessions has to
@@ -537,7 +548,7 @@ export function Code() {
         </div>
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {showSessions ? (
+        {showSessions && !viewerMax ? (
         <>
         {/* The width is the layout's (phase 2), dragged on the line beside it. */}
         <div
@@ -594,7 +605,7 @@ export function Code() {
             conversation rather than sharing the height with it — which is what the note over
             the viewer already says it is: a consequence of opening a file, not a third of the
             window. Close the file and the conversation is back. */}
-        <main className={cn("flex min-h-0 min-w-0 flex-1 flex-col", openFile && "max-lg:hidden")}>
+        <main className={cn("flex min-h-0 min-w-0 flex-1 flex-col", openFile && "max-lg:hidden", viewerMax && "hidden")}>
           <Conversation
             key={conversationKey}
             resumeSession={sessionId}
@@ -712,11 +723,13 @@ export function Code() {
             it overflowed the row instead and painted across the activity panel. */}
         {openFile ? (
           <>
-          <Splitter region="viewer" grows="left" className="hidden lg:block" />
+          {viewerMax ? null : <Splitter region="viewer" grows="left" className="hidden lg:block" />}
           {/* The width comes from the layout through a variable, because it applies only side by side:
               below `lg` the viewer REPLACES the conversation and takes the whole column. */}
           <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col border-hairline lg:w-(--viewer-w) lg:flex-none lg:shrink-0 lg:border-l"
+            // One line on purpose: `columns-can-shrink.test.ts` reads the roles off it. Maximised (phase 5), the
+            // viewer drops its width and grows; otherwise it holds `--viewer-w` from `lg` up.
+            className={cn("flex min-h-0 min-w-0 flex-1 flex-col border-hairline", viewerMax ? "lg:w-auto" : "lg:w-(--viewer-w) lg:flex-none lg:shrink-0 lg:border-l")}
             style={{ "--viewer-w": `${layout.regions.viewer.size ?? 448}px` } as CSSProperties}
           >
             <Viewer workspace={workspace} path={openFile} />

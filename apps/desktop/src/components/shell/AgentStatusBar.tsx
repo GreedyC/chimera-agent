@@ -1,7 +1,7 @@
 import { Square } from "lucide-react";
 
 import { BrandMark } from "@/components/BrandMark";
-import { HiddenTray } from "@/components/shell/HiddenTray";
+import { FocusButton, HiddenTray } from "@/components/shell/HiddenTray";
 import { PendingApprovals } from "@/components/shell/PendingApprovals";
 import { ServerBadge } from "@/components/ServerBadge";
 import { VersionBadge } from "@/components/VersionBadge";
@@ -119,6 +119,7 @@ export function AgentStatusBar({ onOpenUsage }: { onOpenUsage?: () => void }) {
       {/* What the person hid from the screen, and the way back. Renders nothing while nothing is
           hidden, for the reason PendingApprovals gives about an indicator at zero. */}
       <HiddenTray />
+      <FocusButton />
 
       {(busy || run.running) && (
         <button
