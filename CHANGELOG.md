@@ -300,6 +300,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **A long turn followed late comes back whole, and idle conversations stop holding frames.**
+  - **What was wrong:** each conversation kept its last 4000 live frames, and a coding turn streams a frame
+    per token. A screen that came back to a long turn got its tail: no opening frame to draw the row on,
+    and the answer without its start. Every conversation opened in the process also kept its frames until
+    the app closed.
+  - **What happens now:** a replay that asks for frames the buffer dropped gets, for each turn still in it,
+    the opening and the missing frames back from the run log, which records the session number of every
+    frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
+    goes on), and a deleted conversation's are dropped.
+- **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
+  - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
+    closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
+    sweep had the same blind spot for a turn longer than an hour.
+  - **What happens now:** a turn is busy while it prompts, and only idle agents are closed. When every agent
+    is busy, the registry goes over the limit for a while, and logs it, rather than killing work.
 - **A conversation deleted while one of its turns runs stays deleted.**
   - **What was wrong:** deleting a conversation (or a project's conversations) did not look at running turns.
     The turn went on and, when it finished, saved the conversation again, so a conversation the person had
