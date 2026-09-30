@@ -86,6 +86,7 @@ import { useNum, useT, type TFunc } from "@/lib/i18n";
 import { useAgent, type AgentState } from "@/lib/agent-context";
 import { useStickToBottom } from "@/lib/useStickToBottom";
 import { cn } from "@/lib/utils";
+import { writeLastSession } from "@/lib/workspace";
 
 /** Share of the model's window this screen spends on the prompt before compacting.
  *
@@ -1225,6 +1226,8 @@ export function Conversation({
           if (id !== sessionId)
             void qc.invalidateQueries({ queryKey: ["code-sessions"] });
           setSessionId(id);
+          // The project's conversation from now on, so leaving the screen and coming back finds it.
+          writeLastSession(workspace, id);
         },
         onToken: (text) => {
           publish({ status: "streaming" });
