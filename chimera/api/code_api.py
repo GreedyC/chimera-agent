@@ -83,6 +83,7 @@ from chimera.api.schemas import (
 )
 from chimera.api.spoken_log import record_spoken_request
 from chimera.api.sse import SSE_RESPONSE
+from chimera.api.undo_offers import UndoOffers
 from chimera.api.worth import WorthReport, summarize_worth
 from chimera.core.context_budget import DEFAULT_BUDGET_FRACTION, UNMEASURED_USEFUL_TOKENS
 from chimera.governance.approval import ApprovalAnnouncer
@@ -289,7 +290,10 @@ class CodeSeams(BaseModel):
 #: Snapshots kept so a failed editing turn can be undone if the user asks. Bounded and in-memory: an
 #: offer that outlives the app is an offer nobody remembers making, and persisting whole-workspace
 #: snapshots to disk to support one button is a much larger promise than this button makes.
-_pending_reverts: dict[str, tuple[Any, Any]] = {}
+# The undo offers of editing turns, per conversation (`chimera/api/undo_offers.py`). A module-level
+# dict capped at 8 for the whole app used to take away an older conversation's Undo after eight
+# editing turns anywhere.
+_undo_offers = UndoOffers()
 
 
 class _StoppedWhileWaiting(Exception):
@@ -297,7 +301,6 @@ class _StoppedWhileWaiting(Exception):
 
     MESSAGE = "Stopped before it started: another conversation was working in this folder."
 
-_MAX_PENDING_REVERTS = 8
 
 #: FastAPI's upload marker, hoisted out of the signatures so a call in an argument default does not
 #: trip the linter. Same object, same behaviour.
@@ -1687,7 +1690,7 @@ def register_code_api(
         # to read the output rather than guess at what the job produced. Through `job_status`, not
         # `read_file`: the log lives in the app's data folder, outside the workspace, so a read_file
         # of it is a jail question on the screen for something the job tool reads freely.
-        finished = jobs_for(live().home).finished_unreported()
+        finished = jobs_for(live().home).finished_unreported(within=ws)
         if finished:
             lines = [
                 f"- job {j.id} {j.state}"
@@ -1985,12 +1988,9 @@ def register_code_api(
                         # A pass is not consent. The check answers "does this still build", and the
                         # question the button answers is "do I want this", which nothing else on the
                         # screen can answer for the person reading the diff.
-                        token = uuid.uuid4().hex
                         # What THIS turn changed, measured now, before the verifier runs: an undo
                         # puts back these files and no others (`WorkspaceGuard.restore_change`).
-                        _pending_reverts[token] = (guard, guard.diff_since(before))
-                        while len(_pending_reverts) > _MAX_PENDING_REVERTS:
-                            _pending_reverts.pop(next(iter(_pending_reverts)))
+                        token = _undo_offers.offer(session_id, (guard, guard.diff_since(before)))
                         outcome["token"] = token
                         command, source = resolve_verify(None, ws)
                         if command is None:
@@ -2365,7 +2365,7 @@ def register_code_api(
 
     def _revert(token: str) -> dict[str, Any]:
         """Undo through the same single-use offer the receipt makes (`revert_turn`)."""
-        pending = _pending_reverts.pop(token, None)
+        pending = _undo_offers.take(token)
         if pending is None:
             return {"ok": False, "restored": 0}
         workspace_guard, change = pending

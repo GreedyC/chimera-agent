@@ -300,6 +300,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **An undo offer and a finished job's news each stay with the conversation they came from.**
+  - **Undo offers:** they lived in one list capped at 8 for the whole app. After eight editing turns anywhere,
+    an older conversation's Undo button, and a finished background work's undo, answered "nothing to undo".
+    Each conversation now keeps its 20 most recent offers, and the app keeps 200 in all, oldest first out.
+    Each offer holds only the files its turn changed, not a copy of the whole folder.
+  - **Finished jobs:** "a background job finished" went to the next turn of ANY project. That turn marked it
+    reported and could not read its output, because the job tools are fenced to the turn's folder, so the
+    project that started the job never heard. A turn is now told only about jobs that ran inside its own
+    folder.
 - **Undo takes back what its own turn changed, and one conversation at a time edits a folder.**
   - **What was wrong:** undo restored the whole folder to the snapshot taken before the turn. With two
     conversations in one folder, undoing one also reverted the other's edits and anything the person had typed
