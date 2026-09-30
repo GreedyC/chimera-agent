@@ -439,6 +439,50 @@ At ≈ US$ 0.087 per item on this route (≈ 1.02M prompt tokens at 0.084/M, unc
   tokenizer, so every rung is the size its label says. The recalibration rule stays: `est_chars /
   prompt_tokens` is still measured on the 512k rows, and the main run uses whatever it gives.
 
+## Addendum — 2026-09-30, after the Novita pilot, before its main run
+
+**Pilot (`results/glm53flash512_novita_pilot.json`):** 26 rows, **US$ 0.2217**, and `runner_usd` agrees.
+
+- **Gate:** 20/20 at 4k (≥ 18: **PASS**).
+- **The route served 512k.** Five calls read 510,861–512,948 prompt tokens and answered in 23–53 s, against
+  ~200 s on Sail Research. None was cached, none was refused with a 429, and each was billed at exactly the
+  quoted price (ratio 1.00).
+- **Outcomes,** as registered, do not enter the analysis: 4 correct at 512k, 1 `rule_forgotten`.
+
+**One apparatus defect, found in the pilot and fixed before the main run.** P005's 512k call came back after
+23.6 s with `finish_reason` "stop" but nothing inside it:
+
+| field | value |
+|---|---|
+| content | none |
+| prompt tokens | **0** |
+| completion tokens | 0 |
+| cost | none |
+
+The grader scored it `empty`, a wrong answer. A route failure would have counted as the model forgetting, which
+is exactly what this study's rule forbids: a failed call is an error, never a zero.
+
+- **The fix in `run.py`:** a reply with 0 prompt tokens now raises `EmptyResponse`, so it is retried like any
+  failed call, and recorded as an error if it persists. It is never graded.
+- **Tests:** covered by `tests/test_the_useful_context_runner_does_not_grade_an_unread_prompt.py`. Removing each
+  of its two guards made a test fail.
+- **No earlier result is affected.** No row of any earlier results file, published or stopped, has this shape
+  (all ten scanned). The pilot's row stays as recorded, since pilot outcomes are not analysed.
+
+**Fixed for the main run:**
+
+- **Chars per token: 4.36.** The median of `est_chars / prompt_tokens` over the five 512k rows that read a
+  prompt was 4.342–4.361, rounded to 0.01.
+- **n = 54,** by the registered rule. One 512k call cost US$ 0.043 on this route. An item (the ladder plus the
+  4k replay, ~1.02M prompt tokens) is ≈ US$ 0.086. The worst case spent so far is ≈ US$ 2.61, plus this pilot's
+  US$ 0.2217, so ≈ US$ 2.83. That leaves ≈ US$ 5.17 under the approved US$ 8, which buys 60 items at most; the
+  largest multiple of 18 is 54. Projection: **≈ US$ 4.64**.
+- **Cap: US$ 5.00,** so the study stays under ≈ US$ 7.83 even in the worst case for every unrecorded call.
+- **Workers: 2.** The pilot met no 429, and the rule written for this route says 2 in that case.
+- **Items:** M000–M053, profile `glm53flash512_novita`. The stop rule is unchanged.
+- **Output:** `results/glm53flash512_novita_main.json`.
+- **Predictions:** P1 and P2-B stand unchanged.
+
 ## What this cannot show
 
 - Other task shapes; the limits of `PREREGISTRATION.md` apply.

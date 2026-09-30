@@ -177,6 +177,17 @@ def _call(request: dict[str, Any], timeout: int = 900) -> dict[str, Any]:
     }
 
 
+class EmptyResponse(Exception):
+    """A reply the route sent without reading the prompt.
+
+    Seen on 2026-09-30, once in the Novita pilot: a 512k call came back after 23.6 s with
+    finish_reason "stop", no content, 0 prompt tokens, 0 completion tokens and no cost. The grader
+    scored it `empty`, a wrong answer, so a route failure would have counted as the model forgetting.
+    No row of any earlier file has this shape. It is retried like any failed call, and if it persists
+    it is an error, never a grade.
+    """
+
+
 def _one(item: it.Item, length: int, arm: str, cpt: float, cap: float) -> dict[str, Any]:
     global _spent
     request = it.render(item, length, cpt)
@@ -199,8 +210,11 @@ def _one(item: it.Item, length: int, arm: str, cpt: float, cap: float) -> dict[s
     for attempt in range(retries + 1):
         try:
             got = _call(request, timeout=TOP_TIMEOUT if top and TOP_TIMEOUT else TIMEOUT)
+            if not got["prompt_tokens"]:
+                raise EmptyResponse("the route answered without reading the prompt (0 prompt tokens)")
             break
         except Exception as exc:  # noqa: BLE001 -- a failed call is a halt, counted, never a zero
+            got = None
             row["error"] = f"{type(exc).__name__}: {exc}"[:300]
             if attempt < retries:
                 refused = "RateLimit" in type(exc).__name__ or "429" in str(exc)[:200]
