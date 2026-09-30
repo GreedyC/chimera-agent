@@ -188,6 +188,11 @@ def _no_dotenv(
     for name in ("CHIMERA_DESKTOP_BRIDGE", "CHIMERA_DESKTOP_BRIDGE_FULL"):
         monkeypatch.setenv(name, "")
         monkeypatch.delenv(name)
+    # The data folder too. A test that runs `chimera app` without naming one served the developer's
+    # real home, and since the app claims its folder (`chimera/core/instance.py`, R12 of 2026-09-30)
+    # it would have taken the developer's own app's lock, or failed because that app held it. A test
+    # that needs a particular home still sets its own; this is only the default under it.
+    monkeypatch.setenv("CHIMERA_HOME", str(tmp_path_factory.mktemp("home")))
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
