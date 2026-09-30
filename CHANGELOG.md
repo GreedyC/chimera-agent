@@ -300,6 +300,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **A conversation deleted while one of its turns runs stays deleted.**
+  - **What was wrong:** deleting a conversation (or a project's conversations) did not look at running turns.
+    The turn went on and, when it finished, saved the conversation again, so a conversation the person had
+    deleted came back.
+  - **What happens now:** deleting stops the turn with the same signal as Stop. That turn writes nothing more
+    of the conversation: no transcript, no receipt, no history index entry.
 - **A question waiting for a person says which project and conversation asked it.**
   - **What was wrong:** the status bar's list of waiting questions showed every conversation's questions in
     one dialog, and each said only what it would run and why. With two turns in two projects both asking to
