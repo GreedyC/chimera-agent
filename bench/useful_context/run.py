@@ -75,6 +75,18 @@ PROFILES: dict[str, dict[str, Any]] = {
         # (and billed) up to three times. Every other rung keeps 900 s and two retries.
         "TOP_TIMEOUT": 2_400,
     },
+    # Amendment, option B (owner, 2026-09-30): the 900k rung cannot be served on this route, whose server
+    # cuts a call at ~300 s before its first byte, streamed or not. The ladder tops out at 512k, where every
+    # call of both earlier runs answered in 174-207 s. Everything else is the glm53flash profile, without
+    # option A's top-rung timeout: at 512k the top rung is waited for like every other one.
+    "glm53flash512": {
+        "MODEL": "openrouter/z-ai/glm-5.3-flash",
+        "PROVIDER": "Sail Research",
+        "PRICE_IN": 0.045, "PRICE_CACHED": 0.0285, "PRICE_OUT": 0.60,
+        "LADDER": (4_000, 16_000, 32_000, 64_000, 128_000, 256_000, 512_000),
+        "TIER_BAND": (0.8, 1.35),
+        "CORPUS_ROOTS": ("chimera", "tests"),
+    },
     "glm53": {
         "MODEL": "openrouter/z-ai/glm-5.3",
         "PROVIDER": "Baidu",
@@ -212,9 +224,11 @@ def execute(plan: list[tuple[it.Item, list[tuple[int, str]]]], cpt: float, cap: 
 
     started = time.time()
     total_calls = sum(len(c) for _, c in plan)
+    consumed: set[Any] = set()
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(run_item, item, calls): item for item, calls in plan}
         for done, future in enumerate(as_completed(futures), 1):
+            consumed.add(future)
             item = futures[future]
             got = future.result()
             rows.extend(got)
@@ -232,11 +246,21 @@ def execute(plan: list[tuple[it.Item, list[tuple[int, str]]]], cpt: float, cap: 
                 for pending in futures:
                     pending.cancel()
                 break
-    _write(out, rows, meta, cpt, time.time() - started)
+    # Leaving the `with` waited for the items that were already running when the stop rule fired: they
+    # were sent and paid for. Their rows used to be dropped while their cost stayed in `_spent`, so the
+    # 2026-09-30 option-A run printed US$ 0.3166 over a file that summed to US$ 0.1811. They are kept
+    # now, beside the analysed rows and never among them, and the file carries what the runner counted.
+    after_stop = [
+        row for f in futures
+        if f not in consumed and f.done() and not f.cancelled() and f.exception() is None
+        for row in f.result()
+    ]
+    _write(out, rows, meta, cpt, time.time() - started, after_stop=after_stop, final=True)
     print(f"\nwrote {out}: {len(rows)}/{total_calls} rows, US${_spent:.4f}")
 
 
-def _write(out: Path, rows: list[dict[str, Any]], meta: dict[str, Any], cpt: float, seconds: float) -> None:
+def _write(out: Path, rows: list[dict[str, Any]], meta: dict[str, Any], cpt: float, seconds: float,
+           after_stop: list[dict[str, Any]] | None = None, final: bool = False) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     order = {r: k for k, r in enumerate(sorted({x["item"] for x in rows}))}
     ordered = sorted(rows, key=lambda r: (order[r["item"]], r["arm"] != "replay", r["length"]))
@@ -247,6 +271,12 @@ def _write(out: Path, rows: list[dict[str, Any]], meta: dict[str, Any], cpt: flo
         "usd": round(sum(r.get("cost", 0.0) for r in rows), 6), "wall_seconds": round(seconds, 1),
         "rows": ordered,
     }
+    if final:
+        # Every call's settled cost, rows or not. Only at the end: mid-run it would include reservations
+        # for calls still in flight.
+        payload["runner_usd"] = round(_spent, 6)
+        if after_stop:
+            payload["after_stop_rows"] = after_stop
     out.write_text(json.dumps(payload, indent=1, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
 
 

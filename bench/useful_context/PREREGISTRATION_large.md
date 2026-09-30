@@ -207,6 +207,101 @@ at 512k. Every call to 512k answered in both main runs (174–207 s). Spend so f
 ≈ US$ 0.0227 + the stream probe, main runs US$ 0.1366 + US$ 0.3166 recorded; the abandoned top-rung calls
 (at most ~14 by now) are the part the files cannot show.
 
+## Amendment — 2026-09-30, the owner chose option B; written before the relaunch sends a call
+
+**A correction first, with the same prominence as the figure it corrects.** The amendment above says the
+option-A run recorded **US$ 0.3166**. Its file, `results/glm53flash_main.json`, sums to **US$ 0.1811** over its
+36 rows. US$ 0.3166 is what the runner *printed*. The difference is a defect of the runner:
+
+- When the stop rule fires, the thread pool still waits for the items already running. Those calls are sent
+  and paid for, and the runner's counter includes them, but their rows were dropped.
+- In that run, the stop rule fired after the fourth item, with three items in flight (M003, M005 and M006).
+  The gap, US$ 0.1355, is three times the measured cost of one item up to 512k (US$ 0.045). That is
+  consistent with their lower rungs answering and their 900k calls failing.
+
+**Fixed in `run.py` before this relaunch:**
+
+- The rows of items that finish after the stop rule are written to `after_stop_rows`. They sit beside the
+  analysed rows and are never among them.
+- The final file carries `runner_usd`, the runner's own count.
+
+Covered by `tests/test_the_useful_context_runner_keeps_what_it_spent.py`. Each of its three guards was
+removed in turn, and a test failed each time. The earlier results files are not rewritten.
+
+**The count of abandoned calls is also corrected.** The earlier amendments said "at most ~14". A 953 s timeout
+is **three** attempts of ~300 s, not one, so the number of calls sent to the 900k rung and never answered is
+larger. At most:
+
+| where | calls |
+|---|---:|
+| first pilot launch | 18 |
+| pilot P000 | 3 |
+| stopped run M000–M002 | 9 |
+| calls in flight when that run was killed | 3 |
+| option-A run, errored | 4 |
+| option-A run, items in flight | 3 |
+| stream probe | 1 |
+| **total** | **41** |
+
+The first pilot launch is six prompts, up to three attempts each in its ~10 minutes. Uncached, each call is
+≈ US$ 0.041 (900k tokens at US$ 0.045 per M).
+
+**Spend so far:**
+
+| | US$ |
+|---|---:|
+| recorded in the files (pilot 0.1161, stopped run 0.1366, option A 0.1811, probes ≈ 0.0227) | 0.4565 |
+| counted by the runner but dropped from the option-A file | 0.1355 |
+| worst case, if every abandoned call was billed (41 × 0.041) | ≈ 1.68 |
+| **total, worst case** | **≈ 2.27** |
+
+The provider's activity page remains the only complete record.
+
+**What option B changes.** Profile `glm53flash512`; the `glm53flash` profile stays as it was, since it produced
+the three files above.
+
+- **Ladder: 4k … 256k, 512k.** The 900k rung is dropped, because this route cannot serve it (see above).
+- **No top-rung timeout.** Every rung, 512k included, waits 900 s with two retries. That is the regime in which
+  all 512k calls of both earlier runs answered, in 174–207 s. The server's ~300 s cut to the first byte leaves
+  about 90 s of margin at 512k. A 512k call that meets it is an error, counted and published, never a zero.
+
+**What does not change:**
+
+- **Items: M000–M071, n = 72.** The same balanced set, so the 18 cells stay complete.
+- **Rendering and grading:** chars per token 4.35; the grader, the gates and the decision rule.
+- **Execution:** 3 workers; the stop rule (errors above 10% of rows after 30).
+
+**Budget:**
+
+- **Projection:** ≈ US$ 0.045 per item, measured on seven items across the two earlier runs, so ≈ US$ 3.3 for 72.
+- **Cap for this run: US$ 4.50.** The whole study then stays under ≈ US$ 6.8, below the approved US$ 8, even in
+  the worst case above.
+
+**Items already sent.** Some of these prompts were sent before, and a prompt the provider still holds in cache
+could change timing or even output (#484).
+
+- **Which ones:** M000–M002 and M004 were sent at every rung up to 512k, in one or both earlier runs. M003, M005
+  and M006 were in flight when the option-A run stopped, so they probably were too; their rows were not kept.
+- **What the earlier rows show:** no cross-run reuse. Each item sent twice at 512k showed the same cached count
+  both times, hours apart: M000 36,864 of 508,244; M001 12,288; M002 44,032. That is the shared system prompt and
+  tool schemas, not the transcript.
+- **Rule, fixed now:** if more than 5% of 512k rows have `cached_tokens` above half their `prompt_tokens`, the
+  reading is published twice, with and without those rows.
+
+**Predictions, written having seen outcomes.**
+
+- **What has been seen:** seven answered 512k calls on four of these items (M000, M001, M002, M004), all
+  correct, plus their lower rungs. Those rows are not merged into this run. They are said here because they
+  inform the prediction below.
+- **P2-B:** glm53flash holds within the margin at 512k, so `useful_k` is written as a **lower bound of 512**.
+  Confidence moderate: seven correct calls on four items is not 72 items across 18 cells.
+- **P1** is unchanged: the 4k control and replay pass.
+
+**If it fails.** If the stop rule ends this run too, the file is published as it stands, with its
+`after_stop_rows` and `runner_usd`, and the next step is again the owner's.
+
+The relaunch writes `results/glm53flash512_main.json`.
+
 ## What this cannot show
 
 - Other task shapes; the limits of `PREREGISTRATION.md` apply.
