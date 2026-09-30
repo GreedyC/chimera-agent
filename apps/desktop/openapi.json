@@ -2283,6 +2283,25 @@
         "title": "CodeTurnRequest",
         "type": "object"
       },
+      "CodeTurnStopOut": {
+        "description": "A stop that reached a running coding turn. The turn ends at its next step, not at once.",
+        "properties": {
+          "stopping": {
+            "title": "Stopping",
+            "type": "boolean"
+          },
+          "turn_id": {
+            "title": "Turn Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "turn_id",
+          "stopping"
+        ],
+        "title": "CodeTurnStopOut",
+        "type": "object"
+      },
       "CompletionOut": {
         "description": "One inline suggestion, or an account of why there is none.",
         "properties": {
@@ -11901,6 +11920,46 @@
           }
         },
         "summary": "Code Turn Frames"
+      }
+    },
+    "/api/code/turns/{turn_id}/stop": {
+      "post": {
+        "description": "Stop a running coding turn on the server.\n\nUntil this existed the Stop button only aborted the screen's request: the turn went on\ncalling the model, editing files and spending until it finished by itself, while the screen\nsaid it had stopped. The agent loop polls the signal once per step, so the step in progress\nfinishes first; an external agent's prompt is cancelled at once. 404 for a turn that is not\nrunning, never 200-with-nothing: a stop that reached nothing must not read as one that\nworked.",
+        "operationId": "code_turn_stop_api_code_turns__turn_id__stop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "turn_id",
+            "required": true,
+            "schema": {
+              "title": "Turn Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeTurnStopOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Code Turn Stop"
       }
     },
     "/api/code/works/{work_id}/session": {

@@ -1682,6 +1682,13 @@ export const putUiLayout = (layout: object) =>
 /** The coding turns running now, oldest first. Answered from memory, so it is cheap to ask often. */
 export const listRunningTurns = () => json<RunningTurn[]>("/api/code/turns/running");
 
+/** Stop a running coding turn on the server. It ends at its next step; an external agent's prompt is
+ *  cancelled at once. A 404 means the turn was not running (it had already ended), not a failure. */
+export const stopCodeTurn = (turnId: string) =>
+  json<{ turn_id: string; stopping: boolean }>(`/api/code/turns/${encodeURIComponent(turnId)}/stop`, {
+    method: "POST",
+  });
+
 /** Past coding conversations, newest first, each carrying the project it belongs to.
  *
  * `workspace` is what makes the list groupable. Without it these are a flat pile of old questions
