@@ -94,6 +94,19 @@ PROFILES: dict[str, dict[str, Any]] = {
         # --workers 1. Neither changes what is measured, only how hard the route is pressed.
         "RATE_LIMIT_WAIT": 60,
     },
+    # Amendment, option 2 (owner, 2026-09-30): the Sail Research route refused even one call at a time
+    # (HTTP 429 upstream), so the same model is measured on another route, chosen by the rule this study
+    # registered: the cheapest fp8 endpoint serving 1,048,576 tokens on the listing (read 2026-09-30,
+    # 13:49 UTC), Sail Research excluded. Everything else is `glm53flash512`.
+    "glm53flash512_novita": {
+        "MODEL": "openrouter/z-ai/glm-5.3-flash",
+        "PROVIDER": "Novita",
+        "PRICE_IN": 0.084, "PRICE_CACHED": 0.0168, "PRICE_OUT": 0.28,
+        "LADDER": (4_000, 16_000, 32_000, 64_000, 128_000, 256_000, 512_000),
+        "TIER_BAND": (0.8, 1.35),
+        "CORPUS_ROOTS": ("chimera", "tests"),
+        "RATE_LIMIT_WAIT": 60,
+    },
     "glm53": {
         "MODEL": "openrouter/z-ai/glm-5.3",
         "PROVIDER": "Baidu",

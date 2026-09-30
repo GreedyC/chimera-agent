@@ -53,11 +53,12 @@ def _waits(
     return slept
 
 
-def test_the_slow_profile_waits_a_minute_then_two_after_a_refusal(
-    runner: Any, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("profile", ["glm53flash512", "glm53flash512_novita"])
+def test_the_slow_profiles_wait_a_minute_then_two_after_a_refusal(
+    runner: Any, monkeypatch: pytest.MonkeyPatch, profile: str
 ) -> None:
     refused = RateLimitError('{"error":{"code":429,"message":"temporarily rate-limited upstream"}}')
-    assert _waits(runner, monkeypatch, "glm53flash512", refused) == [60, 120]
+    assert _waits(runner, monkeypatch, profile, refused) == [60, 120]
 
 
 def test_any_other_error_keeps_the_usual_waits_on_the_slow_profile(

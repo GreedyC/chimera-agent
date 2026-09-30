@@ -358,6 +358,75 @@ The next step is the owner's, as written above.
 - **If the stop rule ends this one too,** the route cannot carry the run even at one call at a time. That
   reading is published as it is, and the next step is again the owner's.
 
+## Amendment — 2026-09-30, the relaunch was stopped by hand; the owner chose another route (option 2)
+
+**The one-call-at-a-time relaunch** (`results/glm53flash512_slow.json`) was stopped by hand at 09:50, during its
+third item.
+
+- **What it wrote:** 16 rows over two items, US$ 0.0371.
+- **Errors:** four, every one the same upstream 429, now after waits of 60 s and 120 s.
+- **Why it was stopped:** the stop rule was already certain. After the fourth item there would be at least 4
+  errors in 32 rows, 12.5% against the 10% threshold, whatever items 3 and 4 answered. Letting it run would
+  only have spent ~40 minutes and ~US$ 0.09 on a route the owner had set aside.
+- **What stopping by hand costs:** the runner's final write, so the file has no `runner_usd`. The item in
+  flight (M002) is not in it either, up to ≈ US$ 0.046 of unrecorded spend.
+
+**Reading for this route: Sail Research cannot carry this run on 2026-09-30**, at three calls or at one. This is
+a finding about that endpoint's capacity, not about the model.
+
+**The owner's choice: measure the same model on another route.** The route is chosen by the rule this study
+already registered — the cheapest fp8 endpoint serving 1,048,576 tokens — with Sail Research excluded:
+
+| | |
+|---|---|
+| listing | read 2026-09-30, 13:49 UTC, 33 endpoints |
+| route | **Novita**, fp8, context 1,048,576 |
+| prices / M (in, cached, out) | 0.084 / 0.0168 / 0.28 |
+| uptime, last 30 min | 98.6% |
+| temperature, tools | both supported |
+| profile | `glm53flash512_novita`: the `glm53flash512` profile with this provider and these prices, including the 429 wait |
+
+**Why still 512k, not 900k.** The owner's last choice about the ladder was option B, 512k as the top. Novita
+serves the full window, but going back to 900k roughly doubles the tokens per item and does not fit the budget
+at a useful n. That would be a separate decision.
+
+**A different endpoint is a different measurement.** Another host's fp8 build of the same weights may read
+differently (see "What this cannot show"). So this route runs **the registered pilot first**, as every model in
+this study did, and its outcomes do not enter the analysis:
+
+- **Items:** `P000–P019` at 4k, and `P000–P005` at 512k. Gate: **≥ 18/20 at 4k**.
+- **Chars per token:** recalibrated from the 512k rows with the same rule. The tokenizer is the model's, so ≈ 4.35 is
+  expected.
+- **Execution:** 2 workers, pilot cap **US$ 0.40** (projected ≈ US$ 0.27).
+- **What it tells:** whether this route serves 512k at all. If it cannot, the study stops there.
+- **Cache:** the provider cache is per route, and Novita has never seen these prompts, so no row can be a
+  cross-run cache hit.
+
+**The main run follows only if the pilot passes.** Before it sends a call, a short addendum fixes three things:
+
+- **n:** by the registered rule, the largest multiple of 18 under the budget, capped at 72, projected from the
+  pilot's measured cost.
+- **Its cap.**
+- **Its worker count:** 2, or 1 if the pilot met any 429.
+
+**Budget.**
+
+| | US$ |
+|---|---:|
+| recorded in the files: 0.4565 + 0.1355 (option A, dropped) + 0.1701 (option B) + 0.0371 (relaunch) | **0.7992** |
+| unrecorded: the relaunch's in-flight item | ≤ 0.046 |
+| unrecorded: abandoned 900k calls, worst case | ≈ 1.68 |
+| **worst case so far** | **≈ 2.53** |
+| pilot cap | 0.40 |
+| **left for the main run under the approved US$ 8** | **≈ 5.07** |
+
+At ≈ US$ 0.087 per item on this route (≈ 1.02M prompt tokens at 0.084/M, uncached, plus output), the rule gives
+**n = 54 (≈ US$ 4.7)**, not 72. Reaching 72 would need about US$ 1.6 more, which only the owner can approve.
+
+- The pilot writes `results/glm53flash512_novita_pilot.json`.
+- Every earlier file stays as it is and is not merged.
+- The predictions above (P1, P2-B) stand for this route unchanged.
+
 ## What this cannot show
 
 - Other task shapes; the limits of `PREREGISTRATION.md` apply.
