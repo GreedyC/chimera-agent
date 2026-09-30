@@ -1,7 +1,8 @@
 import * as Menu from "@radix-ui/react-dropdown-menu";
-import { PanelsTopLeft } from "lucide-react";
+import { Focus, PanelsTopLeft } from "lucide-react";
 
 import { focusRing } from "@/components/ui/focus";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useT, type TFunc } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout/context";
 import type { HiddenItem } from "@/lib/layout/model";
@@ -74,6 +75,36 @@ export function HiddenTray() {
         </Menu.Content>
       </Menu.Portal>
     </Menu.Root>
+  );
+}
+
+/**
+ * Focus mode, one click from the status bar (phase 5): the rail and both side regions go away and the
+ * composer's settings shrink to their line, leaving the conversation; clicking again (or ⌘⇧F) puts back
+ * exactly what was there. A control, not an indicator, so it is always on screen.
+ */
+export function FocusButton() {
+  const t = useT();
+  const { layout, dispatch } = useLayout();
+  const on = layout.beforeFocus !== null;
+  const label = t(on ? "layout.focus.exit" : "layout.focus.enter");
+  return (
+    <Tooltip label={label}>
+      <button
+        type="button"
+        aria-label={label}
+        aria-pressed={on}
+        onClick={() => dispatch({ type: "toggle-focus" })}
+        className={cn(
+          "flex items-center rounded-chip border border-hairline px-2 py-0.5",
+          "transition-colors duration-1 ease-out hover:text-foreground",
+          on && "border-accent/40 text-accent-ink",
+          focusRing,
+        )}
+      >
+        <Focus className="h-3 w-3" aria-hidden />
+      </button>
+    </Tooltip>
   );
 }
 

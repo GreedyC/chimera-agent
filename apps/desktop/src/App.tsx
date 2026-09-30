@@ -21,6 +21,9 @@ import { ErrorState } from "@/components/ui/async";
 import { getDoctor } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout/context";
+import { PANELS, type PanelId } from "@/lib/layout/model";
+import { loadMine, saveMine } from "@/lib/layout/store";
+import { useToast } from "@/components/ui/toast";
 import { applyTheme, readTheme, resolveTheme, type Theme } from "@/lib/theme";
 import { readWorkspace, writeWorkspace } from "@/lib/workspace";
 import { useIgnition } from "@/lib/useIgnition";
@@ -190,6 +193,8 @@ export default function App() {
   // hidden: the status bar shows nothing at zero, so this is where the way back lives meanwhile.
   const { dispatch: layoutDispatch, hidden, layout } = useLayout();
   const anyHidden = hidden.length > 0;
+  const toast = useToast();
+  const focusOn = layout.beforeFocus !== null;
   const shown = {
     left: layout.regions.left.visible,
     right: layout.regions.right.visible,
@@ -210,8 +215,27 @@ export default function App() {
       group: t("palette.group.layout"),
       run: () => void layoutDispatch({ type: "set-region", region: side, visible: !shown[side] }),
     }));
+    // Layouts one command away (phase 5), and the person's own, saved and applied from here.
+    const mine = loadMine();
+    const presets: Command[] = [
+      { id: "layout-focus", label: t(focusOn ? "layout.focus.exit" : "layout.focus.enter"), group: t("palette.group.layout"),
+        run: () => void layoutDispatch({ type: "toggle-focus" }) },
+      { id: "layout-review", label: t("layout.preset.review"), group: t("palette.group.layout"),
+        run: () => void layoutDispatch({ type: "preset", name: "review" }) },
+      { id: "layout-monitor", label: t("layout.preset.monitor"), group: t("palette.group.layout"),
+        run: () => void layoutDispatch({ type: "preset", name: "monitor" }) },
+      { id: "layout-save-mine", label: t("layout.mine.save"), group: t("palette.group.layout"),
+        run: () => {
+          if (saveMine(layout)) toast(t("layout.mine.saved"), "ok");
+        } },
+      ...(mine
+        ? [{ id: "layout-apply-mine", label: t("layout.mine.apply"), group: t("palette.group.layout"),
+             run: () => void layoutDispatch({ type: "apply", layout: mine }) }]
+        : []),
+    ];
     const layoutCommands: Command[] = [
       ...toggles,
+      ...presets,
       ...(anyHidden
         ? [{ id: "layout-show-all", label: t("layout.hidden.showAll"), group: t("palette.group.layout"),
              run: () => void layoutDispatch({ type: "show-all" }) }]
@@ -220,7 +244,7 @@ export default function App() {
         run: () => void layoutDispatch({ type: "reset" }) },
     ];
     return [...go, ...layoutCommands];
-  }, [t, navigate, layoutDispatch, anyHidden, shown.left, shown.right, shown.rail]);
+  }, [t, navigate, layoutDispatch, anyHidden, shown.left, shown.right, shown.rail, focusOn, layout, toast]);
 
   useHotkeys({
     onPalette: () => setPaletteOpen((o) => !o),
@@ -229,6 +253,22 @@ export default function App() {
     // where someone looks for it. A global shortcut that jumps you to a screen AND clears it is two
     // actions wearing one key.
     onNewChat: () => navigate("code"),
+    onFocusMode: () => void layoutDispatch({ type: "toggle-focus" }),
+    // The panel that holds focus, or the one already maximised: ⌘⇧M goes in and out of the same place.
+    onMaximize: () => {
+      if (layout.maximized) return void layoutDispatch({ type: "maximize", panel: null });
+      const id = (document.activeElement as HTMLElement | null)?.closest("[data-panel]")?.getAttribute("data-panel");
+      if (id && id in PANELS && PANELS[id as PanelId].maximizable) {
+        layoutDispatch({ type: "maximize", panel: id as PanelId });
+      }
+    },
+    // The approval waiting in the conversation, minimised or not: brought into view with focus on its
+    // first control, which is the one that opens it again when it was minimised.
+    onApproval: () => {
+      const card = document.querySelector<HTMLElement>('[data-card="approval"]');
+      card?.scrollIntoView({ block: "center" });
+      card?.querySelector<HTMLElement>("button:not([aria-disabled='true'])")?.focus();
+    },
     onToggleRegion: (side) =>
       void layoutDispatch({ type: "set-region", region: side, visible: !shown[side] }),
     onNavigate: (i) => {

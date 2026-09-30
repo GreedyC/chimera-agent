@@ -22,13 +22,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowLeftRight, ChevronDown, GripVertical, Minus, X } from "lucide-react";
 
+import { MaximizeButton } from "@/components/shell/Maximize";
 import { DOCK_PANELS, isDockPanel, panelTitleKey, type MovablePanel } from "@/components/shell/panels";
 import { focusRing } from "@/components/ui/focus";
 import { useOptionalToast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useT, type TFunc } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout/context";
-import { panelsIn, type Layout, type PanelId, type Zone } from "@/lib/layout/model";
+import { PANELS, panelsIn, type Layout, type PanelId, type Zone } from "@/lib/layout/model";
 import { cn } from "@/lib/utils";
 
 /**
@@ -119,7 +120,8 @@ export function Dock({ zone, className }: { zone: DockZone; className?: string }
   const t = useT();
   const { layout } = useLayout();
   const { active } = useDndContext();
-  const ids = panelsIn(layout, zone).filter(isDockPanel);
+  // The maximised panel is drawn over the main area instead (phase 5), not twice.
+  const ids = panelsIn(layout, zone).filter(isDockPanel).filter((id) => id !== layout.maximized);
   const { setNodeRef, isOver } = useDroppable({ id: `zone:${zone}` });
   if (ids.length === 0 && !active) return null;
 
@@ -208,6 +210,7 @@ function PanelFrame({ id, zone }: { id: MovablePanel; zone: DockZone }) {
           {name}
         </span>
         <MoveMenu id={id} zone={zone} name={name} />
+        {PANELS[id].maximizable ? <MaximizeButton panel={id} name={name} /> : null}
         <Tooltip label={t(minimized ? "layout.card.expand" : "layout.card.minimize", { name })}>
           <button
             type="button"

@@ -4,6 +4,7 @@ import { AgentStatusBar } from "@/components/shell/AgentStatusBar";
 import { EdgeTab, useRegionEnter } from "@/components/shell/RegionToggle";
 import { Splitter } from "@/components/shell/Splitter";
 import { Dock, LayoutDnd } from "@/components/shell/Dock";
+import { MaximizedPanel, useEscapeRestores } from "@/components/shell/Maximize";
 import { focusRing } from "@/components/ui/focus";
 import { useT } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout/context";
@@ -49,6 +50,8 @@ export function AppShell({
   // The inspector is the right region wherever a screen has one; a screen without one shows no tab.
   const showInspector = layout.regions.right.visible;
   const inspectorEnter = useRegionEnter(showInspector, "right");
+  // Escape restores whatever is maximised (phase 5), from anywhere on screen.
+  useEscapeRestores();
   const mainRef = useRef<HTMLElement>(null);
   const first = useRef(true);
 
@@ -87,7 +90,9 @@ export function AppShell({
       {/* One space to drag panels in (phase 4): the Code screen's left dock, the right panel, and the
           bottom dock below the row. */}
       <LayoutDnd>
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
+        {/* A maximised dock panel fills the row, over what is there (phase 5). */}
+        <MaximizedPanel />
         {/* Hidden, the rail leaves a tab on the edge. Every destination stays reachable meanwhile:
             ⌘1–⌘5 and the command palette do not go through the rail. */}
         {showRail ? rail : <EdgeTab side="rail" />}
