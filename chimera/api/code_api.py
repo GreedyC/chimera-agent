@@ -27,7 +27,6 @@ import asyncio
 import base64
 import itertools
 import json
-import os
 import re
 import threading
 import uuid
@@ -47,6 +46,7 @@ from pydantic import BaseModel, Field
 # tests that exercise the endpoint have all passed.
 from sse_starlette.sse import EventSourceResponse
 
+from chimera.api.folder_locks import FolderLocks
 from chimera.api.posture import (
     DEFAULT_APPROVAL,
     DEFAULT_REACH,
@@ -1225,8 +1225,12 @@ def register_code_api(
     graph: Any = None,
     fuse_backend: Any = None,
     static_dir: Path | None = None,
+    folder_locks: FolderLocks | None = None,
 ) -> None:
     """Mount ``POST /api/code/turn`` — a conversational coding turn, streamed.
+
+    ``folder_locks`` is the app's one lock per folder, shared with autonomous runs so a turn and a run
+    never edit one folder at once. A test mounting this alone gets its own.
 
     ``memory``/``graph`` are READ from, and written to in exactly ONE case: an explicit
     "remember that…" in the message the USER typed.
@@ -1324,16 +1328,15 @@ def register_code_api(
         with locks_guard:
             return locks.setdefault(session_id, threading.Lock())
 
-    # One writer per folder, for every turn (background works included), the rule works already kept
-    # among themselves. Two conversations editing one folder at once left a snapshot, a verification
-    # and an undo each describing a mix of both, and undoing one reverted the other's edits. Different
-    # folders never wait on each other. Taken before the session lock, always, so the two can't cross.
-    folder_locks: dict[str, threading.Lock] = {}
+    # One writer per folder, for every turn (background works included) and every autonomous run,
+    # which share this object (`chimera/api/folder_locks.py`). Two writers in one folder left a
+    # snapshot, a verification and an undo each describing a mix of both, and undoing one reverted
+    # the other's edits. Different folders never wait on each other. Taken before the session lock,
+    # always, so the two can't cross.
+    shared_folders = folder_locks if folder_locks is not None else FolderLocks()
 
     def folder_lock(ws: Path) -> threading.Lock:
-        key = os.path.normcase(str(Path(ws).resolve()))
-        with locks_guard:
-            return folder_locks.setdefault(key, threading.Lock())
+        return shared_folders.lock(ws)
 
     def build_agent(
         req: CodeTurnRequest,
@@ -1953,8 +1956,8 @@ def register_code_api(
                 if not folder.acquire(blocking=False):
                     on_notice(
                         "folder_busy",
-                        "Waiting: another conversation is working in this folder. This one starts "
-                        "when it finishes.",
+                        "Waiting: another conversation or run is working in this folder. This one "
+                        "starts when it finishes.",
                         {"workspace": str(ws)},
                     )
                     while not folder.acquire(timeout=0.25):

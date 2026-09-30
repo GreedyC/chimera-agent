@@ -757,6 +757,7 @@ const en: Dict = {
     "No verify command found in this project — this run is judged by a model reading the answer, not by tests.",
   "runs.planning": "planning…",
   "runs.verifying": "verifying…",
+  "runs.folderBusy": "Waiting: another conversation or run is working in this folder",
   "runs.doneOk": "done: passed",
   "runs.doneFail": "done: failed",
   "runs.pauseOnTaint":
@@ -2415,6 +2416,7 @@ const pt: Dict = {
     "Nenhum comando de verificação encontrado neste projeto — esta execução é julgada por um modelo lendo a resposta, não por testes.",
   "runs.planning": "planejando…",
   "runs.verifying": "verificando…",
+  "runs.folderBusy": "Aguardando: outra conversa ou run está trabalhando nesta pasta",
   "runs.doneOk": "concluído: aprovada",
   "runs.doneFail": "concluído: falhou",
   "runs.pauseOnTaint":
@@ -4085,6 +4087,7 @@ const es: Dict = {
     "No se encontró comando de verificación en este proyecto: esta ejecución la juzga un modelo leyendo la respuesta, no las pruebas.",
   "runs.planning": "planificando…",
   "runs.verifying": "verificando…",
+  "runs.folderBusy": "Esperando: otra conversación o ejecución está trabajando en esta carpeta",
   "runs.doneOk": "listo: aprobada",
   "runs.doneFail": "listo: fallida",
   "runs.pauseOnTaint":
@@ -5765,6 +5768,7 @@ const fr: Dict = {
     "Aucune commande de vérification trouvée dans ce projet — cette exécution est jugée par un modèle qui lit la réponse, pas par des tests.",
   "runs.planning": "planification…",
   "runs.verifying": "vérification…",
+  "runs.folderBusy": "En attente : une autre conversation ou exécution travaille dans ce dossier",
   "runs.doneOk": "terminé : réussie",
   "runs.doneFail": "terminé : échouée",
   "runs.pauseOnTaint":
@@ -7451,6 +7455,7 @@ const de: Dict = {
     "Kein Prüfbefehl in diesem Projekt gefunden — dieser Lauf wird von einem Modell beurteilt, das die Antwort liest, nicht von Tests.",
   "runs.planning": "plane…",
   "runs.verifying": "verifiziere…",
+  "runs.folderBusy": "Wartet: Ein anderes Gespräch oder ein anderer Lauf arbeitet in diesem Ordner",
   "runs.doneOk": "fertig: bestanden",
   "runs.doneFail": "fertig: fehlgeschlagen",
   "runs.pauseOnTaint":
@@ -9100,6 +9105,7 @@ const zh: Dict = {
     "这个项目里没有找到验证命令——这次运行由一个读答案的模型判定，不是由测试判定。",
   "runs.planning": "规划中…",
   "runs.verifying": "验证中…",
+  "runs.folderBusy": "等待中：另一个对话或运行正在这个文件夹中工作",
   "runs.doneOk": "完成：通过",
   "runs.doneFail": "完成：失败",
   "runs.pauseOnTaint": "若运行读取了不可信内容，暂停并等待我批准",
@@ -10737,6 +10743,7 @@ const ja: Dict = {
     "このプロジェクトに検証コマンドが見つかりません — この実行は答えを読むモデルが判定します。テストではありません。",
   "runs.planning": "計画中…",
   "runs.verifying": "検証中…",
+  "runs.folderBusy": "待機中：別の会話または実行がこのフォルダで作業中です",
   "runs.doneOk": "完了：合格",
   "runs.doneFail": "完了：失敗",
   "runs.pauseOnTaint": "信頼できない内容を読んだ場合は承認のために一時停止する",
@@ -12409,6 +12416,7 @@ const it: Dict = {
     "Nessun comando di verifica trovato in questo progetto: questa esecuzione è giudicata da un modello che legge la risposta, non dai test.",
   "runs.planning": "pianificazione…",
   "runs.verifying": "verifica…",
+  "runs.folderBusy": "In attesa: un'altra conversazione o esecuzione sta lavorando in questa cartella",
   "runs.doneOk": "fatto: superata",
   "runs.doneFail": "fatto: fallita",
   "runs.pauseOnTaint":
@@ -14083,6 +14091,7 @@ const pl: Dict = {
     "Nie znaleziono polecenia weryfikującego w tym projekcie — to uruchomienie ocenia model czytający odpowiedź, a nie testy.",
   "runs.planning": "planowanie…",
   "runs.verifying": "weryfikacja…",
+  "runs.folderBusy": "Czeka: inna rozmowa lub uruchomienie pracuje w tym folderze",
   "runs.doneOk": "gotowe: zaliczony",
   "runs.doneFail": "gotowe: nieudany",
   "runs.pauseOnTaint":
@@ -15759,6 +15768,7 @@ const ru: Dict = {
     "В этом проекте не нашлось команды проверки — этот запуск оценивает модель, читающая ответ, а не тесты.",
   "runs.planning": "планирует…",
   "runs.verifying": "проверяет…",
+  "runs.folderBusy": "Ждёт: в этой папке работает другой разговор или запуск",
   "runs.doneOk": "готово: пройден",
   "runs.doneFail": "готово: провален",
   "runs.pauseOnTaint":
