@@ -1670,6 +1670,15 @@ export interface RunningTurn {
   transcript_saved: boolean;
 }
 
+/** The desktop's screen layout as the server keeps it (dynamic screen, phase 6). Opaque here: the
+ *  layout module parses it, and reads anything it does not recognise as its default. */
+export const getUiLayout = () => json<{ layout: Record<string, unknown> | null }>("/api/ui/layout");
+export const putUiLayout = (layout: object) =>
+  json<{ layout: Record<string, unknown> | null }>("/api/ui/layout", {
+    method: "PUT",
+    body: JSON.stringify({ layout }),
+  });
+
 /** The coding turns running now, oldest first. Answered from memory, so it is cheap to ask often. */
 export const listRunningTurns = () => json<RunningTurn[]>("/api/code/turns/running");
 

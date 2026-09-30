@@ -162,6 +162,20 @@ class DeletedCountOut(BaseModel):
     deleted: int
 
 
+class UiLayoutOut(BaseModel):
+    """The desktop's stored screen layout, or null when none was stored (dynamic screen, phase 6).
+
+    Opaque to the server on purpose: the client owns the layout model and reads anything it does not
+    recognise as its default, so a shape checked here would be a second definition that drifts.
+    """
+
+    layout: dict[str, Any] | None
+
+
+class UiLayoutIn(BaseModel):
+    layout: dict[str, Any]
+
+
 class CodeSessionMetaOut(BaseModel):
     """One row of the coding-conversation list.
 

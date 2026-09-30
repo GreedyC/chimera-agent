@@ -73,6 +73,8 @@ from chimera.api.schemas import (
     RunningTurnOut,
     TranscriberWarmOut,
     TranscriptOut,
+    UiLayoutIn,
+    UiLayoutOut,
     VisionOut,
     WorkActionOut,
     WorksOut,
@@ -1277,6 +1279,11 @@ def register_code_api(
     # Beside the conversations, not inside them: a project you have added but not yet worked in
     # has no conversation to hang off, which is the whole reason the list cannot be derived.
     projects = CodeProjectRegistry(settings.home / "code_projects.json")
+    # The desktop's screen layout (dynamic screen, phase 6), beside the projects for the same reason:
+    # the webview's own storage does not survive a reinstall.
+    from chimera.core.ui_layout import UiLayoutStore
+
+    ui_layout = UiLayoutStore(settings.home / "ui_layout.json")
     # One lock per session: two concurrent turns on the same conversation would interleave their
     # transcripts and the last save would silently win. Different sessions never wait on each other.
     locks: dict[str, threading.Lock] = {}
@@ -2805,6 +2812,21 @@ def register_code_api(
         """Forget a bookmark. **Conversations are not touched**, so a project you have worked in
         reappears in the sidebar as one you have talked about rather than one you registered."""
         return [{"path": row.path, "alias": row.alias} for row in projects.remove(path)]
+
+    @app.get("/api/ui/layout", dependencies=[guard], response_model=UiLayoutOut)
+    def get_ui_layout() -> dict[str, Any]:
+        """The screen layout the desktop stored, or null. Null is the ordinary first-run answer, and the
+        client then keeps what its own storage has (and sends it here), or its default."""
+        return {"layout": ui_layout.read()}
+
+    @app.put("/api/ui/layout", dependencies=[guard], response_model=UiLayoutOut)
+    def put_ui_layout(body: UiLayoutIn) -> dict[str, Any]:
+        """Keep the screen layout. 413 for one over the size cap; the shape is the client's to check."""
+        try:
+            ui_layout.write(body.layout)
+        except OverflowError as exc:
+            raise HTTPException(status_code=413, detail=str(exc)) from exc
+        return {"layout": body.layout}
 
     # --- sharing: the owner's controls, and the guest app under /guest -------------------------
     #
