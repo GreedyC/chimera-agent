@@ -64,6 +64,7 @@ import { BrowserView } from "@/components/code/BrowserView";
 import { SharePanel } from "@/components/code/SharePanel";
 import { WorksPanel } from "@/components/code/WorksPanel";
 import { TodoPanel, type TodoEntry } from "@/components/code/TodoPanel";
+import { CardChrome, cardId, useCardModes } from "@/components/code/CardChrome";
 import { NoticeList, type NoticeEntry } from "@/components/code/NoticeList";
 import { VoiceMode, type SpokenAnswer, type SpokenAnnouncement } from "@/components/code/VoiceMode";
 import {
@@ -607,6 +608,9 @@ export function Conversation({
   // The question the turn is parked on, if any. One at a time by construction: the tool call
   // that raised it is blocked until it is answered, so a second cannot arrive first.
   const [pendingApproval, setPendingApproval] = useState<CodeApprovalEvent | null>(null);
+  // Every card's minimise / close / per-kind preference (dynamic screen, phase 3). Closed cards are
+  // this screen's only; a new conversation screen starts with all of them.
+  const cards = useCardModes();
   // Sharing. How many links this conversation has (the live stream is worth holding open only
   // when someone could be on the other end), whether the panel is open, and who is here now.
   const [shareCount, setShareCount] = useState(0);
@@ -1579,6 +1583,8 @@ export function Conversation({
                 {e.you}
               </div>
               {e.tools.length > 0 ? (
+                <CardChrome id={cardId(i, "tools")} kind="tools" cards={cards}
+                  summary={t("layout.card.count", { name: t("layout.card.name.tools"), n: e.tools.length })}>
                 <div className="space-y-1 rounded-chip border border-border p-2">
                   <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground">
                     <Wrench className="h-3 w-3" /> {t("code.chat.tools")}
@@ -1587,12 +1593,27 @@ export function Conversation({
                     <ToolRow key={j} tool={tool} onOpenFile={onOpenFile} />
                   ))}
                 </div>
+                </CardChrome>
               ) : null}
-              <TodoPanel items={e.todos} />
-              <NoticeList items={e.notices} />
-              <BrowserView frame={e.browser} />
+              {e.todos.length > 0 ? (
+                <CardChrome id={cardId(i, "todo")} kind="todo" cards={cards}>
+                  <TodoPanel items={e.todos} />
+                </CardChrome>
+              ) : null}
+              {e.notices?.length ? (
+                <CardChrome id={cardId(i, "notices")} kind="notices" cards={cards}
+                  summary={t("layout.card.count", { name: t("layout.card.name.notices"), n: e.notices.length })}>
+                  <NoticeList items={e.notices} />
+                </CardChrome>
+              ) : null}
+              {e.browser ? (
+                <CardChrome id={cardId(i, "browser")} kind="browser" cards={cards}>
+                  <BrowserView frame={e.browser} />
+                </CardChrome>
+              ) : null}
               {e.edits.map((edit, j) => (
-                <div key={j} className="space-y-1">
+                <CardChrome key={j} id={cardId(i, "diff", j)} kind="diff" cards={cards} summary={edit.path}>
+                <div className="space-y-1">
                   <button
                     type="button"
                     onClick={() => onOpenFile?.(edit.path)}
@@ -1602,6 +1623,7 @@ export function Conversation({
                   </button>
                   <DiffView patch={edit.patch} />
                 </div>
+                </CardChrome>
               ))}
               {/* Working, with nothing yet to show for it.
                   Under fusion the backend emits no token frames at all — deliberately, since the
@@ -1649,6 +1671,9 @@ export function Conversation({
                 <p className="text-xs text-muted-foreground">{t("code.chat.abandoned")}</p>
               ) : null}
               {e.failed ? (
+                // Minimises to its first line and never closes: a turn that failed must not look like a
+                // turn that finished.
+                <CardChrome id={cardId(i, "error")} kind="error" cards={cards} summary={t("code.chat.error")}>
                 <div className="space-y-1">
                   <p className="text-xs text-bad-foreground">{t("code.chat.error")}</p>
                   {/* Folded, not hidden: the headline stays one line for the common case where the
@@ -1677,6 +1702,7 @@ export function Conversation({
                     </Button>
                   ) : null}
                 </div>
+                </CardChrome>
               ) : null}
               {e.done?.fused ? (
                 // At the answer, which is the only place it lands in time. The composer warns before
@@ -1688,6 +1714,7 @@ export function Conversation({
                 </p>
               ) : null}
               {e.verified ? (
+                <CardChrome id={cardId(i, "verdict")} kind="verdict" cards={cards}>
                 <Verdict
                   v={e.verified}
                   undone={e.undone}
@@ -1696,8 +1723,26 @@ export function Conversation({
                   onFix={onHandOff}
                   t={t}
                 />
+                </CardChrome>
               ) : null}
-              {e.done ? <TurnReceipt done={e.done} t={t} /> : null}
+              {e.done ? (
+                <CardChrome id={cardId(i, "receipt")} kind="receipt" cards={cards}>
+                  <TurnReceipt done={e.done} t={t} />
+                </CardChrome>
+              ) : null}
+              {/* What was closed in this turn, and the way back to it, where it was. */}
+              {cards.closedInTurn(i) > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => cards.showTurn(i)}
+                  className={cn(
+                    "rounded-chip border border-dashed border-hairline px-2.5 py-0.5 text-xs text-muted-foreground",
+                    "transition-colors duration-1 ease-out hover:border-accent hover:text-foreground",
+                  )}
+                >
+                  {t("layout.card.hiddenInTurn", { n: cards.closedInTurn(i) })}
+                </button>
+              ) : null}
             </div>
           ))}
         </div>
@@ -1760,7 +1805,12 @@ export function Conversation({
           </div>
         ) : null}
         {pendingApproval ? (
-          <ApprovalCard question={pendingApproval} onAnswered={() => setPendingApproval(null)} />
+          // Keyed by the question: a NEW approval is a new card, and it opens whatever the last one
+          // was left as. It minimises to one line and never closes.
+          <CardChrome id={`approval:${pendingApproval.id}`} kind="approval" cards={cards}
+            summary={t("layout.card.approvalWaiting")}>
+            <ApprovalCard question={pendingApproval} onAnswered={() => setPendingApproval(null)} />
+          </CardChrome>
         ) : null}
         <textarea
           className={cn(
