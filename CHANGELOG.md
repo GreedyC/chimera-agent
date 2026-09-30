@@ -300,6 +300,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
+  - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
+    closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
+    sweep had the same blind spot for a turn longer than an hour.
+  - **What happens now:** a turn is busy while it prompts, and only idle agents are closed. When every agent
+    is busy, the registry goes over the limit for a while, and logs it, rather than killing work.
 - **A question waiting for a person says which project and conversation asked it.**
   - **What was wrong:** the status bar's list of waiting questions showed every conversation's questions in
     one dialog, and each said only what it would run and why. With two turns in two projects both asking to
