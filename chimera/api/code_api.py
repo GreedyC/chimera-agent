@@ -1572,6 +1572,23 @@ def register_code_api(
     )
     app.state.work_manager = works
 
+    def approval_origin(run_id: str) -> dict[str, str]:
+        """The conversation and folder of the turn that asked a question, while it waits.
+
+        A question only exists while its turn waits for the answer, so the running turns (and, for a
+        background work's turn, the work's record) always know it.
+        """
+        turn = live_turns.get(run_id)
+        if turn is not None:
+            return {"session_id": turn.session_id, "workspace": turn.workspace}
+        work = work_store.by_turn(run_id)
+        if work is not None:
+            return {"session_id": work.parent, "workspace": work.workspace, "work": work.title}
+        return {}
+
+    # Read by `GET /api/approvals` (app.py), which lists every waiting question from every screen.
+    app.state.approval_origin = approval_origin
+
     def _launch_turn(
         req: CodeTurnRequest,
         ws: Path,

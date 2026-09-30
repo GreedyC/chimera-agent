@@ -300,6 +300,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **A question waiting for a person says which project and conversation asked it.**
+  - **What was wrong:** the status bar's list of waiting questions showed every conversation's questions in
+    one dialog, and each said only what it would run and why. With two turns in two projects both asking to
+    run a command, the wrong one could be approved.
+  - **What happens now:** the question file records the turn that asked (`run_id`). `GET /api/approvals`
+    answers each question with that turn's conversation and folder, read from the running turns (or from a
+    background work's record). Each card in the list reads "From shop · Clean the build", or "From blog ·
+    background work “Resize images”". A question whose origin is unknown gets no line, never an invented
+    one.
 - **An undo offer and a finished job's news each stay with the conversation they came from.**
   - **Undo offers:** they lived in one list capped at 8 for the whole app. After eight editing turns anywhere,
     an older conversation's Undo button, and a finished background work's undo, answered "nothing to undo".

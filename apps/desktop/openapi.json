@@ -657,6 +657,26 @@
           "reason": {
             "title": "Reason",
             "type": "string"
+          },
+          "run_id": {
+            "default": "",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "work": {
+            "default": "",
+            "title": "Work",
+            "type": "string"
+          },
+          "workspace": {
+            "default": "",
+            "title": "Workspace",
+            "type": "string"
           }
         },
         "required": [

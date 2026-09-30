@@ -1372,6 +1372,13 @@ def build_api_app(
         """
         from chimera.governance.pending import pending
 
+        # Where each question comes from. With several conversations working at once, a list of
+        # questions with no project and no conversation on them let the wrong one be approved.
+        origin_of = getattr(app.state, "approval_origin", None)
+
+        def origin(run_id: str) -> dict[str, str]:
+            return origin_of(run_id) if (origin_of is not None and run_id) else {}
+
         return [
             {
                 "id": q.id,
@@ -1388,6 +1395,8 @@ def build_api_app(
                 "band": q.band,
                 "decider_model": q.decider_model,
                 "decision_id": q.decision_id,
+                "run_id": q.run_id,
+                **origin(q.run_id),
             }
             for q in pending(live_settings().home)
         ]
