@@ -54,6 +54,8 @@ const DYNAMIC = [
   // conversation names itself and, when it cannot close, says why, from its kind (`code/CardChrome.tsx`).
   "layout.card.name.",
   "layout.card.why.",
+  // `` t(`layout.moveTo.${z}`) `` — each panel's "Move to" menu names the zones it can go to (`shell/Dock.tsx`).
+  "layout.moveTo.",
   // `` t(`onboarding.local.runtime.${o.runtime}`) `` — the first-run screen names the local
   // runtime a found model belongs to, from the token `/api/models/local` sends (`ollama`,
   // `lm_studio`), so the client never keeps its own list of runtimes.

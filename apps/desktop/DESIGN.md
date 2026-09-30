@@ -178,8 +178,8 @@ twice before this file existed.
 | `focusRing` | `ui/focus.ts` | the one focus-ring definition |
 | `BrandMark` | `BrandMark.tsx` | |
 
-**Dependencies:** four headless Radix packages (dialog, tooltip, select, dropdown-menu) and nothing
-else. Tabs, Switch and Toast are hand-built — each is well under a hundred lines, and a dependency
+**Dependencies:** four headless Radix packages (dialog, tooltip, select, dropdown-menu), and `@dnd-kit` since
+the dynamic screen's phase 4. Tabs, Switch and Toast are hand-built — each is well under a hundred lines, and a dependency
 should buy something harder than that. Radix earns its place on the parts that are genuinely hard to
 get right: focus traps, collision detection, typeahead.
 
@@ -243,9 +243,14 @@ screen only, with an Undo (the toast's one action) and a "hidden in this turn" c
 The approval card, spend warnings and a failed turn's error keep a disabled close button whose tooltip
 says why.
 
-**Dependencies.** `@dnd-kit` (phase 4: dragging between zones by keyboard, with announcements) was
-approved to join the four Radix packages, for the reason given above: it buys something harder than a
-hundred lines. `react-resizable-panels` was approved for phase 2 and **not adopted**: it sizes sibling
+**Phase 4: docks.** The right panel's sections are panels (`shell/Dock.tsx`) that move between the
+right panel, the left sidebar and a bottom dock that exists only while it holds one. Each has a drag
+handle, a "Move to" menu, minimise and close. The agent's state line is not a panel. The composer's
+settings minimise to one line of chips; the posture note beside them never does.
+
+**Dependencies.** `@dnd-kit` (core, sortable, utilities) joined the four Radix packages in phase 4, for
+the reason given above: it buys something harder than a hundred lines, the keyboard half of dragging,
+with every step announced. `react-resizable-panels` was approved for phase 2 and **not adopted**: it sizes sibling
 panels inside one group, while here the right panel lives in the shell and the conversation list inside
 the Code screen, and the layout already keeps the widths, their limits and their storage. The splitter
 it would have bought is one small file.

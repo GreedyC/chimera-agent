@@ -84,7 +84,8 @@ const COLUMNS = [
     // is the one that must not shrink; the width itself is inline, from the layout.
     what: "the session sidebar's wrapper",
     file: join("components", "Code.tsx"),
-    marker: '"flex min-h-0 shrink-0", sessionsEnter',
+    // A column since phase 4: the list above, the panels moved to the left below it.
+    marker: '"flex min-h-0 shrink-0 flex-col", sessionsEnter',
     must: ["shrink-0", "min-h-0"],
     mustNot: ["flex-1"],
   },
