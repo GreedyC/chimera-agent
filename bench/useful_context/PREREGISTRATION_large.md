@@ -427,6 +427,18 @@ At ≈ US$ 0.087 per item on this route (≈ 1.02M prompt tokens at 0.084/M, unc
 - Every earlier file stays as it is and is not merged.
 - The predictions above (P1, P2-B) stand for this route unchanged.
 
+**Addendum, 09:59 — the pilot's first launch was stopped after 13 seconds, before any outcome.**
+
+- **What was wrong:** it was started without `--cpt 4.35`, so it rendered at the runner's default of 3.8 chars
+  per token. Its "512k" rung would have been ≈ 447k provider tokens, and the pilot exists to show whether this
+  route serves 512k.
+- **What it cost:** nothing was printed or written. Up to two calls may have been in flight, ≈ US$ 0.075 of
+  unrecorded spend at worst. The worst case so far becomes ≈ US$ 2.61, which leaves ≈ US$ 4.99 after the
+  pilot's cap. The n rule still gives 54.
+- **What changes:** the pilot is relaunched with `--cpt 4.35`, the value already registered for this model and
+  tokenizer, so every rung is the size its label says. The recalibration rule stays: `est_chars /
+  prompt_tokens` is still measured on the 512k rows, and the main run uses whatever it gives.
+
 ## What this cannot show
 
 - Other task shapes; the limits of `PREREGISTRATION.md` apply.
