@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
+- **The dynamic screen, phase 4: the right panel's sections move between the right panel, the left sidebar and a
+  bottom dock.**
+  - **What moves:** tools, tokens, memory, fusion, background jobs and this machine are each a panel
+    (`shell/Dock.tsx`, `shell/panels.tsx`) with a drag handle, a "Move to" menu, minimise and close (with an
+    Undo, and listed in the hidden-panels tray). A bottom dock appears when a panel is moved there, and only
+    then; while a panel is being dragged, an empty zone shows where it can land.
+  - **Dragging by keyboard:** Space or Enter on the handle picks a panel up, the arrow keys move it (between
+    zones too), Space drops it and Escape cancels; each step is announced to a screen reader in the reader's
+    language. A pointer drag needs a few pixels of movement first, so a click on the handle stays a click.
+    This is `@dnd-kit` (core, sortable, utilities), the dependency the owner approved for this phase.
+  - **What does not move:** the agent's state line at the top of the right panel is no longer in the list of
+    panels, because it is the agent's state, which never hides; the conversation list stays home.
+  - **The composer's settings** (who runs, cost profile, model) minimise to one line of chips. The posture
+    note, with the no-sandbox warning, is outside them and stays on screen.
+  - A panel whose content has nothing to say (Fusion without a fused turn, no background jobs) hides its frame
+    too. The machine panel keeps its old title. Eleven translation keys in all ten languages.
 - **The dynamic screen, phase 3: every card of the conversation minimises, closes and comes back.**
   - **What:** the tool list, the task list, warnings, the browser view, each file's changes, the verification
     verdict, the receipt, a failed turn's error and the approval card each carry three controls in their corner

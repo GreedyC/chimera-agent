@@ -3,6 +3,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { AgentStatusBar } from "@/components/shell/AgentStatusBar";
 import { EdgeTab, useRegionEnter } from "@/components/shell/RegionToggle";
 import { Splitter } from "@/components/shell/Splitter";
+import { Dock, LayoutDnd } from "@/components/shell/Dock";
 import { focusRing } from "@/components/ui/focus";
 import { useT } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout/context";
@@ -83,6 +84,9 @@ export function AppShell({
         {t("a11y.skipToContent")}
       </a>
 
+      {/* One space to drag panels in (phase 4): the Code screen's left dock, the right panel, and the
+          bottom dock below the row. */}
+      <LayoutDnd>
       <div className="flex min-h-0 flex-1">
         {/* Hidden, the rail leaves a tab on the edge. Every destination stays reachable meanwhile:
             ⌘1–⌘5 and the command palette do not go through the rail. */}
@@ -130,6 +134,16 @@ export function AppShell({
             <EdgeTab side="right" />
           ))}
       </div>
+
+      {/* Panels moved to the bottom (phase 4). Nothing at all while none is there, except while one is
+          being dragged, when it shows where it can land. */}
+      {layout.regions.bottom.visible ? (
+        <Dock
+          zone="bottom"
+          className="shrink-0 border-t border-hairline"
+        />
+      ) : null}
+      </LayoutDnd>
 
       {/* Announces the screen a keyboard or screen-reader user just landed on. Separate from the
           agent's own status region, which is about what the agent is doing, not where you are. */}

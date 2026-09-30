@@ -59,10 +59,14 @@ interface PanelSpec {
   maximizable: boolean;
 }
 
-/** Every panel of the Code screen. The Stop button and the status bar are deliberately absent. */
+/** Every panel of the Code screen. The Stop button and the status bar are deliberately absent, and so
+ *  is the agent's state line at the top of the right panel (phase 4 took it out of the list): it is the
+ *  agent's state, which never disappears, so nothing may move or close it.
+ *
+ *  The conversation list stays home: it is drawn by the Code screen with that screen's own props, and
+ *  the way to put it away is hiding the left region (phase 1). */
 export const PANELS = {
-  sessions: { zone: "left", movable: true, closable: true, maximizable: true },
-  "activity.status": { zone: "right", movable: true, closable: true, maximizable: false },
+  sessions: { zone: "left", movable: false, closable: false, maximizable: true },
   "activity.tools": { zone: "right", movable: true, closable: true, maximizable: true },
   "activity.tokens": { zone: "right", movable: true, closable: true, maximizable: false },
   "activity.memory": { zone: "right", movable: true, closable: true, maximizable: false },

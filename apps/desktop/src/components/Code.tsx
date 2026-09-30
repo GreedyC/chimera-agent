@@ -38,6 +38,8 @@ import {
 import { SessionSidebar } from "@/components/code/SessionSidebar";
 import { EdgeTab, useRegionEnter } from "@/components/shell/RegionToggle";
 import { Splitter } from "@/components/shell/Splitter";
+import { Dock } from "@/components/shell/Dock";
+import { ComposerSettings } from "@/components/code/ComposerSettings";
 import { HtmlPreview } from "@/components/code/HtmlPreview";
 import { ProjectPicker } from "@/components/code/ProjectPicker";
 import { useRunSession } from "@/lib/run-session";
@@ -539,10 +541,12 @@ export function Code() {
         <>
         {/* The width is the layout's (phase 2), dragged on the line beside it. */}
         <div
-          className={cn("flex min-h-0 shrink-0", sessionsEnter.className)}
+          className={cn("flex min-h-0 shrink-0 flex-col", sessionsEnter.className)}
           style={{ width: layout.regions.left.size ?? undefined }}
           onAnimationEnd={sessionsEnter.onAnimationEnd}
         >
+        {/* The list takes what the panels moved here (phase 4) leave it. */}
+        <div className="flex min-h-0 flex-1">
         <SessionSidebar
           workspace={workspace}
           activeSession={sessionId}
@@ -563,6 +567,8 @@ export function Code() {
           }}
           onProject={switchProject}
         />
+        </div>
+        <Dock zone="left" className="max-h-1/2 overflow-y-auto border-r border-hairline" />
         </div>
         {/* Only side by side: stacked below `lg`, there is no width between them to drag. */}
         <Splitter region="left" grows="right" className="hidden lg:block" />
@@ -633,6 +639,15 @@ export function Code() {
                transcript once it becomes relevant. */
             controls={
               <div className="flex flex-col gap-1.5">
+                {/* Minimised, the three pickers are one line of chips (dynamic screen, phase 4). The
+                    posture note below is outside it on purpose: the no-sandbox warning never hides. */}
+                <ComposerSettings
+                  summary={[
+                    provider === "" ? t("code.provider.native") : provider,
+                    ...(provider === "" ? [t(`code.roles.profile.${profile}`)] : []),
+                    ...(provider === "" ? [model ? (model.split("/").pop() ?? model) : t("model.pick.default")] : []),
+                  ]}
+                >
                 {/* The picker sits ABOVE the sentence, because the sentence is about the choice.
                     Reversed, someone reads what the agent may do to their files and then changes
                     who the agent is — which is the order in which a promise stops being true. */}
@@ -664,6 +679,7 @@ export function Code() {
                 {provider === "" ? (
                   <ModelPicker value={model} onChange={setModel} disabled={runBusy} />
                 ) : null}
+                </ComposerSettings>
                 <PostureNote
                   workspace={workspace}
                   reach={reach}

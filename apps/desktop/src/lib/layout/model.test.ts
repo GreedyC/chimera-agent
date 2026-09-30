@@ -35,7 +35,8 @@ describe("what never disappears", () => {
 
   it("gives no action a way to reach Stop or the status bar, because neither is a panel", () => {
     const ids: string[] = PANEL_IDS;
-    for (const forbidden of ["stop", "statusbar", "status-bar", "composer.input", "conversation"]) {
+    // The agent's state line joined this list in phase 4: it is the agent's state, which never hides.
+    for (const forbidden of ["stop", "statusbar", "status-bar", "composer.input", "conversation", "activity.status"]) {
       expect(ids).not.toContain(forbidden);
     }
   });
@@ -83,7 +84,7 @@ describe("closing and bringing back", () => {
     expect(applyLayout(start, { type: "show-all" })).toBe(start);
 
     const layout = run(
-      { type: "set-mode", panel: "sessions", mode: "closed" },
+      { type: "set-mode", panel: "activity.memory", mode: "closed" },
       { type: "set-region", region: "right", visible: false },
       { type: "set-region", region: "rail", visible: false },
       { type: "show-all" },
@@ -111,16 +112,16 @@ describe("moving", () => {
     expect(panelsIn(layout, "right")).not.toContain("activity.tools");
     const orders = (zone: "left" | "right") => panelsIn(layout, zone).map((id) => layout.panels[id].order);
     expect(orders("left")).toEqual([0, 1]);
-    expect(orders("right")).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(orders("right")).toEqual([0, 1, 2, 3, 4]);
   });
 
   it("counts the index among the panels the person sees, with a closed one still keeping its slot", () => {
     const layout = run(
-      { type: "set-mode", panel: "activity.status", mode: "closed" },
-      // Second VISIBLE position on the right: after tools, before tokens.
+      { type: "set-mode", panel: "activity.tokens", mode: "closed" },
+      // Second VISIBLE position on the right: after tools, before memory (tokens, closed, is skipped).
       { type: "move", panel: "activity.machine", zone: "right", index: 1 },
     );
-    expect(panelsIn(layout, "right").slice(0, 3)).toEqual(["activity.tools", "activity.machine", "activity.tokens"]);
+    expect(panelsIn(layout, "right").slice(0, 3)).toEqual(["activity.tools", "activity.machine", "activity.memory"]);
     const all = PANEL_IDS.filter((id) => layout.panels[id].zone === "right").map((id) => layout.panels[id].order);
     expect(new Set(all).size).toBe(all.length); // no two tie
   });
