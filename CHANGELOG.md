@@ -292,6 +292,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **External links open in the system browser in the desktop app.**
+  - **What was wrong:** the links that open a new window (the repository, the releases, the MCP and skill
+    catalogues) did nothing in the desktop app. The runtime refuses every new window unless told otherwise, and
+    it said nothing. The same links worked in the browser build.
+  - **What happens now:** the native side hands such a link to the operating system, and the page itself still
+    opens nothing.
+  - **What is refused:** only an `http` or `https` address with a host goes through. It must carry no
+    credentials and be off the app's own origin. `file:`, `javascript:`, `mailto:` and custom protocols are
+    refused, so a link cannot make the system run a program.
+  - **New dependency:** the `open` crate, 5.4.4. It is what Tauri's own opener plugin uses underneath, used
+    here from Rust only; the plugin would add webview commands this app does not grant.
 - **The local decider no longer judges a truncated state.** Ollama keeps only half of its context window for the prompt and cuts the rest with no error. The default window here was 4,096 tokens, so the local System One model read at most ~2,050 tokens (about 11,000 characters of prose), while the verified-answers check sends attached sources of up to 14,000 characters. Every call now asks for a 16,384-token window (8,192 tokens of prompt), and a prompt that still fills it is a halt: the answer ships unverified, never judged on text the model did not see. Measured before the change on this backend (`bench/jevbench_local`): 231 of 231 answers identical with the larger window.
 - **`chimera decide` exits 1 when a question fails.** It exited 0 even when the backend was down or the state overflowed, so a CI step or a script could not tell "answered" from "failed". Now: 0 every question answered; 1 at least one failed, after the JSON is printed (or every JSONL line written) in full; 2 usage, or a question the linter refuses.
 
