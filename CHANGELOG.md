@@ -7,16 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
-- **A conversation can open in a window of its own, so two are worked at once.** "Open in a new window" in
-  the conversation's header draws that one conversation in its own window, in its own project, with its own
-  composer. The window reads the layout and writes none of it, offers no further window, and a second click
-  focuses it. Checked live in the desktop shell.
-- **Turns running at once warn about what they spend together.** Each turn already warned at its own
-  US$ 1; five running at once could spend five times that without a word. When two or more running turns
-  together cross a multiple of the warning amount, each says so. It is a warning, not a stop; a ceiling the
-  person typed is still that turn's own.
-- **Opening the desktop app again brings the open window forward.** A second launch hands over to the
-  running app instead of starting a second backend on the same data folder.
 - **The dynamic screen, phase 7: any panel of the right panel opens in a window of its own.**
   - **How:** "To a window of its own" in a panel's move menu. The panel leaves its dock while the window is
     open and comes back however the window goes: its own "Bring back" button, the tray in the status bar
@@ -80,6 +70,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   US$ 1; five running at once could spend five times that without a word. When two or more running turns
   together cross a multiple of the warning amount, each says so. It is a warning, not a stop; a ceiling the
   person typed is still that turn's own.
+- **A conversation can open in a window of its own, so two are worked at once.** "Open in a new window" in
+  the conversation's header draws that one conversation in its own window, in its own project, with its own
+  composer. The window reads the layout and writes none of it, offers no further window, and a second click
+  focuses it. Checked live in the desktop shell.
 - **The dynamic screen, phase 3: every card of the conversation minimises, closes and comes back.**
   - **What:** the tool list, the task list, warnings, the browser view, each file's changes, the verification
     verdict, the receipt, a failed turn's error and the approval card each carry three controls in their corner
