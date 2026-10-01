@@ -136,6 +136,10 @@ class LiveTurns:
         with self._lock:
             return sorted(self._turns.values(), key=lambda t: t.started_at)
 
+    def get(self, turn_id: str) -> LiveTurn | None:
+        with self._lock:
+            return self._turns.get(turn_id)
+
     def of_session(self, session_id: str) -> LiveTurn | None:
         for turn in self.running():
             if turn.session_id == session_id:

@@ -1662,6 +1662,14 @@ class HitlOut(BaseModel):
 class ApprovalOut(BaseModel):
     """One question waiting for a person, written by `pending.ask_durably` from an attended surface."""
 
+    #: Which turn asked, which conversation it belongs to, and in which folder: what a card needs to
+    #: say where it comes from, with several conversations working at once. Empty when unknown (a
+    #: surface that names no turn, or a turn already gone). ``work`` is a background work's title.
+    run_id: str = ""
+    session_id: str = ""
+    workspace: str = ""
+    work: str = ""
+
     id: str
     action: str  # `<tool>: <command | path | url>` — empty only on a question raised before 0.54
     reason: str

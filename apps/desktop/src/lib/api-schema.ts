@@ -3450,6 +3450,26 @@ export interface components {
             p?: number | null;
             /** Reason */
             reason: string;
+            /**
+             * Run Id
+             * @default
+             */
+            run_id: string;
+            /**
+             * Session Id
+             * @default
+             */
+            session_id: string;
+            /**
+             * Work
+             * @default
+             */
+            work: string;
+            /**
+             * Workspace
+             * @default
+             */
+            workspace: string;
         };
         /** ApproveBody */
         ApproveBody: {
