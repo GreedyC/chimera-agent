@@ -235,7 +235,7 @@ export function Verdict({
   keptFiles?: string[];
   onUndo: () => void;
   onFix: (text: string) => void;
-  /** A run is already working (the app holds one at a time), so the fix could not start now. */
+  /** A run is already working in this project (one per project), so the fix could not start now. */
   fixBlocked?: boolean;
   t: TFunc;
 }) {
@@ -313,8 +313,8 @@ export function Verdict({
           >
             <ShieldCheck className="h-3.5 w-3.5" /> {t("code.chat.verdict.fix")}
           </Button>
-          {/* The app holds one run at a time, and a second is refused rather than queued. This
-              button handed the fix to that refusal and nothing happened; now it says so. */}
+          {/* One run per project, and a second is refused rather than queued. This button handed
+              the fix to that refusal and nothing happened; now it says so. */}
           {fixBlocked ? (
             <p className="w-full text-xs text-muted-foreground">{t("code.chat.verdict.fixBusy")}</p>
           ) : null}
@@ -611,7 +611,7 @@ export function Conversation({
   profile: Profile;
   /** Start a verified run with this text, in the panel that owns the run machinery. */
   onHandOff: (text: string) => void;
-  /** A run is working anywhere: `onHandOff` would be refused, so the fix button is disabled. */
+  /** A run is working in this project: `onHandOff` would be refused, so the fix button is disabled. */
   runLive?: boolean;
   /** The user confirmed a decomposition: run these in parallel, each in its own worktree. */
   onBatch: (tasks: string[]) => void;

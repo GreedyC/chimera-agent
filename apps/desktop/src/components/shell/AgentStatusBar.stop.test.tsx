@@ -103,4 +103,28 @@ describe("AgentStatusBar — stopping a run", () => {
       expect(screen.queryByRole("button", { name: /Stop/ })).not.toBeInTheDocument(),
     );
   });
+
+  it("names the runs working in other projects", async () => {
+    // Runs work in several projects at once now (2026-09-30). The bar names the latest and says how
+    // many others there are, so a run started from another screen is never out of sight.
+    vi.mocked(streamRun).mockImplementation(() => new Promise<void>(() => {}));
+    const user = userEvent.setup();
+    function In({ ws }: { ws: string }) {
+      const run = useRunSession(ws);
+      return <button onClick={() => run.start({ task: `task ${ws}`, workspace: ws, max_attempts: 3 })}>go {ws}</button>;
+    }
+    renderWithProviders(
+      <>
+        <In ws="/a" />
+        <In ws="/b" />
+        <AgentStatusBar />
+      </>,
+    );
+
+    await user.click(screen.getByText("go /a"));
+    await user.click(screen.getByText("go /b"));
+
+    expect(await screen.findByText("task /b")).toBeInTheDocument();
+    expect(screen.getByText("+1 more running")).toBeInTheDocument();
+  });
 });

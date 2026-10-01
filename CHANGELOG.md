@@ -110,6 +110,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - **Motion:** a region that comes back slides in from its own edge (`duration-3`, transform and opacity only),
     and only when it comes back, not every time a screen opens. Reduced motion collapses it to 1 ms.
   - The choice is kept across launches, in the layout from phase 0. Six translation keys in all ten languages.
+- **Autonomous runs in parallel, one per project.** A run in one project no longer blocks starting a run, or
+  the verdict's fix, in another. A second run in the same project is still refused, and the status bar names
+  the latest run with a count of the others.
 - **The dynamic screen, phase 0: one layout model, a way back to anything hidden, and "Restore default layout".**
   - **What it is:** the first of eight phases of the plan the owner approved on 2026-09-29, a screen where
     anything can be minimised, maximised, closed, dragged, resized and brought back. This phase is the model
