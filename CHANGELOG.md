@@ -300,12 +300,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
-  - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
-    closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
-    sweep had the same blind spot for a turn longer than an hour.
-  - **What happens now:** a turn is busy while it prompts, and only idle agents are closed. When every agent
-    is busy, the registry goes over the limit for a while, and logs it, rather than killing work.
 - **Two catalogue rows caught up with what the provider serves.**
   - **What was wrong:** the live check on main had been red since 2026-09-29. `deepseek-v4-flash-0731` was priced
     0.022/0.32 while the index quotes 0.0045/1.28, and `llama-3.3-70b-instruct` promised a 131k window its provider
@@ -318,6 +312,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     deleted came back.
   - **What happens now:** deleting stops the turn with the same signal as Stop. That turn writes nothing more
     of the conversation: no transcript, no receipt, no history index entry.
+- **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
+  - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
+    closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
+    sweep had the same blind spot for a turn longer than an hour.
+  - **What happens now:** a turn is busy while it prompts, and only idle agents are closed. When every agent
+    is busy, the registry goes over the limit for a while, and logs it, rather than killing work.
 - **The desktop updater's TLS library is patched.**
   - **What was wrong:** `rustls` 0.23.43, which the updater uses to download updates, had RUSTSEC-2026-0285
     (TLS 1.3 handshake messages accepted across encryption level boundaries; medium). CI's Rust audit
@@ -353,15 +353,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     reported and could not read its output, because the job tools are fenced to the turn's folder, so the
     project that started the job never heard. A turn is now told only about jobs that ran inside its own
     folder.
-- **A long turn followed late comes back whole, and idle conversations stop holding frames.**
-  - **What was wrong:** each conversation kept its last 4000 live frames, and a coding turn streams a frame
-    per token. A screen that came back to a long turn got its tail: no opening frame to draw the row on,
-    and the answer without its start. Every conversation opened in the process also kept its frames until
-    the app closed.
-  - **What happens now:** a replay that asks for frames the buffer dropped gets, for each turn still in it,
-    the opening and the missing frames back from the run log, which records the session number of every
-    frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
-    goes on), and a deleted conversation's are dropped.
 - **Undo takes back what its own turn changed, and one conversation at a time edits a folder.**
   - **What was wrong:** undo restored the whole folder to the snapshot taken before the turn. With two
     conversations in one folder, undoing one also reverted the other's edits and anything the person had typed
@@ -375,6 +366,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - **What turns in one folder do now:** they take turns, background works included, as works already did
     among themselves. A turn that waits is told why. Stop still reaches it while it waits, and it never
     starts. Different folders still run at once.
+- **A long turn followed late comes back whole, and idle conversations stop holding frames.**
+  - **What was wrong:** each conversation kept its last 4000 live frames, and a coding turn streams a frame
+    per token. A screen that came back to a long turn got its tail: no opening frame to draw the row on,
+    and the answer without its start. Every conversation opened in the process also kept its frames until
+    the app closed.
+  - **What happens now:** a replay that asks for frames the buffer dropped gets, for each turn still in it,
+    the opening and the missing frames back from the run log, which records the session number of every
+    frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
+    goes on), and a deleted conversation's are dropped.
 - **Two turns on the same conversation both stay in it.**
   - **What was wrong:** the coding route loaded the conversation before taking its lock and saved it inside
     the lock. A second turn on the same conversation (the owner and a guest on a shared link, or two tabs)
