@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.64.0] - 2026-10-01
 ### Added
 
 - **The dynamic screen, phase 7: any panel of the right panel opens in a window of its own.**
@@ -311,6 +313,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     forbids. The output of a still-running adopted command is not streamed: `background=true` from
     the start is still the way to watch one.
 
+
+- **Compaction on the default model now starts at the context it was measured to read.**
+  - **Before:** `gpt-6-luna` had no measured useful context. The Code screen's budget was therefore
+    0.6 of its advertised 1,050k window, and it compacted at about 504k tokens.
+  - **Now:** `bench/useful_context` held an agent's context on 72 paired transcripts up to its 256k
+    rung, at a median of 255,474 tokens, with every rung within −10 pp of 4k. The catalogue now
+    carries `useful_k = 255`, a lower bound, so the budget is 255k and compaction lands at 204,000
+    tokens.
+  - **Cost of the run:** US$ 4.67.
+
 ### Fixed
 
 - **Two catalogue rows caught up with what the provider serves.**
@@ -457,18 +469,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - **What happens now:** turns and runs share one lock per folder. A run whose folder is busy says so on
     its feed and waits; Stop still reaches it while it waits.
 
-### Changed
-
-- **Compaction on the default model now starts at the context it was measured to read.**
-  - **Before:** `gpt-6-luna` had no measured useful context. The Code screen's budget was therefore
-    0.6 of its advertised 1,050k window, and it compacted at about 504k tokens.
-  - **Now:** `bench/useful_context` held an agent's context on 72 paired transcripts up to its 256k
-    rung, at a median of 255,474 tokens, with every rung within −10 pp of 4k. The catalogue now
-    carries `useful_k = 255`, a lower bound, so the budget is 255k and compaction lands at 204,000
-    tokens.
-  - **Cost of the run:** US$ 4.67.
-
-### Fixed
 
 - **`apply_patch` no longer writes a stray conflict marker into a file.**
   - **What went wrong:** a hunk with a second `=======` line put that line into the replacement
