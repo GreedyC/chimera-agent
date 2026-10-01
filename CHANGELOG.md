@@ -300,15 +300,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- **A long turn followed late comes back whole, and idle conversations stop holding frames.**
-  - **What was wrong:** each conversation kept its last 4000 live frames, and a coding turn streams a frame
-    per token. A screen that came back to a long turn got its tail: no opening frame to draw the row on,
-    and the answer without its start. Every conversation opened in the process also kept its frames until
-    the app closed.
-  - **What happens now:** a replay that asks for frames the buffer dropped gets, for each turn still in it,
-    the opening and the missing frames back from the run log, which records the session number of every
-    frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
-    goes on), and a deleted conversation's are dropped.
 - **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
   - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
     closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
@@ -368,6 +359,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     reported and could not read its output, because the job tools are fenced to the turn's folder, so the
     project that started the job never heard. A turn is now told only about jobs that ran inside its own
     folder.
+- **A long turn followed late comes back whole, and idle conversations stop holding frames.**
+  - **What was wrong:** each conversation kept its last 4000 live frames, and a coding turn streams a frame
+    per token. A screen that came back to a long turn got its tail: no opening frame to draw the row on,
+    and the answer without its start. Every conversation opened in the process also kept its frames until
+    the app closed.
+  - **What happens now:** a replay that asks for frames the buffer dropped gets, for each turn still in it,
+    the opening and the missing frames back from the run log, which records the session number of every
+    frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
+    goes on), and a deleted conversation's are dropped.
 - **Undo takes back what its own turn changed, and one conversation at a time edits a folder.**
   - **What was wrong:** undo restored the whole folder to the snapshot taken before the turn. With two
     conversations in one folder, undoing one also reverted the other's edits and anything the person had typed
