@@ -318,12 +318,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     deleted came back.
   - **What happens now:** deleting stops the turn with the same signal as Stop. That turn writes nothing more
     of the conversation: no transcript, no receipt, no history index entry.
-- **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
-  - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
-    closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
-    sweep had the same blind spot for a turn longer than an hour.
-  - **What happens now:** a turn is busy while it prompts, and only idle agents are closed. When every agent
-    is busy, the registry goes over the limit for a while, and logs it, rather than killing work.
 - **The desktop updater's TLS library is patched.**
   - **What was wrong:** `rustls` 0.23.43, which the updater uses to download updates, had RUSTSEC-2026-0285
     (TLS 1.3 handshake messages accepted across encryption level boundaries; medium). CI's Rust audit
