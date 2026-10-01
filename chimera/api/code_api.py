@@ -1300,6 +1300,11 @@ def register_code_api(
     from chimera.api.live_turns import LiveTurns
 
     live_turns = LiveTurns()
+    # What the turns running at once have spent together. Each turn warns about its own spend; five
+    # at once could each stay under that and spend five times it without a word (R14, 2026-09-30).
+    from chimera.api.combined_spend import CombinedSpend
+
+    combined_spend = CombinedSpend()
     # Turns whose conversation was deleted while they ran. Stopped, and they write nothing more of it:
     # a turn that finished after its conversation was deleted used to save it again, and the deleted
     # conversation came back.
@@ -2266,6 +2271,14 @@ def register_code_api(
                     )
                     return
 
+                # The meter the agent would have built from the config's `max_usd`/`warn_usd`,
+                # built here instead so it also reports to the sum of the turns running at once.
+                agent_config = getattr(agent, "config", None)
+                turn_spend = combined_spend.budget(
+                    turn_id,
+                    max_usd=getattr(agent_config, "max_usd", None),
+                    warn_usd=getattr(agent_config, "warn_usd", None),
+                )
                 with lock_for(session_id):
                     # What is stored now, not what was stored when this request arrived: a turn of
                     # the same conversation may have finished while this one waited for the lock.
@@ -2283,6 +2296,7 @@ def register_code_api(
                         # A background work is stopped through the works registry; every other
                         # turn through its own signal, raised by POST /api/code/turns/{id}/stop.
                         should_stop=stop_signal,
+                        spend=turn_spend,
                     )
                     if fused:
                         agent.backend = original_backend  # type: ignore[assignment]
@@ -2408,6 +2422,7 @@ def register_code_api(
                     folder.release()
                 # Every way out of a turn, so a turn that died still stops being "running".
                 live_turns.finish(turn_id)
+                combined_spend.close(turn_id)
                 deleted_mid_turn.discard(turn_id)
                 if loop is not None and queue is not None:
                     loop.call_soon_threadsafe(queue.put_nowait, None)  # sentinel: end of stream
