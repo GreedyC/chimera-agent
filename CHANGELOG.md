@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 
-- **Opening the desktop app again brings the open window forward.** A second launch hands over to the
-  running app instead of starting a second backend on the same data folder.
 - **The dynamic screen, phase 7: any panel of the right panel opens in a window of its own.**
   - **How:** "To a window of its own" in a panel's move menu. The panel leaves its dock while the window is
     open and comes back however the window goes: its own "Bring back" button, the tray in the status bar
@@ -37,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     - with no server, the local copy keeps working.
   - **The editor's sidebar** follows the left region like the conversation list: it hides from its own
     button, leaves a tab on its edge and slides back in.
+- **Opening the desktop app again brings the open window forward.** A second launch hands over to the
+  running app instead of starting a second backend on the same data folder.
 - **The dynamic screen, phase 5: maximise any panel, focus mode, and layouts one command away.**
   - **Maximise:** the file viewer and the tools, fusion, background-jobs and machine panels maximise from a
     button in their header, or with ⌘⇧M / Ctrl+Shift+M on the panel that holds focus. Escape restores from
@@ -308,29 +308,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     serves at 65,536. Both reach the user: the price prices a turn's receipt, and the window sets when a conversation
     compacts.
   - **What happens now:** both rows carry the live figures; the old price stays in `also_seen`.
-- **One Chimera Desktop server per data folder.**
-  - **What was wrong:** a second copy of the app (a second click on the icon, or `chimera app` in a terminal)
-    could serve the same data folder. Each server keeps in memory the turns it runs and the folders they
-    edit, so two of them each believed they were alone: the one-writer-per-folder rule held only inside
-    each, and Stop in one window could not reach a turn the other ran.
-  - **What happens now:** the server claims its data folder before building anything, with a lock the OS
-    drops when the process ends. A second server on the same folder says where the first one is and exits
-    with code 3.
-- **A long turn followed late comes back whole, and idle conversations stop holding frames.**
-  - **What was wrong:** each conversation kept its last 4000 live frames, and a coding turn streams a frame
-    per token. A screen that came back to a long turn got its tail: no opening frame to draw the row on,
-    and the answer without its start. Every conversation opened in the process also kept its frames until
-    the app closed.
-  - **What happens now:** a replay that asks for frames the buffer dropped gets, for each turn still in it,
-    the opening and the missing frames back from the run log, which records the session number of every
-    frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
-    goes on), and a deleted conversation's are dropped.
-- **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
-  - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
-    closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
-    sweep had the same blind spot for a turn longer than an hour.
-  - **What happens now:** a turn is busy while it prompts, and only idle agents are closed. When every agent
-    is busy, the registry goes over the limit for a while, and logs it, rather than killing work.
 - **A conversation deleted while one of its turns runs stays deleted.**
   - **What was wrong:** deleting a conversation (or a project's conversations) did not look at running turns.
     The turn went on and, when it finished, saved the conversation again, so a conversation the person had
@@ -425,6 +402,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - **New dependency:** the `open` crate, 5.4.4. It is what Tauri's own opener plugin uses underneath, used
     here from Rust only; the plugin would add webview commands this app does not grant.
 - **The local decider no longer judges a truncated state.** Ollama keeps only half of its context window for the prompt and cuts the rest with no error. The default window here was 4,096 tokens, so the local System One model read at most ~2,050 tokens (about 11,000 characters of prose), while the verified-answers check sends attached sources of up to 14,000 characters. Every call now asks for a 16,384-token window (8,192 tokens of prompt), and a prompt that still fills it is a halt: the answer ships unverified, never judged on text the model did not see. Measured before the change on this backend (`bench/jevbench_local`): 231 of 231 answers identical with the larger window.
+- **One Chimera Desktop server per data folder.**
+  - **What was wrong:** a second copy of the app (a second click on the icon, or `chimera app` in a terminal)
+    could serve the same data folder. Each server keeps in memory the turns it runs and the folders they
+    edit, so two of them each believed they were alone: the one-writer-per-folder rule held only inside
+    each, and Stop in one window could not reach a turn the other ran.
+  - **What happens now:** the server claims its data folder before building anything, with a lock the OS
+    drops when the process ends. A second server on the same folder says where the first one is and exits
+    with code 3.
 - **`chimera decide` exits 1 when a question fails.** It exited 0 even when the backend was down or the state overflowed, so a CI step or a script could not tell "answered" from "failed". Now: 0 every question answered; 1 at least one failed, after the JSON is printed (or every JSONL line written) in full; 2 usage, or a question the linter refuses.
 
 ### Changed
