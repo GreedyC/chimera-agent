@@ -48,7 +48,7 @@ import { useT } from "@/lib/i18n";
 import { useLayout } from "@/lib/layout/context";
 import { cn } from "@/lib/utils";
 import { shellAllowed, setShellAllowed } from "@/lib/project-shell";
-import { readWorkspace, writeWorkspace } from "@/lib/workspace";
+import { readLastSession, readWorkspace, writeLastSession, writeWorkspace } from "@/lib/workspace";
 
 const fieldCls = "field w-full px-3 text-sm";
 
@@ -339,7 +339,11 @@ export function Code() {
   // changes — the conversation holds its exchanges in state, so switching sessions has to
   // discard them rather than let the previous project's turns sit above the new one.
   const [picking, setPicking] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  // The project's last conversation, read when the screen opens: it used to start at null, so
+  // leaving the screen and coming back landed on a blank conversation. Only READ here and when the
+  // project changes — the conversation on screen records a new one itself, and pushing that back
+  // into `resumeSession` would reload the stored transcript over the turn it is streaming.
+  const [sessionId, setSessionId] = useState<string | null>(() => readLastSession(readWorkspace()));
   const [conversationKey, setConversationKey] = useState(0);
   // The conversation and the run share one workspace, so they share two facts: what the user asked
   // (handed over by "Run with verification") and whether a run is already in flight.
@@ -428,7 +432,8 @@ export function Code() {
       setWorkspace(next);
       writeWorkspace(next);
       setProjectDraft(next);
-      setSessionId(null);
+      // That project's own conversation, or a new one: never the one from the project being left.
+      setSessionId(readLastSession(next));
       startConversation();
       void qc.invalidateQueries({ queryKey: ["fs-file"] });
       void qc.invalidateQueries({ queryKey: ["git-status"] });
@@ -565,10 +570,12 @@ export function Code() {
             // A new conversation, not a cleared one: the old transcript stays on disk and stays in
             // the list. Clearing used to be the only way to start over, and it deleted the session.
             setSessionId(null);
+            writeLastSession(workspace, null);
             startConversation();
           }}
           onResume={(session) => {
             setSessionId(session.id);
+            writeLastSession(session.workspace, session.id);
             startConversation();
             if (session.workspace !== workspace) {
               setWorkspace(session.workspace);

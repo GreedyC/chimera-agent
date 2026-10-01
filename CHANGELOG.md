@@ -340,6 +340,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     once when it leaves. Beside the bar's own subject, a chip reads "+N running". Its menu lists every other
     running coding turn (project · what was asked) from the server, each with a Stop that ends that turn on
     the server. It renders nothing while nothing else runs.
+- **The Code screen comes back to the conversation you were in, per project.**
+  - **What was wrong:** leaving the Code screen and coming back, or switching project and back, landed on a
+    blank new conversation. The conversation was still in the list; the screen had forgotten it.
+  - **What happens now:** the last conversation of each project is remembered and reopened. New
+    conversation forgets it, and so does deleting it from the sidebar.
 - **A question waiting for a person says which project and conversation asked it.**
   - **What was wrong:** the status bar's list of waiting questions showed every conversation's questions in
     one dialog, and each said only what it would run and why. With two turns in two projects both asking to
