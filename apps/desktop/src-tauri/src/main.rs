@@ -188,6 +188,10 @@ static FLOAT_WINDOWS: AtomicUsize = AtomicUsize::new(0);
 /// origin, the root path, and a single `float` parameter naming a panel. Another site, another port,
 /// another path, credentials, a fragment or a second parameter are refused, as everything was before.
 ///
+/// Or a single `conversation` parameter holding a session id: one conversation drawn in a window of its
+/// own, so two can be worked at once (the review of several conversations at once, 2026-09-30). The id
+/// is held to what the session store keeps: letters, digits, `-` and `_`, at most 64.
+///
 /// The window it opens is no stronger than the one that asked. It loads the same http origin, and
 /// `capabilities/default.json` lists the window `main` alone, so a `float-` window reaches no IPC.
 fn is_float_url(target: &tauri::Url, origin: &str) -> bool {
@@ -204,13 +208,20 @@ fn is_float_url(target: &tauri::Url, origin: &str) -> bool {
         return false;
     }
     let pairs: Vec<(String, String)> = target.query_pairs().into_owned().collect();
-    // A panel id: lowercase words joined by dots ("activity.jobs"). The page checks it names a real
-    // panel; this only keeps the address to the shape one can have.
-    matches!(pairs.as_slice(), [(key, value)]
-        if key == "float"
-            && !value.is_empty()
-            && value.len() <= 64
-            && value.chars().all(|c| c.is_ascii_lowercase() || c == '.'))
+    let [(key, value)] = pairs.as_slice() else {
+        return false;
+    };
+    if value.is_empty() || value.len() > 64 {
+        return false;
+    }
+    match key.as_str() {
+        // A panel id: lowercase words joined by dots ("activity.jobs"). The page checks it names a real
+        // panel; this only keeps the address to the shape one can have.
+        "float" => value.chars().all(|c| c.is_ascii_lowercase() || c == '.'),
+        // A session id, as the store writes it.
+        "conversation" => value.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'),
+        _ => false,
+    }
 }
 
 /// Whether `target` is a page on the web to hand to the system browser: an external link the page
@@ -2565,6 +2576,24 @@ mod float_window_tests {
         ] {
             assert!(!allowed(target), "{target} must be refused");
         }
+    }
+
+    #[test]
+    fn a_conversation_address_at_this_origin_opens_and_nothing_near_it() {
+        assert!(allowed("http://127.0.0.1:8765/?conversation=3f2a9c0d8e7b4a1f9c6d5e4b3a2f1e0d"));
+        assert!(allowed("http://127.0.0.1:8765/?conversation=a-b_C9"));
+        for target in [
+            "http://127.0.0.1:8765/?conversation=",
+            "http://127.0.0.1:8765/?conversation=..%2F..%2Fetc",
+            "http://127.0.0.1:8765/?conversation=a%20b",
+            "http://127.0.0.1:8765/?conversation=abc&float=activity.jobs",
+            "http://127.0.0.1:8765/code?conversation=abc",
+            "https://example.com/?conversation=abc",
+        ] {
+            assert!(!allowed(target), "{target} must be refused");
+        }
+        let long = format!("http://127.0.0.1:8765/?conversation={}", "a".repeat(65));
+        assert!(!allowed(&long), "an id longer than the store keeps must be refused");
     }
 
     #[test]

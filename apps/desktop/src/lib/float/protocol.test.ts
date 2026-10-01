@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { floatPanelFrom, floatUrl, floatWindowName, isFloatMessage } from "@/lib/float/protocol";
+import {
+  conversationFrom,
+  conversationUrl,
+  conversationWindowName,
+  floatPanelFrom,
+  floatUrl,
+  floatWindowName,
+  isFloatMessage,
+} from "@/lib/float/protocol";
 
 /**
  * Phase 7 of the dynamic screen: the address of a panel's own window, and what the two windows accept
@@ -44,5 +52,31 @@ describe("what crosses the channel", () => {
     expect(isFloatMessage({ type: "closed" })).toBe(false);
     expect(isFloatMessage({ type: "agent", state: { tools: "no" } })).toBe(false);
     expect(isFloatMessage({ type: "navigate", url: "https://example.com" })).toBe(false);
+  });
+});
+
+/**
+ * A conversation in a window of its own (after R16 of the review of 2026-09-30): the same page, asked
+ * by `?conversation=<id>` to draw one conversation. The native side opens this shape and no other
+ * new one, so the id is held to what a session id can be: letters, digits, `-` and `_`, at most 64.
+ */
+describe("the address of a conversation's window", () => {
+  it("is this origin's root with one parameter, and reads back as the same conversation", () => {
+    const url = conversationUrl("3f2a9c", "http://127.0.0.1:8765");
+    expect(url).toBe("http://127.0.0.1:8765/?conversation=3f2a9c");
+    expect(conversationFrom(new URL(url).search)).toBe("3f2a9c");
+  });
+
+  it("is the app for anything that is not a session id", () => {
+    expect(conversationFrom("")).toBeNull();
+    expect(conversationFrom("?conversation=")).toBeNull();
+    expect(conversationFrom("?conversation=../../etc")).toBeNull();
+    expect(conversationFrom(`?conversation=${"a".repeat(65)}`)).toBeNull();
+    expect(conversationFrom("?float=activity.jobs")).toBeNull();
+  });
+
+  it("names one window per conversation, so opening it again focuses the one already open", () => {
+    expect(conversationWindowName("abc")).toBe(conversationWindowName("abc"));
+    expect(conversationWindowName("abc")).not.toBe(conversationWindowName("abd"));
   });
 });

@@ -50,6 +50,33 @@ export function floatPanelFrom(search: string): MovablePanel | null {
   return value !== null && isDockPanel(value) ? value : null;
 }
 
+/** The query parameter that makes the page draw one conversation instead of the app. */
+export const CONVERSATION_PARAM = "conversation";
+
+/** What a session id can be: the store keeps letters, digits, `-` and `_`, at most 64 of them. The
+ *  native side opens a window for this shape and no other new one (`is_float_url`). */
+const SESSION_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+/** The address of the window for one conversation, at this page's origin. */
+export function conversationUrl(sessionId: string, origin: string = window.location.origin): string {
+  return `${origin}/?${CONVERSATION_PARAM}=${encodeURIComponent(sessionId)}`;
+}
+
+/** The conversation this page was opened to draw, or null for the app. */
+export function conversationFrom(search: string): string | null {
+  const value = new URLSearchParams(search).get(CONVERSATION_PARAM);
+  return value !== null && SESSION_ID.test(value) ? value : null;
+}
+
+/** The size a conversation's window opens at. Without one the shell used the webview's default,
+ *  measured live (2026-09-30) as too short for the transcript to get any height under the composer. */
+export const CONVERSATION_WINDOW_FEATURES = "popup,width=1040,height=860";
+
+/** The window's name for one conversation. Opening it again focuses the window that has it. */
+export function conversationWindowName(sessionId: string): string {
+  return `chimera-conversation-${sessionId}`;
+}
+
 /** The window's name for one panel. Opening a panel that already floats focuses its window. */
 export function floatWindowName(panel: MovablePanel): string {
   return `chimera-float-${panel.replace(/[^a-z]/gi, "-")}`;

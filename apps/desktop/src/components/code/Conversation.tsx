@@ -10,6 +10,7 @@ import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  AppWindow,
   ArrowDown,
   Copy,
   Download,
@@ -592,6 +593,7 @@ export function Conversation({
   controls,
   onOpenFile,
   resumeSession,
+  onOpenWindow,
 }: {
   workspace: string;
   openFile: string | null;
@@ -623,6 +625,8 @@ export function Conversation({
   onOpenFile?: (path: string) => void;
   /** Continue a stored conversation: its turns are fetched and rendered above the composer. */
   resumeSession?: string | null;
+  /** Open this conversation in a window of its own. Absent inside that window: it already is one. */
+  onOpenWindow?: (sessionId: string) => void;
 }) {
   const t = useT();
   const qc = useQueryClient();
@@ -1497,6 +1501,16 @@ export function Conversation({
               >
                 <Link2 className="h-3.5 w-3.5" /> {t("code.share.button")}
                 {shareCount > 0 ? ` · ${shareCount}` : ""}
+              </Button>
+            ) : null}
+            {sessionId && onOpenWindow ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                title={t("code.window.openHint")}
+                onClick={() => onOpenWindow(sessionId)}
+              >
+                <AppWindow className="h-3.5 w-3.5" /> {t("code.window.open")}
               </Button>
             ) : null}
             {/* A record of what an agent did to a repository should be able to leave the window it

@@ -31,7 +31,17 @@ const LayoutContext = createContext<LayoutApi | null>(null);
  * Kept apart from `AgentProvider` on purpose: the agent's state changes on every streamed token, and
  * a panel moving must not redraw the transcript, nor a token redraw the panels.
  */
-export function LayoutProvider({ children, initial }: { children: ReactNode; initial?: Layout }) {
+export function LayoutProvider({
+  children,
+  initial,
+  persist = true,
+}: {
+  children: ReactNode;
+  initial?: Layout;
+  /** False for a window that draws one conversation: it reads the person's layout and writes none of
+   *  it, because the main window owns it and a change made elsewhere would land there unseen. */
+  persist?: boolean;
+}) {
   const [layout, setLayout] = useState<Layout>(() => initial ?? loadLayout());
   const past = useRef<Layout[]>([]);
   const [canUndo, setCanUndo] = useState(false);
@@ -41,8 +51,8 @@ export function LayoutProvider({ children, initial }: { children: ReactNode; ini
   const resizing = useRef<string | null>(null);
 
   useEffect(() => {
-    saveLayout(layout);
-  }, [layout]);
+    if (persist) saveLayout(layout);
+  }, [layout, persist]);
 
   const dispatch = useCallback((action: LayoutAction) => {
     const next = applyLayout(current.current, action);

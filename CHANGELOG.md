@@ -70,6 +70,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   US$ 1; five running at once could spend five times that without a word. When two or more running turns
   together cross a multiple of the warning amount, each says so. It is a warning, not a stop; a ceiling the
   person typed is still that turn's own.
+- **A conversation can open in a window of its own, so two are worked at once.** "Open in a new window" in
+  the conversation's header draws that one conversation in its own window, in its own project, with its own
+  composer. The window reads the layout and writes none of it, offers no further window, and a second click
+  focuses it. Checked live in the desktop shell.
 - **The dynamic screen, phase 3: every card of the conversation minimises, closes and comes back.**
   - **What:** the tool list, the task list, warnings, the browser view, each file's changes, the verification
     verdict, the receipt, a failed turn's error and the approval card each carry three controls in their corner
