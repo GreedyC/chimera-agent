@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The chat bot gets what 0.64 said a person waiting gets.**
+  - **What was wrong:** 0.64.0 turned the limits into warnings, and that reached `chimera chat` and the desktop
+    app only. The Discord bot (`serve --discord`, and the same bot started from the app's Messaging switch) kept
+    the six-step wall, ended a long thread on a context overflow, and could not show a warning, because the
+    gateway called `send`, which takes no callbacks. A reply cut short by a limit read like a finished one.
+  - **Now:** the bot runs with the same five settings as the terminal (one function, `attended`, instead of
+    five keywords copied to four places and missed in three). Its replies carry the turn's warnings and the
+    reason a reply was cut short, one `⚠` line each, under the answer. The HTTP `/chat` reply stays the answer
+    alone, and the HTTP gateway keeps the step wall, because the webhook jobs run through it with nobody waiting.
+- **The terminal compacts at the context its model was measured to read.**
+  - **What was wrong:** run without `--model`, the context budget was sized for an empty model name. The
+    default model, measured to read 255k, compacted at about 51k, and `/model` kept the old model's budget.
+  - **Now:** the budget is sized for the model the run calls (the default when none is given) and follows a
+    switch.
+- **Warnings reach every terminal command, and a finished background job reaches every chat.**
+  - `--max-usd` wrapped the agent in a turn whose signature had no `on_notice`, so every warning of a
+    conversation with a ceiling was dropped. `chimera tui` and `chimera agent` never asked for them.
+  - A shell command that outlives its timeout becomes a job on every surface, and only the Code screen was told
+    when one ended. `chat`, `assist`, `tui` and the bot now hear it on the next turn, as the Code screen does.
+
 ## [0.64.0] - 2026-10-01
 ### Added
 
