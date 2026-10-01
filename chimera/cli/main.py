@@ -2879,6 +2879,26 @@ def desktop_app(
 
     _kernel_observes_unless_told_otherwise()
     settings = get_settings()
+    # One server per data folder, claimed before anything is built. A server keeps in memory the
+    # turns it runs, the folder each edits, the undo offers and the live frames; a second one on the
+    # same folder believed it was alone, so the one-writer-per-folder lock held only inside each,
+    # and Stop in one window could not reach a turn the other ran. The OS drops the claim with the
+    # process, so a crash never leaves the folder locked (`chimera/core/instance.py`).
+    from chimera.core.instance import claim_home, running_url
+
+    claim = claim_home(Path(settings.home))
+    if claim is None:
+        where = running_url(Path(settings.home))
+        console.print(
+            "[yellow]Chimera Desktop is already running on this data folder"
+            + (f" at {where}" if where else "")
+            + ".[/yellow] Use that one, or give this one another CHIMERA_HOME."
+        )
+        if open_browser and where:
+            import webbrowser
+
+            webbrowser.open(where)
+        raise typer.Exit(code=3)
     if not settings.can_answer():
         # Unlike run/solve/fuse (which need a model to do their job and stay strict), the desktop app
         # can BOOT keyless: LLMGateway() below is lazy (no model call), and the UI opens a first-run
@@ -3153,6 +3173,7 @@ def desktop_app(
     url = f"http://{host}:{port}"
     if emit_port_file:  # discovery channel for a parent process (the Tauri sidecar reads this)
         Path(emit_port_file).write_text(url, encoding="utf-8")
+    claim.announce(url)
     # The desktop bridge learns its port only now. With "Allow Claude to operate this app" on, this
     # writes the discovery file `chimera mcp desktop` reads; off, it only clears a stale one. A
     # wildcard bind is reached on loopback — the bridge is for a client on THIS machine.
@@ -3175,6 +3196,7 @@ def desktop_app(
     finally:
         # First, so the token dies with the server even if a later step raises.
         desktop_bridge.close()
+        claim.release()
         if cron_stop is not None:
             cron_stop.set()  # stop the cron daemon thread on Ctrl+C / shutdown
         messaging.stop_all()  # close any running messaging adapters
