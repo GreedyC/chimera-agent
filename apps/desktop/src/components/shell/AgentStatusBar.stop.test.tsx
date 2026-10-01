@@ -13,6 +13,9 @@ vi.mock("@/lib/api", () => ({
   streamRun: vi.fn(),
   cancelRun: vi.fn(),
   getApprovals: vi.fn(async () => []),
+  // The bar lists the coding turns running in other conversations: none here.
+  listRunningTurns: vi.fn(async () => []),
+  stopCodeTurn: vi.fn(),
 }));
 vi.mock("@/components/VersionBadge", () => ({ VersionBadge: () => null }));
 

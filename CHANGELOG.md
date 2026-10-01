@@ -306,6 +306,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     deleted came back.
   - **What happens now:** deleting stops the turn with the same signal as Stop. That turn writes nothing more
     of the conversation: no transcript, no receipt, no history index entry.
+- **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
+  - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
+    closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
+    sweep had the same blind spot for a turn longer than an hour.
+  - **What happens now:** a turn is busy while it prompts, and only idle agents are closed. When every agent
+    is busy, the registry goes over the limit for a while, and logs it, rather than killing work.
+- **The desktop updater's TLS library is patched.**
+  - **What was wrong:** `rustls` 0.23.43, which the updater uses to download updates, had RUSTSEC-2026-0285
+    (TLS 1.3 handshake messages accepted across encryption level boundaries; medium). CI's Rust audit
+    reported it from 2026-09-17 but is advisory, so the job stayed green and nobody saw it.
+  - **What happens now:** `rustls` 0.23.45 and `rustls-webpki` 0.103.15 (the version it needs); nothing
+    else moved.
+- **The status bar no longer mixes conversations, and it lists every turn running elsewhere, each with its
+  own Stop.**
+  - **What was wrong:** the bar reads one agent state, and every conversation wrote into it for as long as
+    its handlers lived. Start a turn in A, switch to B and send, and when A finished it set "done, not busy",
+    so B's Stop vanished while B was still running.
+  - **Also wrong:** the other running turns were invisible from the bar. With three working, it described
+    one and offered one Stop.
+  - **What happens now:** a conversation publishes only while it is on screen, and hands the state back
+    once when it leaves. Beside the bar's own subject, a chip reads "+N running". Its menu lists every other
+    running coding turn (project · what was asked) from the server, each with a Stop that ends that turn on
+    the server. It renders nothing while nothing else runs.
 - **A question waiting for a person says which project and conversation asked it.**
   - **What was wrong:** the status bar's list of waiting questions showed every conversation's questions in
     one dialog, and each said only what it would run and why. With two turns in two projects both asking to

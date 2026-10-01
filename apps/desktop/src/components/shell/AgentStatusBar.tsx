@@ -3,6 +3,7 @@ import { Square } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 import { FocusButton, HiddenTray } from "@/components/shell/HiddenTray";
 import { PendingApprovals } from "@/components/shell/PendingApprovals";
+import { RunningElsewhere } from "@/components/shell/RunningElsewhere";
 import { ServerBadge } from "@/components/ServerBadge";
 import { VersionBadge } from "@/components/VersionBadge";
 import { focusRing } from "@/components/ui/focus";
@@ -26,7 +27,7 @@ import { cn } from "@/lib/utils";
 export function AgentStatusBar({ onOpenUsage }: { onOpenUsage?: () => void }) {
   const t = useT();
   const num = useNum();
-  const { status, tools, report, busy, stop } = useAgent();
+  const { status, tools, report, busy, stop, turnId } = useAgent();
   const run = useRunSession();
   // A live run outranks the chat turn as the subject of this bar. Both can be going at once, but
   // only one of them is the thing you might have walked away from — a chat turn finishes in
@@ -115,6 +116,11 @@ export function AgentStatusBar({ onOpenUsage }: { onOpenUsage?: () => void }) {
           agent is waiting on YOU, from whichever screen you happen to be on. Renders nothing at
           all while no question is parked — see PendingApprovals. */}
       <PendingApprovals />
+
+      {/* The coding turns running in OTHER conversations, each with its own Stop. The bar describes
+          one turn; with several working at once the others were invisible from here and could only
+          be stopped by opening each conversation. Renders nothing while none is. */}
+      <RunningElsewhere current={turnId ?? null} />
 
       {/* What the person hid from the screen, and the way back. Renders nothing while nothing is
           hidden, for the reason PendingApprovals gives about an indicator at zero. */}

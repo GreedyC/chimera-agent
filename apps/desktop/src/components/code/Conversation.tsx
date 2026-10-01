@@ -83,7 +83,7 @@ import {
   type TranscriptExchange,
 } from "@/lib/transcript";
 import { useNum, useT, type TFunc } from "@/lib/i18n";
-import { useAgent } from "@/lib/agent-context";
+import { useAgent, type AgentState } from "@/lib/agent-context";
 import { useStickToBottom } from "@/lib/useStickToBottom";
 import { cn } from "@/lib/utils";
 
@@ -938,14 +938,38 @@ export function Conversation({
   // Publish what this turn is doing, so the shell's footer and the activity panel keep working from
   // any screen. There is a test that exists precisely to say the agent must stay visible when you
   // navigate away mid-turn.
-  const { publish } = useAgent();
+  const { publish: publishShared } = useAgent();
+  // Only while this conversation is on screen. Switching conversations unmounts this one while its
+  // turn may still be running, and its handlers used to go on publishing into the one state the bar
+  // reads: turn A finishing set "done, not busy" while turn B was running, and B's Stop disappeared.
+  // Leaving, it hands the state back once, if it was the one working; the turn itself goes on and the
+  // bar still lists it (RunningElsewhere), from the server.
+  const onScreen = useRef(true);
+  const publishedBusy = useRef(false);
+  const publish = useCallback(
+    (next: Partial<Omit<AgentState, "publish">>) => {
+      if (!onScreen.current) return;
+      if (next.busy !== undefined) publishedBusy.current = next.busy;
+      publishShared(next);
+    },
+    [publishShared],
+  );
+  useEffect(() => {
+    onScreen.current = true;
+    return () => {
+      onScreen.current = false;
+      if (publishedBusy.current) {
+        publishShared({ status: "idle", busy: false, tools: [], report: null, stop: () => {}, turnId: null });
+      }
+    };
+  }, [publishShared]);
   // The bar shows a turn this screen is only watching the way it shows one it started: working while
   // it runs, done when it ends. Written here rather than in `applyLive`, which is built before
   // `publish` exists, and keyed on the transition so a followed turn is announced once, not per frame.
   const wasFollowing = useRef(false);
   useEffect(() => {
     if (following) {
-      publish({ status: "thinking", tools: [], report: null, busy: true, stop: abandon });
+      publish({ status: "thinking", tools: [], report: null, busy: true, stop: abandon, turnId: following });
     } else if (wasFollowing.current && followEndedBy.current === "frame") {
       publish({ status: "done", busy: false, report: null });
     }
@@ -1194,6 +1218,7 @@ export function Conversation({
           if (turnId) {
             ownTurns.current.add(turnId);
             currentTurnRef.current = turnId;
+            publish({ turnId });
           }
           // Invalidate on the FIRST turn's id, not on every turn: the sidebar lists conversations,
           // and a conversation that already exists in the list has not changed by gaining a message.
