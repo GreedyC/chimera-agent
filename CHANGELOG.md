@@ -334,6 +334,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Dependencies past their open advisories.** PyJWT 2.15.1 (15 advisories, one critical), urllib3 2.8.0 (three,
   two high) and brace-expansion 2.1.7 in the desktop tree. One PyJWT advisory has no fix yet, and glib still
   waits on a Tauri upgrade.
+- **`deepseek-v4-flash-0731` carries the higher of the two prices it is quoted at.** The route moved from 0.0045 to
+  0.0108 per million input tokens within a day; the row now reads 0.0108 so a fallback receipt never under-states
+  what a turn cost, and 0.0045 stays as a price it has been seen at.
 - **The desktop updater's TLS library is patched.**
   - **What was wrong:** `rustls` 0.23.43, which the updater uses to download updates, had RUSTSEC-2026-0285
     (TLS 1.3 handshake messages accepted across encryption level boundaries; medium). CI's Rust audit
