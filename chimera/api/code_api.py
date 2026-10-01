@@ -296,6 +296,10 @@ class CodeSeams(BaseModel):
 _undo_offers = UndoOffers()
 
 
+class _Deleted(Exception):
+    """The turn's conversation was deleted while it ran: nothing more is recorded for it."""
+
+
 class _StoppedWhileWaiting(Exception):
     """A turn stopped before it started, while it waited for another turn in its folder."""
 
@@ -1283,6 +1287,17 @@ def register_code_api(
     from chimera.api.live_turns import LiveTurns
 
     live_turns = LiveTurns()
+    # Turns whose conversation was deleted while they ran. Stopped, and they write nothing more of it:
+    # a turn that finished after its conversation was deleted used to save it again, and the deleted
+    # conversation came back.
+    deleted_mid_turn: set[str] = set()
+
+    def forget_running(session_ids: list[str]) -> None:
+        wanted = set(session_ids)
+        for turn in live_turns.running():
+            if turn.session_id in wanted:
+                deleted_mid_turn.add(turn.turn_id)
+                live_turns.request_stop(turn.turn_id)
     # The index of finished turns (`chimera.memory.history`), one per home, shared with the
     # `recall_history` tool every registry mounts. The session file is what a conversation is
     # RESUMED from and trims itself accordingly; this is what a person's question about a turn
@@ -2062,10 +2077,11 @@ def register_code_api(
                         # conversation may have saved meanwhile: the receipt goes on top of what is
                         # stored now, never back over it with this turn's older copy.
                         with lock_for(session_id):
-                            store_for.refresh(session)
-                            session.remember_receipt(receipt)
-                            with live_turns.writing(turn_id):
-                                store_for.save(session)
+                            if turn_id not in deleted_mid_turn:
+                                store_for.refresh(session)
+                                session.remember_receipt(receipt)
+                                with live_turns.writing(turn_id):
+                                    store_for.save(session)
                     except OSError as exc:  # noqa: BLE001 — a failed record must not fail the turn
                         _log.debug("could not store the turn receipt: %s", exc)
                     # The turn joins the conversation history index — the record that outlives the
@@ -2079,6 +2095,8 @@ def register_code_api(
                         from chimera.api.code_replay import exchanges_from_messages
 
                         exchanges = exchanges_from_messages(own_messages)
+                        if turn_id in deleted_mid_turn:
+                            raise _Deleted  # the conversation is gone; so is its index
                         history.record(
                             turn_id=turn_id,
                             session_id=session_id,
@@ -2090,6 +2108,8 @@ def register_code_api(
                             tools=[str(t) for t in (payload.get("tool_names") or [])],
                             tainted=bool(payload.get("tainted")),
                         )
+                    except _Deleted:
+                        pass  # deliberately not indexed: its conversation was deleted mid-turn
                     except Exception as exc:  # noqa: BLE001 — a failed record must not fail the turn
                         _log.debug("could not index the turn in the history: %s", exc)
                     emit("done", payload)
@@ -2214,8 +2234,9 @@ def register_code_api(
                         # sidebar would show an untitled, empty session for work that really happened.
                         session.messages.append({"role": "user", "content": message})
                         session.messages.append({"role": "assistant", "content": acp_result.answer})
-                        with live_turns.writing(turn_id):
-                            store_for.save(session)
+                        if turn_id not in deleted_mid_turn:
+                            with live_turns.writing(turn_id):
+                                store_for.save(session)
                     _verify_and_finish(
                         done_payload(acp_result, provider=external, tainted=bool(ledger.run_tainted()))
                     )
@@ -2247,8 +2268,9 @@ def register_code_api(
                     answer, grounded, grounded_usd = _check_grounded(grounded_turn, result)
                     if answer != result.answer:
                         session.replace_last_answer(answer)
-                    with live_turns.writing(turn_id):
-                        store_for.save(session)
+                    if turn_id not in deleted_mid_turn:
+                        with live_turns.writing(turn_id):
+                            store_for.save(session)
                 _verify_and_finish(
                     {
                         "answer": answer,
@@ -2362,6 +2384,7 @@ def register_code_api(
                     folder.release()
                 # Every way out of a turn, so a turn that died still stops being "running".
                 live_turns.finish(turn_id)
+                deleted_mid_turn.discard(turn_id)
                 if loop is not None and queue is not None:
                     loop.call_soon_threadsafe(queue.put_nowait, None)  # sentinel: end of stream
 
@@ -2864,6 +2887,8 @@ def register_code_api(
     def delete_code_session(session_id: str) -> dict[str, bool]:
         """Forget a conversation. An unknown id is ``{ok: false}`` with a 200, not a 404 — that is
         exactly the state a second click on Clear hits, and it is not an error."""
+        # A turn still running in it is stopped first, and told to write nothing more of it.
+        forget_running([session_id])
         try:
             gone = store.delete(session_id)
         except ValueError:
@@ -2888,6 +2913,7 @@ def register_code_api(
         # The ids first, then the files, then the index: the index is keyed by session id, and
         # the list is the only place the workspace-to-id mapping exists.
         ids = [str(m["id"]) for m in store.list_meta() if m["workspace"] == workspace]
+        forget_running(ids)
         deleted = store.delete_project(workspace)
         history.forget_sessions(ids)
         for sid in ids:
