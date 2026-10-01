@@ -399,6 +399,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     the opening and the missing frames back from the run log, which records the session number of every
     frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
     goes on), and a deleted conversation's are dropped.
+- **A memory write no longer fails on Windows when the file is busy for longer than 0.2 s.** The antivirus or a
+  paused reader can hold a file open past the old retry window, and the write then failed, losing the memory
+  being saved. Retries now back off from 10 ms to 250 ms, about 3.8 s in all.
 - **Two turns on the same conversation both stay in it.**
   - **What was wrong:** the coding route loaded the conversation before taking its lock and saved it inside
     the lock. A second turn on the same conversation (the owner and a guest on a shared link, or two tabs)
