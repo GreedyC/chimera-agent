@@ -300,6 +300,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **A conversation deleted while one of its turns runs stays deleted.**
+  - **What was wrong:** deleting a conversation (or a project's conversations) did not look at running turns.
+    The turn went on and, when it finished, saved the conversation again, so a conversation the person had
+    deleted came back.
+  - **What happens now:** deleting stops the turn with the same signal as Stop. That turn writes nothing more
+    of the conversation: no transcript, no receipt, no history index entry.
 - **An external agent in the middle of a turn is never closed to make room, nor for being idle.**
   - **What was wrong:** the ACP registry keeps at most four external agents (Claude Code, Gemini) alive, and
     closed the least recently used one when a fifth started, without asking whether it was mid-turn. The idle
