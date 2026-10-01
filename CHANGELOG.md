@@ -435,6 +435,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     drops when the process ends. A second server on the same folder says where the first one is and exits
     with code 3.
 - **`chimera decide` exits 1 when a question fails.** It exited 0 even when the backend was down or the state overflowed, so a CI step or a script could not tell "answered" from "failed". Now: 0 every question answered; 1 at least one failed, after the JSON is printed (or every JSONL line written) in full; 2 usage, or a question the linter refuses.
+- **An autonomous run waits for its folder the way a coding turn does.**
+  - **What was wrong:** turns took one lock per folder; runs took none, so another window or client could
+    start a run beside a turn, or a second run, in the same folder.
+  - **What happens now:** turns and runs share one lock per folder. A run whose folder is busy says so on
+    its feed and waits; Stop still reaches it while it waits.
 
 ### Changed
 
