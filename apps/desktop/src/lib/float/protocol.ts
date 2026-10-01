@@ -68,6 +68,10 @@ export function conversationFrom(search: string): string | null {
   return value !== null && SESSION_ID.test(value) ? value : null;
 }
 
+/** The size a conversation's window opens at. Without one the shell used the webview's default,
+ *  measured live (2026-09-30) as too short for the transcript to get any height under the composer. */
+export const CONVERSATION_WINDOW_FEATURES = "popup,width=1040,height=860";
+
 /** The window's name for one conversation. Opening it again focuses the window that has it. */
 export function conversationWindowName(sessionId: string): string {
   return `chimera-conversation-${sessionId}`;

@@ -73,7 +73,9 @@ function ConversationWindowBody({ sessionId }: { sessionId: string }) {
   const runBusy = run.running && (run.workspace === null || run.workspace === workspace);
 
   return (
-    <main aria-label={project} className="flex h-screen min-h-0 flex-col bg-background text-foreground">
+    // `overflow-x-hidden`: seen live, the conversation header's row of buttons ran past a narrow
+    // window and the whole page scrolled sideways.
+    <main aria-label={project} className="flex h-screen min-h-0 flex-col overflow-x-hidden bg-background text-foreground">
       <Conversation
         resumeSession={sessionId}
         workspace={workspace}

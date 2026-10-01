@@ -49,7 +49,7 @@ import { useLayout } from "@/lib/layout/context";
 import { cn } from "@/lib/utils";
 import { shellAllowed, setShellAllowed } from "@/lib/project-shell";
 import { readLastSession, readWorkspace, writeLastSession, writeWorkspace } from "@/lib/workspace";
-import { conversationUrl, conversationWindowName } from "@/lib/float/protocol";
+import { CONVERSATION_WINDOW_FEATURES, conversationUrl, conversationWindowName } from "@/lib/float/protocol";
 
 const fieldCls = "field w-full px-3 text-sm";
 
@@ -621,7 +621,9 @@ export function Code() {
             openFile={openFile}
             onOpenFile={setOpenFile}
             // Two conversations at once: this one in a window of its own, the next one here.
-            onOpenWindow={(id) => window.open(conversationUrl(id), conversationWindowName(id))}
+            onOpenWindow={(id) =>
+              window.open(conversationUrl(id), conversationWindowName(id), CONVERSATION_WINDOW_FEATURES)
+            }
             onHandOff={(text) =>
               // Straight into the shared run — the multi-attempt, revert-if-it-fails path the button
               // actually promises. It used to fill a form below and wait, so the user could set the

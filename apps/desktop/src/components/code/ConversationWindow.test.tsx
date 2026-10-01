@@ -103,9 +103,12 @@ describe("a conversation in a window of its own", () => {
 
     await user.click(await screen.findByRole("button", { name: /Open in a new window/i }));
 
+    // With a size: without one the shell opened it at the webview's default, measured live on
+    // 2026-09-30 as too short for the transcript to get any height under the composer.
     expect(opened).toHaveBeenCalledWith(
       `${window.location.origin}/?conversation=s1`,
       "chimera-conversation-s1",
+      expect.stringMatching(/width=\d+,height=\d+/),
     );
     opened.mockRestore();
   });
