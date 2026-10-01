@@ -300,6 +300,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **The desktop updater's TLS library is patched.**
+  - **What was wrong:** `rustls` 0.23.43, which the updater uses to download updates, had RUSTSEC-2026-0285
+    (TLS 1.3 handshake messages accepted across encryption level boundaries; medium). CI's Rust audit
+    reported it from 2026-09-17 but is advisory, so the job stayed green and nobody saw it.
+  - **What happens now:** `rustls` 0.23.45 and `rustls-webpki` 0.103.15 (the version it needs); nothing
+    else moved.
 - **The status bar no longer mixes conversations, and it lists every turn running elsewhere, each with its
   own Stop.**
   - **What was wrong:** the bar reads one agent state, and every conversation wrote into it for as long as
