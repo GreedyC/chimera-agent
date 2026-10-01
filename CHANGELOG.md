@@ -369,6 +369,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - **What turns in one folder do now:** they take turns, background works included, as works already did
     among themselves. A turn that waits is told why. Stop still reaches it while it waits, and it never
     starts. Different folders still run at once.
+- **A long turn followed late comes back whole, and idle conversations stop holding frames.**
+  - **What was wrong:** each conversation kept its last 4000 live frames, and a coding turn streams a frame
+    per token. A screen that came back to a long turn got its tail: no opening frame to draw the row on,
+    and the answer without its start. Every conversation opened in the process also kept its frames until
+    the app closed.
+  - **What happens now:** a replay that asks for frames the buffer dropped gets, for each turn still in it,
+    the opening and the missing frames back from the run log, which records the session number of every
+    frame. Conversations nobody watches and nothing runs in for 30 minutes drop their frames (the numbering
+    goes on), and a deleted conversation's are dropped.
 - **Two turns on the same conversation both stay in it.**
   - **What was wrong:** the coding route loaded the conversation before taking its lock and saved it inside
     the lock. A second turn on the same conversation (the owner and a guest on a shared link, or two tabs)

@@ -106,6 +106,10 @@ _log = get_logger("api.code")
 #: is the difference between a long run and a runaway one, and the client asking is a UI field.
 MAX_RUN_STEPS = 100
 
+#: How long a conversation nobody watches and nothing runs in keeps its live frames. Past it, a
+#: screen that comes back reads the stored conversation, which holds every finished turn.
+IDLE_BUS_SECONDS = 1800.0
+
 
 class CodeSeams(BaseModel):
     """How far a coding loop may go, and what it may touch.
@@ -1281,7 +1285,16 @@ def register_code_api(
     from chimera.api.sharing import SHARES_FILE, SessionBus, ShareStore
 
     shares = ShareStore(settings.home / SHARES_FILE)
-    bus = SessionBus()
+
+    def _from_run_log(turn_id: str, after: int, before: int) -> list[dict[str, Any]]:
+        # What the live ring dropped of a turn it still holds part of: the run log keeps every frame
+        # of a coding turn, each with the session number the bus gave it (`emit` below).
+        return [
+            f for f in runlog.frames(settings.home, turn_id, area="code")
+            if isinstance(f.get("session_seq"), int) and after < f["session_seq"] < before
+        ]
+
+    bus = SessionBus(backfill=_from_run_log)
     # The turns running right now, so a screen that left a conversation mid-turn can find its way
     # back: the stored file holds nothing of a turn until the agent finishes.
     from chimera.api.live_turns import LiveTurns
@@ -1806,31 +1819,42 @@ def register_code_api(
 
         def emit(event: str, payload: Any) -> None:
             numbered = {**payload, "seq": next(seq)} if isinstance(payload, dict) else payload
+            published: dict[str, Any] | None = None
+            if background is None:
+                # Onto the session's bus, for everyone watching this conversation — the owner's
+                # own screen when a guest asked, a guest's when the owner did. The browser picture
+                # goes live and is not kept, for the reason the run log does not keep it.
+                published = bus.publish(
+                    session_id, event,
+                    numbered if isinstance(numbered, dict) else {"value": payload},
+                    turn_id=turn_id, author=author, keep=event != "browser",
+                )
             # A browser frame is a picture of a moment, tens of kilobytes each, and replay is for
             # the words a dropped connection lost — not for redrawing a page that has moved on.
-            # So frames go to the live stream and never to the run log.
+            # So frames go to the live stream and never to the run log. Each frame the bus
+            # numbered carries that number into the run log: the bus keeps the last few thousand
+            # and a long turn outgrows them, so a screen that comes back to it gets the start from
+            # here, and the number says which frames it already has.
             if isinstance(numbered, dict) and event != "browser":
-                runlog.append(settings.home, turn_id, event, numbered, area="code")
+                record = numbered if published is None else {**numbered, "session_seq": published["session_seq"]}
+                runlog.append(settings.home, turn_id, event, record, area="code")
             if loop is not None and queue is not None:
                 loop.call_soon_threadsafe(queue.put_nowait, (event, numbered))
             if background is not None:
                 # The parent conversation hears about the work in compact frames — its state, the
                 # tools it ran, the files it edited, a card it raised — never its every token.
                 _work_frame(background, event, numbered if isinstance(numbered, dict) else {})
-                return
-            # And onto the session's bus, for everyone watching this conversation — the owner's
-            # own screen when a guest asked, a guest's when the owner did. The browser picture goes
-            # live and is not kept, for the reason the run log does not keep it.
-            bus.publish(
-                session_id, event,
-                numbered if isinstance(numbered, dict) else {"value": payload},
-                turn_id=turn_id, author=author, keep=event != "browser",
-            )
 
         # The turn's opening frame on the bus: what was asked and by whom, before any work. A
         # viewer who did not send this message needs both to draw the row the answer will land
         # under; the session file only learns the author when the receipt is written at the end.
         if background is None:
+            # The frames of conversations left alone for a while go first: every conversation ever
+            # opened in this process kept its last few thousand frames until the app closed.
+            bus.trim_idle(
+                max_age=IDLE_BUS_SECONDS,
+                keep={t.session_id for t in live_turns.running()} | {session_id},
+            )
             opening = bus.publish(
                 session_id, "turn_started", {"message": req.message, "author": author},
                 turn_id=turn_id, author=author,
@@ -2898,6 +2922,7 @@ def register_code_api(
         # tokens: a link into a deleted conversation must open nothing.
         history.forget_session(session_id)
         shares.revoke_session(session_id)
+        bus.drop(session_id)
         work_store.forget_parent(session_id)
         return {"ok": gone}
 
@@ -2918,6 +2943,7 @@ def register_code_api(
         history.forget_sessions(ids)
         for sid in ids:
             shares.revoke_session(sid)
+            bus.drop(sid)
         return {"deleted": deleted}
 
     # The registered projects live at `/workspaces`, NOT at `/projects`, and the distance is
