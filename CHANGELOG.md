@@ -349,6 +349,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     blank new conversation. The conversation was still in the list; the screen had forgotten it.
   - **What happens now:** the last conversation of each project is remembered and reopened. New
     conversation forgets it, and so does deleting it from the sidebar.
+- **A conversation holds at most four turns running or waiting.** A share link reaches the guest route over
+  the network, and nothing bounded how many turns a guest could pile onto one conversation, each a thread
+  waiting on its lock. A fifth is refused with 429 before anything is built or announced.
 - **A question waiting for a person says which project and conversation asked it.**
   - **What was wrong:** the status bar's list of waiting questions showed every conversation's questions in
     one dialog, and each said only what it would run and why. With two turns in two projects both asking to

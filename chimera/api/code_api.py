@@ -110,6 +110,12 @@ MAX_RUN_STEPS = 100
 #: screen that comes back reads the stored conversation, which holds every finished turn.
 IDLE_BUS_SECONDS = 1800.0
 
+#: Turns one conversation may hold at once, running or waiting for it: one running, three queued.
+#: The owner's composer queues a follow-up itself and sends it when the turn before ends, so it never
+#: comes near this; a share link reaches the guest route over the network, and without a bound every
+#: turn a guest sent was one more thread waiting on the conversation's lock.
+MAX_TURNS_PER_CONVERSATION = 4
+
 
 class CodeSeams(BaseModel):
     """How far a coding loop may go, and what it may touch.
@@ -1356,6 +1362,29 @@ def register_code_api(
     def folder_lock(ws: Path) -> threading.Lock:
         return shared_folders.lock(ws)
 
+    # How many turns each conversation holds right now, running or waiting (R17, 2026-09-30).
+    held_turns: dict[str, int] = {}
+
+    def admit_turn(session_id: str) -> None:
+        with locks_guard:
+            if held_turns.get(session_id, 0) >= MAX_TURNS_PER_CONVERSATION:
+                raise HTTPException(
+                    status_code=429,
+                    detail=(
+                        f"this conversation already has {MAX_TURNS_PER_CONVERSATION} turns running or "
+                        "waiting; send this one when one of them ends"
+                    ),
+                )
+            held_turns[session_id] = held_turns.get(session_id, 0) + 1
+
+    def release_turn(session_id: str) -> None:
+        with locks_guard:
+            left = held_turns.get(session_id, 0) - 1
+            if left > 0:
+                held_turns[session_id] = left
+            else:
+                held_turns.pop(session_id, None)
+
     def build_agent(
         req: CodeTurnRequest,
         ws: Path,
@@ -1633,6 +1662,36 @@ def register_code_api(
         loop: asyncio.AbstractEventLoop | None = None,
         queue: asyncio.Queue[tuple[str, Any] | None] | None = None,
         background: Work | None = None,
+    ) -> tuple[str, str]:
+        """Admit the turn into its conversation, then build and start it (:func:`_start_admitted`).
+
+        Admitted BEFORE anything is built: past that point the turn is announced on the bus and
+        listed as running, so a refusal after it would leave a turn that never ran on everyone's
+        screen. A conversation's first turn has no id yet and nothing to wait behind; a background
+        work runs on its own session, bounded by the works manager.
+        """
+        held = req.session_id if background is None and req.session_id else ""
+        if held:
+            admit_turn(held)
+        try:
+            return _start_admitted(
+                req, ws, author=author, loop=loop, queue=queue, background=background, held=held
+            )
+        except BaseException:
+            # Nothing was started, so the place goes back. Once the thread runs, it gives it back.
+            if held:
+                release_turn(held)
+            raise
+
+    def _start_admitted(
+        req: CodeTurnRequest,
+        ws: Path,
+        *,
+        author: str,
+        loop: asyncio.AbstractEventLoop | None,
+        queue: asyncio.Queue[tuple[str, Any] | None] | None,
+        background: Work | None,
+        held: str,
     ) -> tuple[str, str]:
         """Build the turn and start its thread; return ``(session_id, turn_id)``.
 
@@ -2427,6 +2486,8 @@ def register_code_api(
                 live_turns.finish(turn_id)
                 combined_spend.close(turn_id)
                 deleted_mid_turn.discard(turn_id)
+                if held:
+                    release_turn(held)
                 if loop is not None and queue is not None:
                     loop.call_soon_threadsafe(queue.put_nowait, None)  # sentinel: end of stream
 
