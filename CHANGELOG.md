@@ -300,6 +300,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Two catalogue rows caught up with what the provider serves.**
+  - **What was wrong:** the live check on main had been red since 2026-09-29. `deepseek-v4-flash-0731` was priced
+    0.022/0.32 while the index quotes 0.0045/1.28, and `llama-3.3-70b-instruct` promised a 131k window its provider
+    serves at 65,536. Both reach the user: the price prices a turn's receipt, and the window sets when a conversation
+    compacts.
+  - **What happens now:** both rows carry the live figures; the old price stays in `also_seen`.
 - **A conversation deleted while one of its turns runs stays deleted.**
   - **What was wrong:** deleting a conversation (or a project's conversations) did not look at running turns.
     The turn went on and, when it finished, saved the conversation again, so a conversation the person had
