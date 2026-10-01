@@ -196,3 +196,24 @@ def _no_dotenv(
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def _prices_put_back() -> Iterator[None]:
+    """The price table as it was, after every test.
+
+    `set_price` inserts into a process-wide table and nothing undid it, so a price a test pinned for
+    its own arithmetic reached every later test: one pinned deepseek-chat at US$ 100 per million and
+    a receipt test billed 12k tokens at US$ 1.20 (found 2026-09-30, by bisecting the suite). The
+    shared `.chimera` folder's price cache had hidden it until each test got its own folder.
+
+    The flag that says the shipped catalogue was folded in goes back with it. The catalogue is folded
+    in once, on the first lookup; restoring the table without the flag would drop those prices and
+    leave the flag saying they are there, so every later test would price the catalogue as unknown.
+    """
+    from chimera.fusion import receipts
+
+    saved, registered = list(receipts._PRICES), receipts._catalog_registered
+    yield
+    receipts._PRICES[:] = saved
+    receipts._catalog_registered = registered
