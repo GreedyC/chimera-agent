@@ -1167,6 +1167,7 @@ const en: Dict = {
   "code.chat.verdict.revertedExceptChanged": "Edits undone, except {n} file(s) that changed after this turn, left as they are: {files}",
   "code.chat.verdict.revertFailed": "Could not undo — that snapshot is gone.",
   "code.chat.verdict.fix": "Let the agent try to fix it",
+  "code.chat.verdict.fixBusy": "A run is already working; the fix can start when it ends",
   "code.chat.verdict.fixBrief": "The check `{cmd}` failed with this output:",
   "code.chat.verdict.fixOriginal": "This is what I had asked for:",
   "code.posture.reach.read_only": "read only",
@@ -2828,6 +2829,7 @@ const pt: Dict = {
   "code.chat.verdict.revertFailed":
     "Não deu para desfazer — aquele instantâneo já não existe.",
   "code.chat.verdict.fix": "Deixar o agente tentar corrigir",
+  "code.chat.verdict.fixBusy": "Um run já está trabalhando; a correção pode começar quando ele terminar",
   "code.chat.verdict.fixBrief": "A verificação `{cmd}` falhou com esta saída:",
   "code.chat.verdict.fixOriginal": "Era isto que eu tinha pedido:",
   "code.posture.reach.read_only": "só leitura",
@@ -4499,6 +4501,7 @@ const es: Dict = {
   "code.chat.verdict.revertFailed":
     "No se pudo deshacer: esa instantánea ya no existe.",
   "code.chat.verdict.fix": "Dejar que el agente intente arreglarlo",
+  "code.chat.verdict.fixBusy": "Ya hay una ejecución en curso; el arreglo podrá empezar cuando termine",
   "code.chat.verdict.fixBrief": "La verificación `{cmd}` falló con esta salida:",
   "code.chat.verdict.fixOriginal": "Esto es lo que había pedido:",
   "code.posture.reach.read_only": "solo lectura",
@@ -6184,6 +6187,7 @@ const fr: Dict = {
   "code.chat.verdict.revertFailed":
     "Impossible d'annuler — cet instantané n'existe plus.",
   "code.chat.verdict.fix": "Laisser l'agent essayer de corriger",
+  "code.chat.verdict.fixBusy": "Une exécution est déjà en cours ; la correction pourra commencer quand elle se terminera",
   "code.chat.verdict.fixBrief": "La vérification `{cmd}` a échoué avec cette sortie :",
   "code.chat.verdict.fixOriginal": "Voici ce que j'avais demandé :",
   "code.posture.reach.read_only": "lecture seule",
@@ -7869,6 +7873,7 @@ const de: Dict = {
   "code.chat.verdict.revertFailed":
     "Zurücknehmen nicht möglich — dieser Schnappschuss ist weg.",
   "code.chat.verdict.fix": "Den Agenten es reparieren lassen",
+  "code.chat.verdict.fixBusy": "Ein Lauf arbeitet bereits; die Reparatur kann beginnen, wenn er endet",
   "code.chat.verdict.fixBrief": "Die Prüfung `{cmd}` ist mit dieser Ausgabe fehlgeschlagen:",
   "code.chat.verdict.fixOriginal": "Das hatte ich angefragt:",
   "code.posture.reach.read_only": "nur lesen",
@@ -9493,6 +9498,7 @@ const zh: Dict = {
   "code.chat.verdict.revertedExceptChanged": "已撤销修改，但有 {n} 个文件在本轮之后又被改动，保持原样：{files}",
   "code.chat.verdict.revertFailed": "无法撤销——那份快照已经没有了。",
   "code.chat.verdict.fix": "让智能体试着修好",
+  "code.chat.verdict.fixBusy": "已有一个运行正在进行；它结束后才能开始修复",
   "code.chat.verdict.fixBrief": "检查 `{cmd}` 失败，输出如下：",
   "code.chat.verdict.fixOriginal": "我原本的要求是：",
   "code.posture.reach.read_only": "只读",
@@ -11148,6 +11154,7 @@ const ja: Dict = {
   "code.chat.verdict.revertFailed":
     "取り消せません — そのスナップショットはもうありません。",
   "code.chat.verdict.fix": "エージェントに直させる",
+  "code.chat.verdict.fixBusy": "すでに実行が動いています。終わってから修正を始められます",
   "code.chat.verdict.fixBrief": "チェック `{cmd}` が次の出力で失敗しました:",
   "code.chat.verdict.fixOriginal": "元の依頼はこちらです:",
   "code.posture.reach.read_only": "読み取りのみ",
@@ -12824,6 +12831,7 @@ const it: Dict = {
   "code.chat.verdict.revertFailed":
     "Non è stato possibile annullare — quello snapshot non c'è più.",
   "code.chat.verdict.fix": "Lascia che l'agente provi a correggere",
+  "code.chat.verdict.fixBusy": "Un'esecuzione è già in corso; la correzione potrà partire quando finisce",
   "code.chat.verdict.fixBrief": "Il controllo `{cmd}` è fallito con questo output:",
   "code.chat.verdict.fixOriginal": "Questo è ciò che avevo chiesto:",
   "code.posture.reach.read_only": "sola lettura",
@@ -14497,6 +14505,7 @@ const pl: Dict = {
   "code.chat.verdict.revertFailed":
     "Nie udało się cofnąć — tamtego zrzutu już nie ma.",
   "code.chat.verdict.fix": "Niech agent spróbuje to naprawić",
+  "code.chat.verdict.fixBusy": "Jedno uruchomienie już trwa; naprawa może ruszyć, gdy się skończy",
   "code.chat.verdict.fixBrief": "Sprawdzenie `{cmd}` nie powiodło się z tym wynikiem:",
   "code.chat.verdict.fixOriginal": "O to prosiłem:",
   "code.posture.reach.read_only": "tylko odczyt",
@@ -16174,6 +16183,7 @@ const ru: Dict = {
   "code.chat.verdict.revertFailed":
     "Не удалось отменить — этого снимка больше нет.",
   "code.chat.verdict.fix": "Дать агенту попробовать это починить",
+  "code.chat.verdict.fixBusy": "Один запуск уже идёт; исправление начнётся, когда он закончится",
   "code.chat.verdict.fixBrief": "Проверка `{cmd}` завершилась ошибкой:",
   "code.chat.verdict.fixOriginal": "Вот что я просил:",
   "code.posture.reach.read_only": "только чтение",

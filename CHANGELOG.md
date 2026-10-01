@@ -407,6 +407,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     reached nothing.
   - **Where it applies:** the Stop button uses it for a turn the screen started and for one it was following
     after coming back to the conversation.
+- **"Let the agent try to fix it" says why it cannot start.** With a run already working, the button handed
+  the fix to a session that refused it without a word, and the click did nothing. It is now disabled, with
+  a line saying why.
 - **External links open in the system browser in the desktop app.**
   - **What was wrong:** the links that open a new window (the repository, the releases, the MCP and skill
     catalogues) did nothing in the desktop app. The runtime refuses every new window unless told otherwise, and
