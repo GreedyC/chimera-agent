@@ -1264,7 +1264,7 @@ def register_code_api(
     from chimera.core.events import tool as tool_event
     from chimera.core.instructions import load as load_identity
     from chimera.core.instructions import render as render_identity
-    from chimera.core.jobs import jobs_for
+    from chimera.core.jobs import finished_note
     from chimera.core.redact import redact
     from chimera.interface.session import recall_facts
     from chimera.memory.history import files_of_exchange, history_for
@@ -1798,22 +1798,10 @@ def register_code_api(
         # Background jobs that ended since a turn last looked. Handed to the model here — true for
         # this turn, absent from the stored transcript, like the image note above — so "the
         # download finished, exit 0" reaches the person through the agent instead of through
-        # nobody. Each job is reported once (`finished_unreported` marks it), and the model is told
-        # to read the output rather than guess at what the job produced. Through `job_status`, not
-        # `read_file`: the log lives in the app's data folder, outside the workspace, so a read_file
-        # of it is a jail question on the screen for something the job tool reads freely.
-        finished = jobs_for(live().home).finished_unreported(within=ws)
-        if finished:
-            lines = [
-                f"- job {j.id} {j.state}"
-                + (f" (exit {j.exit_code})" if j.exit_code is not None else "")
-                + f": {j.command[:160]}"
-                for j in finished
-            ]
-            note = (note + "\n\n" if note else "") + (
-                "Background jobs that finished since your last turn (read their output with "
-                "job_status(job_id=...) before saying what they produced):\n" + "\n".join(lines)
-            )
+        # nobody. See `finished_note`.
+        jobs_note = finished_note(live().home, ws)
+        if jobs_note:
+            note = (note + "\n\n" if note else "") + jobs_note
 
         # What this conversation's background works are up to, for the model that is talking —
         # and the handles to stop or undo one. Only for a conversation that exists: a first message
