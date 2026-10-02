@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A slow Intel dmg no longer holds back the update of every platform.**
+  - **What was wrong:** on the `macos-15-intel` runner, Tauri's `bundle_dmg.sh` took 1.5 minutes for v0.61.2,
+    4 for v0.62.1, 8 for v0.63.0 and 9 for v0.63.1, and failed after 10 on v0.64.0, twice. The dmg was the same
+    272 MB every time. The failed job skipped `latest.json`, so the installed apps of every platform kept being
+    offered 0.63.1, and v0.64.0 was never marked Latest.
+  - **Now:** the Intel job bundles the app and its updater only. The Intel dmg is built by its own `hdiutil`
+    step, which may fail without taking the release down.
+
 ## [0.64.1] - 2026-10-01
 ### Fixed
 
