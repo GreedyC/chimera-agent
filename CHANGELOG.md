@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     offered 0.63.1, and v0.64.0 was never marked Latest.
   - **Now:** the Intel job bundles the app and its updater only. The Intel dmg is built by its own `hdiutil`
     step, which may fail without taking the release down.
+- **The browser works in the installed desktop app.**
+  - **What was wrong:** the browser tool runs Playwright's own driver (a bundled node and its CLI), and in the
+    frozen sidecar that driver is package data, which the freeze did not collect. The installed app could neither
+    launch Chromium nor install it, and nothing said so until a page was opened.
+  - **Now:** the freeze collects Playwright whole (~36 MB per installer), and two tests guard both halves: the
+    install command starts at the bundled driver, and the recipe keeps collecting it.
 
 ## [0.64.1] - 2026-10-01
 ### Fixed
