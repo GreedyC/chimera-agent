@@ -1,6 +1,6 @@
 ---
 name: check-the-provider-before-you-catalog
-description: A model catalogue entry is a claim about a live provider; verify the provider's current documentation before recording a slug, price, context window, or capability.
+description: Verify the provider's current documentation before recording a model identifier, price, limit, or capability.
 version: 0.1.0
 kind: pattern
 stage: verify
@@ -17,33 +17,20 @@ license: Apache-2.0
 
 ## Trigger
 
-You are about to add or change a model catalogue entry. Treat each field as a separate external
-claim: a model slug, price, context limit, modality, or tool capability can change independently.
+You are changing a model catalogue. Identifiers, prices, limits, modalities and tool support can change independently.
 
 ## Do
 
-1. Open the provider's current model or pricing documentation, not a search snippet or an old
-   benchmark. Record the URL and the date checked in the change description.
-2. Copy the provider's exact model identifier. Do not normalize a slug from memory or infer a
-   successor from a similar name.
-3. Set unknown prices or limits to `None` rather than guessing. A missing field is honest; a stale
-   number can silently route work or calculate cost incorrectly.
-4. Check whether the catalogue already has the slug, and run its duplicate and invariant tests.
-5. If the provider page is ambiguous, leave the entry unchanged and open a question instead of
-   converting uncertainty into data.
+Read official model and pricing documentation; record its URL and check date. Use the exact identifier. Keep unknown prices or limits as `None`. Check for duplicates and run invariant tests. If the source is ambiguous, leave the entry unchanged and ask.
 
 ## Avoid
 
-Do not use a model's marketing name as its API identifier, copy a price from a third-party table,
-or mark tools as supported merely because another model in the family supports them.
+Do not substitute marketing names, third-party prices or another model's capabilities for verified provider facts.
 
 ## Check
 
-Run the catalogue invariant tests and inspect the resulting entry with the normal CLI. A test that
-only checks the tuple is non-empty will not catch a plausible but wrong price or slug.
+Run catalogue tests and inspect the entry through the CLI. Non-empty fields alone do not prove correctness.
 
 ## Risk
 
-Provider pages can change after a contribution is merged. Keeping the source URL and check date
-in the review record makes later refreshes possible and prevents an unverified value from looking
-permanent.
+Provider documentation can change after merge. Source URLs and check dates make later updates traceable; they do not guarantee future accuracy.
