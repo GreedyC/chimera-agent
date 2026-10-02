@@ -48,8 +48,14 @@ jobs:
           # be built ON an Intel runner. NOTE: macos-13 was retired (Dec 2025); `macos-15-intel` is
           # the last x86_64 image and is scheduled to go away ~Aug 2027, after which GitHub Actions
           # drops macOS x86_64 entirely. Revisit before then.
+          #
+          # `app` only: the dmg is built by its own step below, off the release's critical path.
+          # Tauri's `bundle_dmg.sh` on this runner took 1.5 min for v0.61.2, 4 for v0.62.1, 8 for
+          # v0.63.0, 9 for v0.63.1, and failed after 10 on v0.64.0, twice, with the dmg the same
+          # 272 MB every time. The job failing took `latest.json` down with it, so the updater of
+          # EVERY platform kept offering 0.63.1. The updater needs the `.app.tar.gz`, not the dmg.
           - os: macos-15-intel
-            bundles: app,dmg
+            bundles: app
             updater_target: darwin-x86_64
           - os: ubuntu-latest
             bundles: appimage,deb
@@ -74,7 +80,7 @@ jobs:
         run: npm --prefix apps/desktop run build
 
       - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: "3.12"
 
@@ -199,6 +205,30 @@ jobs:
           # a Linux build that exists. Set for every OS because it is inert where linuxdeploy does
           # not run, and a conditional here would be a second thing to keep in sync.
           NO_STRIP: "true"
+
+      # The Intel dmg, for a fresh install, made with `hdiutil` directly and allowed to fail: a slow
+      # runner then costs the Intel dmg of this release, not the updater of every platform. Same
+      # name and layout Tauri gives it (the app plus a link to /Applications). It runs before the
+      # stamp step, which renames only the updater bundle, and lands in bundle/dmg/, which the
+      # upload below already attaches.
+      - name: Build the Intel dmg (allowed to fail)
+        if: matrix.os == 'macos-15-intel'
+        continue-on-error: true
+        timeout-minutes: 25
+        shell: bash
+        run: |
+          set -euo pipefail
+          b=apps/desktop/src-tauri/target/release/bundle
+          version=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
+          stage=$(mktemp -d)
+          ditto "$b/macos/Chimera.app" "$stage/Chimera.app"
+          ln -s /Applications "$stage/Applications"
+          mkdir -p "$b/dmg"
+          start=$(date +%s)
+          hdiutil create -volname Chimera -srcfolder "$stage" -ov -format UDZO \
+            "$b/dmg/Chimera_${version}_x64.dmg"
+          echo "dmg built in $(( $(date +%s) - start ))s"
+          ls -lh "$b/dmg"
 
       # BOTH macOS jobs (arm64 + Intel) emit an updater bundle named plainly `Chimera.app.tar.gz` —
       # the nsis (.exe) and AppImage names already carry their arch, but this one doesn't. Two jobs
