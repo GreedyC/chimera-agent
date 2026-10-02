@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.64.1] - 2026-10-01
 ### Fixed
 
 - **The chat bot gets what 0.64 said a person waiting gets.**
