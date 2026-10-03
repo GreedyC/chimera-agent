@@ -1,5 +1,5 @@
 ---
-source_sha256: 51704b23e9a37ef270ce9056bd6527db635f6fa9958f189c607e3ab2f1583a49
+source_sha256: e39717130faf730675cb8625321788f13b88dfe484745739ac6398e5682e3c82
 ---
 
 # Chimera — Architecture
@@ -124,11 +124,19 @@ l'est) :
 
 `chimera/orchestration/`
 
+Ceci est de la mécanique, pas une recommandation. Quand Chimera fait tourner plus d'un agent — à plat
+par défaut, quatre formes autorisées et les raisons mesurées d'écarter le reste — est décidé dans la
+[politique multi-agents](../../multi-agent-policy.md) (en anglais).
+
 - `Role` + `RoleAgent` — spécialisation par rôle (à la CrewAI).
 - `SequentialCrew` — les rôles s'enchaînent dans l'ordre, chacun voit les sorties précédentes
-  **consolidées** et peut écrire dans la mémoire partagée.
+  **consolidées** et peut écrire dans la mémoire partagée. **Non mesuré** en tant qu'équipe : aucun
+  bench ne le compare à un seul agent à coût égal.
 - `SupervisorCrew` — les workers traitent la tâche en parallèle, les sorties sont consolidées,
-  et un superviseur synthétise (à la CAPRA `parallel_review`, `2606.18976`).
+  et un superviseur synthétise (à la CAPRA `parallel_review`, `2606.18976`). **Non mesuré** en tant
+  qu'équipe. La mesure la plus proche est l'étape de synthèse de la hiérarchie, et elle dépend du
+  synthétiseur : avec un modèle 3B à tous les rôles, la synthèse des résumés des workers a perdu des
+  valeurs qu'ils avaient trouvées ; avec le synthétiseur de production, non.
 - `consolidate` — la fusion de messages MOC garde le contexte d'équipe compact (`2606.02359`).
 
 ## Écosystème auto-évolutif (Tier 4)
@@ -155,7 +163,14 @@ l'affirmation est **mesurée, pas assertée** :
 
 - `HierarchicalOrchestrator` — décomposer → distribuer des workers budgétisés → vérifier chaque
   résultat → synthétiser. Un fan-out en forme de lecture délègue ; une sous-tâche trivialement
-  petite est répondue en ligne par le modèle de confiance du sommet.
+  petite est répondue en ligne par le modèle de confiance du sommet. Mesuré : il économise des
+  tokens en lecture multi-étapes de grands documents (66,5 % de moins). À nombre d'appels égal, avec
+  un backbone 3B à tous les rôles et 30 tâches synthétiques d'extraction à forte lecture, il n'a pas
+  battu un seul agent : la direction va contre la hiérarchie, `pass^3` −26,7 pp, intervalle
+  [−36,2, −4,2], une estimation ponctuelle à l'intérieur du plancher de bascule de 33–47 %. Avec le
+  synthétiseur de production il a obtenu 0,63 / 0,50 (`pass@1` / `pass^3`, dix tâches), et aucun
+  bras à agent unique à appels égaux n'a tourné à ce niveau — voir la
+  [politique multi-agents](../../multi-agent-policy.md).
 - `CascadeBackend` — faible → porte → intermédiaire → porte → fusion, en montant seulement
   quand la réponse d'un palier échoue une porte d'acceptation bon marché. Le **journal de
   routage** enregistre chaque saut, si bien que le coût est la **somme sur les sauts tentés**,

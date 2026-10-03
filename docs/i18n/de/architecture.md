@@ -1,5 +1,5 @@
 ---
-source_sha256: 51704b23e9a37ef270ce9056bd6527db635f6fa9958f189c607e3ab2f1583a49
+source_sha256: e39717130faf730675cb8625321788f13b88dfe484745739ac6398e5682e3c82
 ---
 
 # Chimera — Architektur
@@ -116,11 +116,19 @@ Ein sich selbst verbessernder Trust-Kernel (AgentTrust v2, `2606.08539`):
 
 `chimera/orchestration/`
 
+Das ist Mechanik, keine Empfehlung. Wann Chimera mehr als einen Agenten laufen lässt — standardmäßig
+flach, vier zugelassene Formen und die gemessenen Gründe, den Rest wegzulassen —, entscheidet die
+[Multi-Agent-Richtlinie](../../multi-agent-policy.md) (englisch).
+
 - `Role` + `RoleAgent` — Rollenspezialisierung (im CrewAI-Stil).
 - `SequentialCrew` — Rollen in fester Reihenfolge, jede sieht die **konsolidierten** vorherigen
-  Ausgaben und kann in den gemeinsamen Speicher schreiben.
+  Ausgaben und kann in den gemeinsamen Speicher schreiben. **Ungemessen** als Team: kein Bench
+  vergleicht es bei gleichen Kosten mit einem einzelnen Agenten.
 - `SupervisorCrew` — Worker bearbeiten die Aufgabe parallel, die Ausgaben werden konsolidiert, und
-  ein Supervisor synthetisiert (im CAPRA-Stil, `parallel_review`, `2606.18976`).
+  ein Supervisor synthetisiert (im CAPRA-Stil, `parallel_review`, `2606.18976`). **Ungemessen** als
+  Team. Die nächste Messung ist der Syntheseschritt der Hierarchie, und sie hängt vom Synthesemodell
+  ab: mit einem 3B-Modell in jeder Rolle gingen bei der Synthese über die Zusammenfassungen der
+  Worker Werte verloren, die diese gefunden hatten; mit dem Produktions-Synthesemodell nicht.
 - `consolidate` — MOC-Nachrichtenverschmelzung hält den Team-Kontext schlank (`2606.02359`).
 
 ## Sich selbst entwickelndes Ökosystem (Tier 4)
@@ -147,7 +155,14 @@ Behauptung wird **gemessen, nicht nur aufgestellt**:
 
 - `HierarchicalOrchestrator` — zerlegen → budgetierte Worker beauftragen → jedes Ergebnis
   verifizieren → synthetisieren. Read-artige Fan-outs werden delegiert; eine trivial kleine
-  Teilaufgabe wird direkt vom vertrauenswürdigen Top-Modell inline beantwortet.
+  Teilaufgabe wird direkt vom vertrauenswürdigen Top-Modell inline beantwortet. Gemessen: Er spart
+  Tokens beim mehrstufigen Lesen großer Dokumente (66,5 % weniger). Bei gleicher Zahl von Aufrufen,
+  mit einem 3B-Backbone in jeder Rolle und 30 synthetischen leseintensiven Extraktionsaufgaben,
+  schlug er einen einzelnen Agenten nicht: die Richtung spricht gegen die Hierarchie, `pass^3`
+  −26,7 pp, Intervall [−36,2, −4,2], ein Punktschätzer innerhalb der Flip-Schwelle von 33–47 %. Mit
+  dem Produktions-Synthesemodell erreichte er 0,63 / 0,50 (`pass@1` / `pass^3`, zehn Aufgaben), und
+  auf dieser Stufe lief noch kein Einzelagent-Arm mit gleich vielen Aufrufen — siehe die
+  [Multi-Agent-Richtlinie](../../multi-agent-policy.md).
 - `CascadeBackend` — schwach → Gate → mittel → Gate → Fusion, wobei nur dann eskaliert wird, wenn
   die Antwort einer Stufe an einem günstigen Akzeptanz-Gate scheitert. Das **Route-Log**
   protokolliert jeden Hop, sodass die Kosten die **Summe über alle versuchten Hops** sind, nicht

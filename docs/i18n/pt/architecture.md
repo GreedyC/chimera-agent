@@ -1,5 +1,5 @@
 ---
-source_sha256: 51704b23e9a37ef270ce9056bd6527db635f6fa9958f189c607e3ab2f1583a49
+source_sha256: e39717130faf730675cb8625321788f13b88dfe484745739ac6398e5682e3c82
 ---
 
 # Chimera — Arquitetura
@@ -116,11 +116,19 @@ fronteira):
 
 `chimera/orchestration/`
 
+Isto é maquinário, não recomendação. Quando o Chimera roda mais de um agente — plano por padrão,
+quatro formas sancionadas e os motivos medidos para deixar o resto de fora — é decidido na
+[política multiagente](../../multi-agent-policy.md) (em inglês).
+
 - `Role` + `RoleAgent` — especialização de papel (estilo CrewAI).
 - `SequentialCrew` — papéis em ordem, cada um vê as saídas anteriores **consolidadas** e pode
-  escrever na memória compartilhada.
+  escrever na memória compartilhada. **Não medido** como time: nenhum bench o compara a um agente só
+  a custo igual.
 - `SupervisorCrew` — trabalhadores endereçam a tarefa em paralelo, as saídas são consolidadas, e
-  um supervisor sintetiza (estilo CAPRA `parallel_review`, `2606.18976`).
+  um supervisor sintetiza (estilo CAPRA `parallel_review`, `2606.18976`). **Não medido** como time.
+  A medição mais próxima é o passo de síntese da hierarquia, e ela depende do sintetizador: com um
+  modelo 3B em todos os papéis, a síntese sobre os resumos dos trabalhadores perdeu valores que eles
+  tinham achado; com o sintetizador de produção, não.
 - `consolidate` — a fusão de mensagens do MOC mantém o contexto do time enxuto (`2606.02359`).
 
 ## Ecossistema auto-evolutivo (Tier 4)
@@ -145,7 +153,14 @@ A delegação só compensa quando é mais barata do que fazer o trabalho inline,
 
 - `HierarchicalOrchestrator` — decompõe → despacha trabalhadores com orçamento → verifica cada
   resultado → sintetiza. Fan-out no formato de leitura delega; uma subtarefa trivialmente pequena
-  é respondida inline pelo modelo de confiança do topo.
+  é respondida inline pelo modelo de confiança do topo. Medido: economiza tokens na
+  leitura em vários passos de documentos grandes (66,5% a menos). Com o mesmo número de chamadas,
+  com um backbone 3B em todos os papéis e 30 tarefas sintéticas de extração com muita leitura, não
+  superou um agente só: a direção é contra a hierarquia, `pass^3` −26,7 pp, intervalo [−36,2, −4,2],
+  uma estimativa pontual dentro do piso de oscilação de 33–47%. Com o sintetizador de produção fez
+  0,63 / 0,50 (`pass@1` / `pass^3`, dez tarefas), e nesse nível nenhum braço de agente único com as
+  mesmas chamadas rodou — veja a
+  [política multiagente](../../multi-agent-policy.md).
 - `CascadeBackend` — fraco → gate → médio → gate → fusão, subindo de nível só quando a resposta de
   um tier falha em um gate de aceitação barato. O **route log** registra cada salto, então o custo
   é a **soma de todos os saltos tentados**, não só o aceito — as escaladas são pagas.
