@@ -38,6 +38,7 @@ import { Governance } from "@/components/Governance";
 import { Decisions } from "@/components/Decisions";
 import { Usage } from "@/components/Usage";
 import { SystemOneCard } from "@/components/SystemOneCard";
+import { KeepAwakeCard } from "@/components/KeepAwakeCard";
 import { FoldersCard } from "@/components/FoldersCard";
 import { VoiceCard } from "@/components/VoiceCard";
 import { NotificationsCard } from "@/components/NotificationsCard";
@@ -1558,6 +1559,14 @@ export function Settings({
                     />
                   </Row>
                 </Card>
+
+                {/* Beside the scheduler because a schedule is the work a sleeping laptop loses most
+              often. Off by default; a server without the block reads as off, which is what it does. */}
+                <KeepAwakeCard
+                  mode={c.keep_awake?.mode ?? "off"}
+                  onBattery={c.keep_awake?.on_battery ?? false}
+                  onSave={save}
+                />
 
                 {/* Three modules whose measurements did not recommend them, which is why each is off
               and why each hint says what was measured rather than what the module promises. A
