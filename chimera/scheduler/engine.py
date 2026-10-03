@@ -16,7 +16,7 @@ from croniter import croniter
 
 from chimera.concurrency import call_with_deadline
 from chimera.orchestration.budget import BudgetExceeded
-from chimera.scheduler.models import CreatedBy, CronJob, DispatchStatus, kill_flag_path
+from chimera.scheduler.models import CreatedBy, CronJob, DispatchStatus, Notify, kill_flag_path
 from chimera.scheduler.store import CronStore
 from chimera.telemetry import get_logger
 
@@ -43,6 +43,14 @@ FAIL_LIMIT = 5
 #: morning · 7h" firing at half past nine is a different promise from the one the screen made.
 JITTER_FRAC = 0.1
 JITTER_CAP_S = 300.0
+
+
+def _clean_tools(tools: list[str] | None) -> list[str] | None:
+    """A job's tool list, trimmed and without repeats, in the order given. None stays None: "no
+    list" (every tool) and "an empty list" (no tool) are opposite instructions."""
+    if tools is None:
+        return None
+    return list(dict.fromkeys(name.strip() for name in tools if name.strip()))
 
 
 def _jitter(key: str, period: float) -> float:
@@ -162,6 +170,8 @@ class Scheduler:
         deliver_to: str | None = None,
         verify: str = "",
         max_attempts: int = 1,
+        notify: Notify = "always",
+        tools: list[str] | None = None,
     ) -> CronJob:
         """Register a job fired by a cron expression.
 
@@ -172,6 +182,9 @@ class Scheduler:
             could write them, so the gate could never arm for any user.
         max_attempts: How many times one dispatch may try. Worth raising only alongside `verify` —
             without a gate nothing can tell a failed attempt from a finished one.
+        notify: When the answer is posted to the job's destination (`CronJob.notify`); `always`
+            is today's behaviour.
+        tools: The only tools the job may use (`CronJob.tools`); None keeps every tool.
         """
         if not croniter.is_valid(cron_expr):
             raise ValueError(f"invalid cron expression: {cron_expr!r}")
@@ -193,6 +206,8 @@ class Scheduler:
             deliver_to=deliver_to,
             verify=verify,
             max_attempts=max(1, max_attempts),
+            notify=notify,
+            tools=_clean_tools(tools),
         )
         self.store.add(job)
         return job
@@ -206,6 +221,8 @@ class Scheduler:
         created_by: CreatedBy = "human",
         verify: str = "",
         max_attempts: int = 1,
+        notify: Notify = "always",
+        tools: list[str] | None = None,
     ) -> CronJob:
         """Register a job fired by a named event.
 
@@ -216,6 +233,9 @@ class Scheduler:
             could write them, so the gate could never arm for any user.
         max_attempts: How many times one dispatch may try. Worth raising only alongside `verify` —
             without a gate nothing can tell a failed attempt from a finished one.
+        notify: When the answer is posted to the job's destination (`CronJob.notify`); `always`
+            is today's behaviour.
+        tools: The only tools the job may use (`CronJob.tools`); None keeps every tool.
         """
         job = CronJob(
             id=uuid.uuid4().hex[:8],
@@ -227,6 +247,8 @@ class Scheduler:
             enabled=created_by != "agent",  # agent-created triggers start disabled (same invariant)
             verify=verify,
             max_attempts=max(1, max_attempts),
+            notify=notify,
+            tools=_clean_tools(tools),
         )
         self.store.add(job)
         return job
@@ -240,6 +262,8 @@ class Scheduler:
         created_by: CreatedBy = "human",
         verify: str = "",
         max_attempts: int = 1,
+        notify: Notify = "always",
+        tools: list[str] | None = None,
     ) -> CronJob:
         """Register a job fired by an inbound HTTP POST to ``/webhook/<hook>``.
 
@@ -253,7 +277,24 @@ class Scheduler:
             could write them, so the gate could never arm for any user.
         max_attempts: How many times one dispatch may try. Worth raising only alongside `verify` —
             without a gate nothing can tell a failed attempt from a finished one.
+        notify: Must be ``always``. See below.
+        tools: Must be None. See below.
+
+        Raises:
+            ValueError: ``tools`` or a ``notify`` other than ``always``. A webhook job is dispatched
+                by ``chimera serve`` through the chat gateway, with the gateway's own registry and
+                reply path — not through the scheduled-run path that applies ``CronJob.tools``,
+                ``notify`` and the unattended-run note. Storing them would print ``tools=read_file``
+                in ``cron list`` over a run that holds every tool: a fence that reads as enforced
+                and is not, which is worse than no fence. Refused until the webhook path honours
+                them.
         """
+        if tools is not None or notify != "always":
+            raise ValueError(
+                "a webhook job cannot take --tools or --notify yet: it runs through the chat "
+                "gateway, which does not apply either, so the job would hold every tool and post "
+                "every answer while its listing said otherwise"
+            )
         job = CronJob(
             id=uuid.uuid4().hex[:8],
             name=name,
@@ -263,6 +304,8 @@ class Scheduler:
             created_by=created_by,
             verify=verify,
             max_attempts=max(1, max_attempts),
+            notify=notify,
+            tools=_clean_tools(tools),
         )
         self.store.add(job)
         return job
@@ -430,6 +473,11 @@ class Scheduler:
                 else:
                     self._record(job, veredito or "ok", None)
             except TimeoutError:
+                # Known gap: raised here, outside the dispatch, so the delivery sink never hears
+                # of it — a `notify=failures_only` or `on_change` job is NOT told its run timed
+                # out (the record and `last_status` are). And the abandoned thread may still call
+                # the sink later and move `last_delivered_hash` on a job this tick already saved,
+                # so that move can be lost. Left for a follow-up that posts the timeout from here.
                 _log.warning(
                     "cron job %s (%s) exceeded %ss and was abandoned; the schedule continues",
                     job.name, job.id, job_timeout,

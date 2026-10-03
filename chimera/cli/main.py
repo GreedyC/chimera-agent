@@ -3617,6 +3617,15 @@ def _webhook_handler(gateway: MessageGateway) -> Any:
         results: list[str] = []
 
         def dispatch(job: Any) -> None:
+            if job.tools is not None or job.notify != "always":
+                # Fail closed. `cron add --webhook` refuses these fields, so a webhook job carrying
+                # them was edited into jobs.json by hand — and the gateway below would run it with
+                # every tool and post every answer while `cron list` printed the fence. Not run is
+                # the honest outcome; fire_webhook logs the reason.
+                raise ValueError(
+                    f"webhook job {job.name!r} sets tools/notify, which the webhook path does not "
+                    "apply; refusing to run it with every tool"
+                )
             prompt = job.action
             if payload:
                 # Fenced: the payload is whatever the sender POSTed, and the job's action is the
@@ -6372,6 +6381,17 @@ def cron_list() -> None:
         )
     console.print(table)
 
+    # Lines, not columns, for the same width reason as the failure line below — and only for the
+    # jobs that differ from the default, so a crontab nobody tuned prints exactly what it did.
+    for job in store.list():
+        extras = []
+        if job.notify != "always":
+            extras.append(f"notify={job.notify}")
+        if job.tools is not None:
+            extras.append(f"tools={','.join(job.tools) or '(none)'}")
+        if extras:
+            console.print(f"  [cyan]{job.id}[/cyan] [dim]{' · '.join(extras)}[/dim]")
+
     # A line, not a column. This table was already at its width budget with six columns; a seventh
     # truncated the name, which is the column people read — and a truncated warning is a warning
     # somebody scrolls past. What this has to fix is that `enabled` and `schedule` together read as
@@ -6522,6 +6542,19 @@ def cron_add(
         help="Attempts per dispatch. Worth raising only with --verify: without a gate nothing can "
              "tell a failed attempt from a finished one.",
     ),
+    notify: str = typer.Option(
+        "always", "--notify",
+        help="When the answer is posted to the job's destination: always (every answer except "
+             "the job's own 'nothing new' reply), on_change (skip an answer identical to the last "
+             "one delivered), or failures_only. The result file gets every answer either way. "
+             "Not with --webhook: a webhook job answers through the chat gateway.",
+    ),
+    tools: str | None = typer.Option(
+        None, "--tools",
+        help="Comma-separated tools this job may use; the rest are removed from its registry. "
+             "Omit for every tool (the previous behaviour). Refused with --webhook: a webhook "
+             "job runs through the chat gateway, which does not apply the list.",
+    ),
 ) -> None:
     """Add a cron, event- or webhook-triggered job.
 
@@ -6532,23 +6565,39 @@ def cron_add(
     import time
 
     from chimera.scheduler import Scheduler
+    from chimera.scheduler.models import Notify
+
+    modos: dict[str, Notify] = {
+        "always": "always", "on_change": "on_change", "failures_only": "failures_only"
+    }
+    if notify not in modos:
+        console.print(f"[red]--notify must be one of: {', '.join(modos)}[/red]")
+        raise typer.Exit(code=1)
+    modo = modos[notify]
+    lista = None if tools is None else [t.strip() for t in tools.split(",") if t.strip()]
 
     sched = Scheduler(_cron_store())
     # Passed by name rather than unpacked from a dict: a `**kwargs` here type-erases both fields,
     # and these are exactly the two that decide whether the run is governed.
     if webhook:
-        job = sched.schedule_webhook(
-            name, schedule, action, verify=verify, max_attempts=max_attempts
-        )
+        try:
+            job = sched.schedule_webhook(
+                name, schedule, action, verify=verify, max_attempts=max_attempts,
+                notify=modo, tools=lista,
+            )
+        except ValueError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(code=1) from exc
     elif event:
         job = sched.schedule_event(
-            name, schedule, action, verify=verify, max_attempts=max_attempts
+            name, schedule, action, verify=verify, max_attempts=max_attempts,
+            notify=modo, tools=lista,
         )
     else:
         try:
             job = sched.schedule_cron(
                 name, schedule, action, now=time.time(),
-                verify=verify, max_attempts=max_attempts,
+                verify=verify, max_attempts=max_attempts, notify=modo, tools=lista,
             )
         except ValueError as exc:
             console.print(f"[red]{exc}[/red]")
