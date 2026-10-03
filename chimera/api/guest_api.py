@@ -240,19 +240,29 @@ def build_guest_app(
 def _mount_guest_page(guest: FastAPI, static_dir: Path | None) -> None:
     """``/`` and ``/assets`` from the built bundle — the two things the guest page needs."""
     from fastapi.responses import FileResponse
-    from fastapi.staticfiles import StaticFiles
+
+    from chimera.api.page_csp import static_files_with_policy
 
     page = static_dir / "guest.html" if static_dir is not None else None
     assets = static_dir / "assets" if static_dir is not None else None
     if assets is not None and assets.is_dir():
-        guest.mount("/assets", StaticFiles(directory=assets), name="guest-assets")
+        guest.mount("/assets", static_files_with_policy(assets), name="guest-assets")
 
     @guest.get("/", include_in_schema=False)
     def _page() -> Any:
+        from fastapi.responses import HTMLResponse
+
+        from chimera.api.page_csp import guest_page_csp
+
         if page is None or not page.is_file():
             # A build without the page (the API alone) says so rather than serving the owner's app.
             raise HTTPException(status_code=404, detail="the shared-conversation page is not built")
-        return FileResponse(page, media_type="text/html")
+        # Still the file and only the file — no token is ever put in it — but now with a policy:
+        # the page renders the conversation's answers as Markdown, and a Markdown image in one of
+        # them would otherwise make the GUEST's browser fetch any host the answer names. The
+        # policy hashes the page's own inline script, so it is computed from the text served.
+        html = page.read_text(encoding="utf-8")
+        return HTMLResponse(html, headers={"Content-Security-Policy": guest_page_csp(html)})
 
     @guest.get("/chimera-icon.png", include_in_schema=False)
     def _icon() -> Any:
