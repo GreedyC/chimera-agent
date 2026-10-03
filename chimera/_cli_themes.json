@@ -82,6 +82,7 @@
     "key": "cli.themeAutomation",
     "commands": [
       "cron",
+      "report",
       "kanban",
       "project",
       "agents"
