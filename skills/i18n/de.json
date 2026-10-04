@@ -2,8 +2,8 @@
   "_why": "Translated DISPLAY text for the skill cards: the description, the five body sections, and the trigger chips.\n\nNone of it is the payload. SKILL.md stays byte-identical, so the SHA-256 published on the page still attests to the exact bytes the CLI imports and the agent reads at runtime. The agent always reads the English; a translation lives beside the card and never in place of it. What the page owes the reader in exchange is to say so, which it does.\n\nEvery block declares the source_sha256 of the English it was made from, so a translation of text that has since changed falls back to English instead of being shown as current. The unit of that hash is deliberate: a description hashes alone, the five sections hash as one joined body, and the triggers hash as one joined list — a card that gains a section or a trigger retires all of its siblings together, because a page mixing a current Trigger with a stale Avoid gives the reader no way to tell which is which.\n\nAn earlier version of this note read \"descriptions, and only the descriptions\" and argued the body could never be translated. That was true of the mechanism at the time, not of the rule it appealed to.",
   "descriptions": {
     "check-the-provider-before-you-catalog": {
-      "source_sha256": "d9da55b74dc00236b701eedb54e39ff292a9d34f9fbfa25acc282ddaadd93d94",
-      "text": "Prüfe den Live-Index der Route, bevor du Modell-Slug, Preis oder bedientes Kontextfenster erfasst."
+      "source_sha256": "1332545277d5c614ca3ed747ec5f6132abb43778aba651e91d1a9e466a0b6c1c",
+      "text": "Prüfe die aktuellen Anbieterdokumente, bevor du Modellkennung, Preis, Limit oder Fähigkeit erfasst."
     },
     "assert-what-the-generator-found": {
       "source_sha256": "059b66d7e09a1aa6ce2b31647672f3c724dbafb4d8b75c1b599d79c0762823f2",
@@ -105,11 +105,11 @@
   "sections": {
     "check-the-provider-before-you-catalog": {
       "Trigger": "Du änderst einen Modellkatalog. Kennungen, Preise, Limits, Modalitäten und Werkzeugunterstützung können sich unabhängig ändern.",
-      "Do": "Nimm den genauen Slug, Preis und das bediente Fenster aus dem Live-Index von OpenRouter über `chimera.providers.listing`; notiere Quelle und Prüfdatum. Bei abweichenden Preisen das alte Paar in `also_seen` erhalten, statt die Historie zu überschreiben. Unbekanntes bleibt `None`, niemals schätzen. Duplikate prüfen; bei unklarer Quelle nichts ändern und nachfragen.",
-      "Avoid": "Keine Preise oder Fenster von Marketingseiten eines Anbieters oder anderen Modellen kopieren. Die Historie in `also_seen` nicht überschreiben. Das beworbene Fenster muss nicht dem bedienten Fenster entsprechen.",
-      "Check": "Katalog-Unit-Tests und `tests/test_catalog_is_live.py` ausführen (Netzwerktest auf main), dann den Eintrag per CLI prüfen. Nicht leere Felder allein beweisen keine Richtigkeit.",
-      "Risk": "Der Live-Index kann sich nach dem Merge mit Routen und Preisen ändern. Quellen und Prüfdatum machen Updates nachvollziehbar, garantieren aber keine künftige Richtigkeit. Belege werden nach dem Live-Index bepreist; der Katalogeintrag ist der Fallback.",
-      "source_sha256": "92ff4d5f76ab364b62e5cd77ec3aff582c4c9e087f38c4e63905adaa5f60122e"
+      "Do": "Lies die offiziellen Modell- und Preisdokumente; notiere URL und Prüfdatum. Verwende die genaue Kennung. Unbekannte Preise oder Limits bleiben `None`. Prüfe Duplikate und Invarianten. Bei unklarer Quelle den Eintrag unverändert lassen und nachfragen.",
+      "Avoid": "Ersetze belegte Anbieterangaben nicht durch Marketingnamen, Preise Dritter oder Fähigkeiten eines anderen Modells.",
+      "Check": "Führe Katalogtests aus und prüfe den Eintrag per CLI. Nicht leere Felder allein beweisen keine Richtigkeit.",
+      "Risk": "Anbieterdokumente können sich nach dem Merge ändern. Quell-URLs und Prüfdatum machen Aktualisierungen nachvollziehbar, garantieren aber keine künftige Richtigkeit.",
+      "source_sha256": "959c8c82b7809afd2a5b4e0e67d326f60fb1c34008fd2424d7ca0ec6073cfb78"
     },
     "assert-what-the-generator-found": {
       "Avoid": "`assert build()` — das besteht auch dann, wenn der Generator eine leere Liste zurückgibt, eine unvollständige Liste, oder eine Liste, in der jedes Element auf subtile Weise die falsche Art ist.\n\nVermeiden Sie außerdem, `isinstance` zu vertrauen, wenn Sie eine Struktur eines Drittanbieters durchlaufen. Bibliotheken vendorn ihre Abhängigkeiten: eine `TyperGroup` ist keine Instanz der `click.Group`, die Ihre Datei importiert hat, weil Typer seine eigene Kopie von Click mitliefert. Fragen Sie, ob das Objekt das *hat*, was Sie brauchen — ein `commands`-Mapping, eine `items`-Methode —, statt danach, als welche Klasse es sich ausgibt. Duck-Typing übersteht eine vendorte Abhängigkeit und einen Major-Versionssprung; eine Klassenprüfung übersteht keines von beidem und scheitert durch Fehlklassifizierung statt durch eine Exception.",

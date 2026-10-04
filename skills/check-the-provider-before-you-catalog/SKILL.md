@@ -1,6 +1,6 @@
 ---
 name: check-the-provider-before-you-catalog
-description: Verify the route's live index before recording a model slug, price or served context window.
+description: Verify the provider's current documentation before recording a model identifier, price, limit, or capability.
 version: 0.1.0
 kind: pattern
 stage: verify
@@ -21,16 +21,16 @@ You are changing a model catalogue. Identifiers, prices, limits, modalities and 
 
 ## Do
 
-Take the exact slug, price and served window from the live OpenRouter index through `chimera.providers.listing`; record the source and check date. When a row's price differs from the index, retain the old pair in `also_seen` rather than overwriting its history. Keep unknown values as `None`, never guessed. Check for duplicates. If the source is ambiguous, leave the entry unchanged and ask.
+Read official model and pricing documentation; record its URL and check date. Use the exact identifier. Keep unknown prices or limits as `None`. Check for duplicates and run invariant tests. If the source is ambiguous, leave the entry unchanged and ask.
 
 ## Avoid
 
-Do not copy prices or windows from a vendor's marketing page or another model. Do not overwrite `also_seen` history. An advertised window is not necessarily the window the route serves.
+Do not substitute marketing names, third-party prices or another model's capabilities for verified provider facts.
 
 ## Check
 
-Run the catalogue unit tests and `tests/test_catalog_is_live.py` (a network check run on main), then inspect the entry through the CLI. Non-empty fields alone do not prove correctness.
+Run catalogue tests and inspect the entry through the CLI. Non-empty fields alone do not prove correctness.
 
 ## Risk
 
-The live index can change after merge as routes and prices change. Source references and check dates make updates traceable; they do not guarantee future accuracy. Receipts are priced from the live index; the catalogue row is a fallback.
+Provider documentation can change after merge. Source URLs and check dates make later updates traceable; they do not guarantee future accuracy.
