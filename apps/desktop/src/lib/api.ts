@@ -16,11 +16,15 @@ import type {
   GitInitResult,
   GitRevertResult,
   GitStatus,
+  GitUncommitted,
   RouteMeta,
   Resources,
   BackgroundJob,
   BackgroundJobs,
   CompletionAcceptance,
+  OutputStyle,
+  SuggestionEvent,
+  SuggestionStats,
   DiagnosticsResult,
   InlineCompletion,
   SearchResult,
@@ -394,6 +398,16 @@ export const postCompletionOutcome = (id: string, accepted: boolean) =>
 
 export const getCompletionStats = () => json<CompletionAcceptance>("/api/complete/stats");
 
+// --- Next-step suggestions under an answer ---
+// Fire-and-forget, like the completion outcome above: an unrecorded event costs a sample, and a
+// click must never wait on a statistic. The kind travels, the suggestion's text never does.
+export const postSuggestionEvent = (event: SuggestionEvent) =>
+  json<SuggestionStats>("/api/suggestions/event", {
+    method: "POST",
+    body: JSON.stringify(event),
+  });
+export const getSuggestionStats = () => json<SuggestionStats>("/api/suggestions/stats");
+
 // --- What this machine is spending ---
 // Every field is nullable and that is the contract, not an oversight: a measurement that could not
 // be taken is absent, never zero. 0% VRAM on an AMD card would be believed, and would be wrong
@@ -416,6 +430,14 @@ export const getGitStatus = (workspace?: string | null) => {
   const qs = params.toString();
   return json<GitStatus>(`/api/git/status${qs ? `?${qs}` : ""}`);
 };
+// Which of a turn's edits are still uncommitted. Asked of the server, which knows the workspace and
+// the repository root: comparing the agent's path with git's on this side got an absolute path, a new
+// folder and two files of the same name wrong (study 29, P4.5).
+export const getGitUncommitted = (workspace: string | null | undefined, paths: string[]) =>
+  json<GitUncommitted>("/api/git/uncommitted", {
+    method: "POST",
+    body: JSON.stringify({ workspace: workspace || null, paths }),
+  });
 export const getGitDiff = (workspace: string | null | undefined, path?: string | null, staged = false) => {
   const params = new URLSearchParams();
   if (workspace) params.set("workspace", workspace);
@@ -1086,6 +1108,10 @@ export interface CodeTurnInput {
   /** Route this turn through the fusion panel. It will not be able to use tools — see
    *  {@link CodeTurnDone.fused}, which is how the answer says so. */
   fuse?: boolean;
+  /** How this conversation's answers are written (`chimera/core/output_style.py`). Omitted for the
+   *  default, which adds nothing to the prompt — a turn nobody chose a style for sends exactly the
+   *  request it sent before. Wording only: nothing the turn may do depends on it. */
+  style?: OutputStyle;
   /** Stop for a person on the PLAN before this turn touches anything
    *  (`chimera/api/plan_gate.py`).
    *
@@ -1189,6 +1215,11 @@ export interface CodeTurnDone {
    *  the prompt alone. Zero tool calls is the same number a turn that needed none reports, so
    *  without this flag the two are indistinguishable. */
   fused?: boolean;
+  /** The output style this turn's prompt carried, and the version of its words. Absent when it
+   *  carried none — the default, a spoken turn, an external agent — so the badge never names words
+   *  the model was not given. */
+  style?: OutputStyle;
+  style_version?: number;
   /** The external agent that did this turn, or absent for Chimera's own loop.
    *
    *  Present because the two are not interchangeable on the receipt: `steps` and

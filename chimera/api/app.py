@@ -82,6 +82,7 @@ from chimera.api.schemas import (
     GitInitOut,
     GitRevertOut,
     GitStatusOut,
+    GitUncommittedOut,
     GovernanceAuditOut,
     HealthOut,
     HitlOut,
@@ -116,6 +117,8 @@ from chimera.api.schemas import (
     SessionMetaOut,
     ShellPrefsIn,
     ShellPrefsOut,
+    SuggestionEventIn,
+    SuggestionStatsOut,
     SystemOneModelsOut,
     ToolsOut,
     UpdatedOut,
@@ -260,6 +263,13 @@ class GitRevertRequest(BaseModel):
     """The workspace (repo) the revert is scoped to. None = the app's launch workspace."""
     paths: list[str]
     """The run's changed paths to discard (git-backed revert, scoped to these only)."""
+
+
+class GitUncommittedRequest(BaseModel):
+    workspace: str | None = None
+    """The workspace the paths are relative to. None = the app's launch workspace."""
+    paths: list[str]
+    """Files a turn wrote, as the agent named them (relative to the workspace, or absolute)."""
 
 
 class GitInitRequest(BaseModel):
@@ -2056,6 +2066,27 @@ def build_api_app(
 
         return acceptance(Path(settings.home))
 
+    @app.post("/api/suggestions/event", dependencies=[guard], response_model=SuggestionStatsOut)
+    def suggestion_event_endpoint(req: SuggestionEventIn) -> dict[str, Any]:
+        """Record that a next-step suggestion was shown, picked or sent, and answer with the rates.
+
+        The suggestions themselves are computed on the screen from facts of the turn and cost
+        nothing; this is the only part of them the server sees, and it sees the kind, not the text.
+        """
+        from chimera.api import suggestion_log
+
+        home = Path(settings.home)
+        suggestion_log.record(home, event=req.event, kind=req.kind, edited=req.edited)
+        return suggestion_log.stats(home)
+
+    @app.get("/api/suggestions/stats", dependencies=[guard], response_model=SuggestionStatsOut)
+    def suggestion_stats_endpoint() -> dict[str, Any]:
+        """How often the suggestions under an answer are taken on THIS machine — the measure the plan
+        set for them. Each rate is null until it has a denominator."""
+        from chimera.api import suggestion_log
+
+        return suggestion_log.stats(Path(settings.home))
+
     @app.get("/api/resources", dependencies=[guard], response_model=ResourcesOut)
     def resources_endpoint() -> dict[str, Any]:
         """What this machine is spending, right now.
@@ -2161,6 +2192,15 @@ def build_api_app(
         from chimera.api.git_api import git_status
 
         return git_status(_resolve_fs_workspace(workspace))
+
+    @app.post("/api/git/uncommitted", dependencies=[guard], response_model=GitUncommittedOut)
+    def git_uncommitted_endpoint(req: GitUncommittedRequest) -> dict[str, Any]:
+        # Read-only, though a POST: the paths are a list the client already holds, and a body carries
+        # it without a URL length to outgrow. Which of a turn's edits git still reports as changed,
+        # matched where the workspace and the repository root are both known (the commit chip).
+        from chimera.api.git_api import git_uncommitted
+
+        return git_uncommitted(_resolve_fs_workspace(req.workspace), req.paths)
 
     @app.get("/api/git/diff", dependencies=[guard], response_model=GitDiffOut)
     def git_diff_endpoint(

@@ -1682,6 +1682,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/git/uncommitted": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Git Uncommitted Endpoint */
+        post: operations["git_uncommitted_endpoint_api_git_uncommitted_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/governance/audit": {
         parameters: {
             query?: never;
@@ -3119,6 +3136,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/suggestions/event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggestion Event Endpoint
+         * @description Record that a next-step suggestion was shown, picked or sent, and answer with the rates.
+         *
+         *     The suggestions themselves are computed on the screen from facts of the turn and cost
+         *     nothing; this is the only part of them the server sees, and it sees the kind, not the text.
+         */
+        post: operations["suggestion_event_endpoint_api_suggestions_event_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/suggestions/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggestion Stats Endpoint
+         * @description How often the suggestions under an answer are taken on THIS machine — the measure the plan
+         *     set for them. Each rate is null until it has a denominator.
+         */
+        get: operations["suggestion_stats_endpoint_api_suggestions_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tools": {
         parameters: {
             query?: never;
@@ -4546,6 +4607,12 @@ export interface components {
              */
             stream: boolean;
             /**
+             * Style
+             * @default default
+             * @enum {string}
+             */
+            style: "default" | "concise" | "explanatory";
+            /**
              * Summarise Compaction
              * @default false
              */
@@ -5903,6 +5970,20 @@ export interface components {
             files: components["schemas"]["GitFileOut"][];
             /** Is Repo */
             is_repo: boolean;
+        };
+        /** GitUncommittedOut */
+        GitUncommittedOut: {
+            /** Files */
+            files: string[];
+            /** Is Repo */
+            is_repo: boolean;
+        };
+        /** GitUncommittedRequest */
+        GitUncommittedRequest: {
+            /** Paths */
+            paths: string[];
+            /** Workspace */
+            workspace?: string | null;
         };
         /** GovernanceAuditOut */
         GovernanceAuditOut: {
@@ -8071,6 +8152,72 @@ export interface components {
              * @default
              */
             task_id: string;
+        };
+        /**
+         * SuggestionCountsOut
+         * @description Shown, picked and sent, and the two rates between them — each null with no denominator.
+         */
+        SuggestionCountsOut: {
+            /** Edited */
+            edited: number;
+            /** Pick Rate */
+            pick_rate: number | null;
+            /** Picked */
+            picked: number;
+            /** Send Rate */
+            send_rate: number | null;
+            /** Sent */
+            sent: number;
+            /** Shown */
+            shown: number;
+        };
+        /**
+         * SuggestionEventIn
+         * @description One event of a next-step suggestion under a Code-screen answer (:mod:`chimera.api.suggestion_log`).
+         *
+         *     The kind and the event, never the suggestion's text: an acceptance rate does not need to know
+         *     which files a "commit" suggestion named.
+         */
+        SuggestionEventIn: {
+            /**
+             * Edited
+             * @default false
+             */
+            edited: boolean;
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "shown" | "picked" | "sent";
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "fix" | "commit" | "continue";
+        };
+        /**
+         * SuggestionStatsOut
+         * @description How often the suggestions under an answer are taken, on this machine, in total and per kind.
+         */
+        SuggestionStatsOut: {
+            /** By Kind */
+            by_kind: {
+                [key: string]: components["schemas"]["SuggestionCountsOut"];
+            };
+            /** Edited */
+            edited: number;
+            /** Note */
+            note: string;
+            /** Pick Rate */
+            pick_rate: number | null;
+            /** Picked */
+            picked: number;
+            /** Send Rate */
+            send_rate: number | null;
+            /** Sent */
+            sent: number;
+            /** Shown */
+            shown: number;
         };
         /**
          * SystemOneModelOut
@@ -11290,6 +11437,39 @@ export interface operations {
             };
         };
     };
+    git_uncommitted_endpoint_api_git_uncommitted_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GitUncommittedRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitUncommittedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     governance_audit_endpoint_api_governance_audit_get: {
         parameters: {
             query?: never;
@@ -13418,6 +13598,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggestion_event_endpoint_api_suggestions_event_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestionEventIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionStatsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggestion_stats_endpoint_api_suggestions_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionStatsOut"];
                 };
             };
         };

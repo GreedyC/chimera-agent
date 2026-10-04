@@ -39,6 +39,9 @@ export function makeCodeApiMock() {
     getFsTree: vi.fn(),
     getGitDiff: vi.fn(),
     getGitStatus: vi.fn(),
+    // "Not a repository" by default: nothing known, so no commit chip appears in a suite that is not
+    // about it, and the call never resolves `undefined` into react-query.
+    getGitUncommitted: vi.fn(async () => ({ is_repo: false, files: [] })),
     // Resolves an EMPTY conversation by default, not `undefined`: the replay path reads
     // `.exchanges` on whatever comes back, and a bare `vi.fn()` makes every suite that mounts the
     // conversation die on a property access that has nothing to do with what it is testing.
@@ -181,7 +184,17 @@ export function makeCodeApiMock() {
     streamCrew: vi.fn(),
     cancelOrchestration: vi.fn(),
     getApproaches: vi.fn(async () => ({ approaches: [], default: [] })),
+    // The next-step suggestions under an answer post their events here (fire-and-forget) and the
+    // settings row reads the rate back. Resolved with an empty ledger, which is a fresh install.
+    postSuggestionEvent: vi.fn(async () => emptySuggestionStats()),
+    getSuggestionStats: vi.fn(async () => emptySuggestionStats()),
   };
+}
+
+/** The suggestion ledger of an install that has shown nothing yet: every rate null, not zero. */
+export function emptySuggestionStats() {
+  const none = { shown: 0, picked: 0, sent: 0, edited: 0, pick_rate: null, send_rate: null };
+  return { ...none, by_kind: { fix: none, commit: none, continue: none }, note: "no suggestion shown yet" };
 }
 
 /** The posture facts the server would report for an ordinary local setup. */
