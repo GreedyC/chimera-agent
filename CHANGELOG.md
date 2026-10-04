@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.64.3] - 2026-10-04
 ### Security
 
 - **Settings that widen what the agent reaches, or loosen a guard or a privacy fence, are the owner's alone** (#770,
@@ -224,6 +226,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **`llama-3.3-70b-instruct` keeps its price row honest after a rise.** On 2026-10-04 the live index quoted
+  0.22/0.50, up from 0.10/0.32, and the live check on main turned red. The row now carries the higher figure, so a
+  fallback never tells a user they spent less than they did, and keeps the old one as seen.
 - **Starting a run in one repository no longer deletes another repository's live worktree** (#770). The boot-time
   cleanup removed every `chimera-wt-*` folder older than an hour in the shared temp folder, whichever repository's run
   was working in it. It now removes only folders no repository knows.
