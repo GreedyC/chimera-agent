@@ -40,6 +40,7 @@ import { Decisions } from "@/components/Decisions";
 import { Usage } from "@/components/Usage";
 import { SystemOneCard } from "@/components/SystemOneCard";
 import { KeepAwakeCard } from "@/components/KeepAwakeCard";
+import { DeferSavingNote } from "@/components/DeferSavingNote";
 import { FoldersCard } from "@/components/FoldersCard";
 import { VoiceCard } from "@/components/VoiceCard";
 import { NotificationsCard } from "@/components/NotificationsCard";
@@ -417,6 +418,7 @@ function Row({
   applies,
   env,
   warn = false,
+  note,
   children,
 }: {
   label: string;
@@ -426,6 +428,8 @@ function Row({
   env?: string;
   /** The hint is a warning about what switching this on allows, not a description of it. */
   warn?: boolean;
+  /** A live line under the hint — a figure the server measured, not a sentence written in advance. */
+  note?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -437,6 +441,7 @@ function Row({
             {hint}
           </div>
         )}
+        {note}
         <AppliesNote when={applies} />
         <PinnedNote env={env} />
       </div>
@@ -1538,6 +1543,44 @@ export function Settings({
                       }
                     />
                   </Row>
+                  {/* Where that browser may go (study 29, P5.2). Both empty by default, which is the
+              browser as it always was. The values are shown as written, not masked: they are the
+              owner's own statements, and a list that cannot be read back cannot be corrected. The
+              server refuses a value it would not read (a URL in the site list, Chimera's own port
+              in the ports), so a typo is an error here rather than a list that matches nothing. */}
+                  <Row
+                    label={t("settings.row.browserSites")}
+                    hint={t("settings.hint.browserSites")}
+                    applies={c.applies?.CHIMERA_BROWSER_SITES}
+                    env="CHIMERA_BROWSER_SITES"
+                  >
+                    <TextField
+                      value={(c.browser?.sites ?? []).join(", ")}
+                      placeholder="github.com, *.github.com"
+                      onSave={(v) => save({ CHIMERA_BROWSER_SITES: v })}
+                    />
+                  </Row>
+                  <Row
+                    label={t("settings.row.browserLocalPorts")}
+                    hint={t("settings.hint.browserLocalPorts")}
+                    applies={c.applies?.CHIMERA_BROWSER_LOCAL_PORTS}
+                    env="CHIMERA_BROWSER_LOCAL_PORTS"
+                    warn
+                  >
+                    <TextField
+                      value={(c.browser?.local_ports ?? []).join(", ")}
+                      placeholder="3000, 8080"
+                      onSave={(v) => save({ CHIMERA_BROWSER_LOCAL_PORTS: v })}
+                    />
+                  </Row>
+                  {/* A hand-edited `.env` value that does not parse leaves the browser out of every
+              conversation. The two rows above would then read empty — "any public site" — so the
+              server's reason is shown here, in its own words (it names the key and the entry). */}
+                  {c.browser?.invalid ? (
+                    <p role="alert" className="text-xs text-bad-foreground">
+                      {t("settings.browserReach.invalid", { error: c.browser.invalid })}
+                    </p>
+                  ) : null}
                   {/* The switch the posture line names when it reports a conversation as unguarded. Off
               by default (`chimera/config.py`: `guard_chat: bool = Field(default=False)`), which is
               a real exposure and the reason the posture line has to say so.
@@ -1655,6 +1698,33 @@ export function Settings({
                       onChange={(v) =>
                         save({ CHIMERA_EXPLORER_CONTRACT: String(v) })
                       }
+                    />
+                  </Row>
+                  {/* Tools reached on demand. Off: the built-in bench was inconclusive and the MCP
+                half was never measured — the hints quote `bench/tool_defer/RESULT.md` and say so.
+                Under each, the token half as THIS install measures it, a loss included. */}
+                  <Row
+                    label={t("settings.row.deferTools")}
+                    hint={t("settings.hint.deferTools")}
+                    note={<DeferSavingNote half="builtin" />}
+                    applies={c.applies?.CHIMERA_DEFER_TOOLS}
+                    env="CHIMERA_DEFER_TOOLS"
+                  >
+                    <Toggle
+                      on={c.defer?.tools ?? false}
+                      onChange={(v) => save({ CHIMERA_DEFER_TOOLS: String(v) })}
+                    />
+                  </Row>
+                  <Row
+                    label={t("settings.row.mcpDefer")}
+                    hint={t("settings.hint.mcpDefer")}
+                    note={<DeferSavingNote half="mcp" />}
+                    applies={c.applies?.CHIMERA_MCP_DEFER}
+                    env="CHIMERA_MCP_DEFER"
+                  >
+                    <Toggle
+                      on={c.defer?.mcp ?? false}
+                      onChange={(v) => save({ CHIMERA_MCP_DEFER: String(v) })}
                     />
                   </Row>
                 </Card>

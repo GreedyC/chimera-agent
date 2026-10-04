@@ -123,6 +123,12 @@ _EDITABLE_SETTINGS = {
     # and `PATCH /api/config` has always refused the key. So the one way to see what the agent is
     # doing on a web page was a file the app never mentions.
     "CHIMERA_BROWSER_HEADLESS",
+    # Where the browser may go (study 29, P5.2). The site list only narrows; the local ports open
+    # loopback on the ports named, never Chimera's own. Both values are checked before they are
+    # written (`_VALUE_CHECKS`), so a typo is a refusal on the screen rather than a browser that
+    # silently reads the list as matching nothing.
+    "CHIMERA_BROWSER_SITES",
+    "CHIMERA_BROWSER_LOCAL_PORTS",
     "CHIMERA_MCP_AUTOLOAD",
     # The learn-to-use wire. Off by default, which means the agent writes skills and never reads one
     # back — the promise of the product with the switch missing from the product.
@@ -162,6 +168,13 @@ _EDITABLE_SETTINGS = {
     "CHIMERA_BROWSER_SITUATION",
     "CHIMERA_RESEARCH_AGENT",
     "CHIMERA_EXPLORER_CONTRACT",
+    # Tools reached on demand instead of declared on every step — the built-in half and the MCP
+    # half. `config.py` promised beside both that the saving is reported on your own installation,
+    # and the only way to switch either was `.env`. Off: the built-in bench was inconclusive
+    # (`bench/tool_defer/RESULT.md`, McNemar p = 0.125) and nothing has measured the MCP half. The
+    # screen shows that, and the saving measured here (`GET /api/tools/defer-saving`), on the row.
+    "CHIMERA_DEFER_TOOLS",
+    "CHIMERA_MCP_DEFER",
     # The desktop bridge's two switches (`chimera/api/desktop_bridge.py`). The owner's, and only the
     # owner's: the bridge refuses to write either one on Claude's behalf, even with full control on,
     # so a client can never widen its own access.
@@ -222,11 +235,20 @@ APPLIES_WHEN: dict[str, str] = {
     # onto the screen of a browser that is already running headless, so the honest answer is the
     # next conversation, which is when a fresh registry (and a fresh browser) is built.
     "CHIMERA_BROWSER_HEADLESS": NEXT_CONVERSATION,
+    # Read at the same point as the headless switch: `default_registry` hands the browser its reach
+    # when it builds the tool, and the reach then holds for that browser's life.
+    "CHIMERA_BROWSER_SITES": NEXT_CONVERSATION,
+    "CHIMERA_BROWSER_LOCAL_PORTS": NEXT_CONVERSATION,
     # Same read point: `default_registry` hands the browser its situation when it builds the tool, and
     # the loop's config takes the flag when the agent is built. A chat keeps both for its lifetime;
     # a Code turn builds both afresh, so there it is the next turn. The research agent and the
     # explorer's contract are read only on the Code turn, per turn, so they are absent: next call.
     "CHIMERA_BROWSER_SITUATION": NEXT_CONVERSATION,
+    # Both read where the registry is assembled: per conversation in the chat (`_chat_session` reads
+    # `get_settings()` fresh) and per turn on the Code screen, which is sooner. "Next conversation"
+    # is the scope that is true on both; an open chat keeps the tool list it started with.
+    "CHIMERA_DEFER_TOOLS": NEXT_CONVERSATION,
+    "CHIMERA_MCP_DEFER": NEXT_CONVERSATION,
     # The governance band builds its decider once per assembly (`governance/band.py::build_band`), so
     # a chat already running keeps the instrument it started with; the next one reads the new pair.
     # `POST /api/decide` and the `decide` tool rebuild on the next call.
@@ -244,6 +266,27 @@ APPLIES_WHEN: dict[str, str] = {
     "CHIMERA_SIGNAL_ALLOWED_USERS": NEXT_LAUNCH,
     "CHIMERA_WHATSAPP_ALLOWED_NUMBERS": NEXT_LAUNCH,
 }
+
+
+def _browser_reach_lists(settings: Settings) -> dict[str, Any]:
+    """The two lists as the browser reads them, and — when either does not parse — why.
+
+    A value that does not parse is not "empty": `default_registry` leaves the browser out of the
+    registry altogether (`BrowserReach.from_settings` raises), so empty lists alone would show the
+    owner "any public site" for a browser that exists in no conversation. ``invalid`` carries the
+    parser's own message, which names the key and the entry."""
+    from chimera.tools.browser_reach import parse_ports, parse_sites
+
+    errors: list[str] = []
+    try:
+        sites = list(parse_sites(settings.browser_sites))
+    except ValueError as exc:
+        sites, errors = [], [*errors, str(exc)]
+    try:
+        ports = sorted(parse_ports(settings.browser_local_ports))
+    except ValueError as exc:
+        ports, errors = [], [*errors, str(exc)]
+    return {"sites": sites, "local_ports": ports, "invalid": "; ".join(errors) or None}
 
 
 def _fusion_kinship(panel: list[str], judge: str) -> dict[str, Any]:
@@ -431,12 +474,21 @@ def read_config(settings: Settings) -> dict[str, Any]:
         },
         "cache": {"completion": settings.cache, "prompt": settings.prompt_cache},
         "sandbox": {"mode": settings.sandbox, "image": settings.sandbox_image},
-        "browser": {"headless": settings.browser_headless},
+        # The site list and the declared ports as written, not a mask: statements the owner made and
+        # has to be able to read back. A value `.env` holds that does not parse leaves the lists
+        # empty AND says why in `invalid`: empty alone would read "any public site" for a browser
+        # that is left out of every conversation (`default_registry`).
+        "browser": {
+            "headless": settings.browser_headless,
+            **_browser_reach_lists(settings),
+        },
         "experimental": {
             "browser_situation": settings.browser_situation,
             "research_agent": settings.research_agent,
             "explorer_contract": settings.explorer_contract,
         },
+        # Tools on demand, both halves. What they would save is `GET /api/tools/defer-saving`.
+        "defer": {"tools": settings.defer_tools, "mcp": settings.mcp_defer},
         # The day's dollar ceiling, as set; `None` is no cap. Scheduled jobs only — see SpendCfgOut.
         "spend": {"daily_usd_cap": settings.daily_usd_cap},
         # The owner's keep-awake choice. What the keeper is DOING is `GET /api/keep-awake`.
@@ -672,6 +724,18 @@ def _check_archive_after_days(value: str) -> None:
         )
 
 
+def _check_browser_sites(value: str) -> None:
+    from chimera.tools.browser_reach import parse_sites
+
+    parse_sites(value)
+
+
+def _check_browser_ports(value: str) -> None:
+    from chimera.tools.browser_reach import parse_ports
+
+    parse_ports(value)
+
+
 def _check_boolean(key: str) -> Callable[[str], None]:
     def check(value: str) -> None:
         if value.strip().lower() not in ("true", "false", "1", "0", "yes", "no", "on", "off"):
@@ -685,10 +749,16 @@ def _check_boolean(key: str) -> Callable[[str], None]:
 _VALUE_CHECKS: dict[str, Callable[[str], None]] = {
     "CHIMERA_DAILY_USD_CAP": _check_daily_cap,
     "CHIMERA_KEEP_AWAKE": _check_keep_awake,
+    "CHIMERA_BROWSER_SITES": _check_browser_sites,
+    "CHIMERA_BROWSER_LOCAL_PORTS": _check_browser_ports,
     "CHIMERA_KEEP_AWAKE_ON_BATTERY": _check_boolean("CHIMERA_KEEP_AWAKE_ON_BATTERY"),
     "CHIMERA_ARCHIVE_AFTER_DAYS": _check_archive_after_days,
     # A boolean the app would fail to start on if it were saved as anything else.
     "CHIMERA_CRON_NOTIFY_FAILURES": _check_boolean("CHIMERA_CRON_NOTIFY_FAILURES"),
+    # A value `Settings` cannot parse as a bool takes the whole app down at the next read, which is
+    # worse than a refusal here.
+    "CHIMERA_DEFER_TOOLS": _check_boolean("CHIMERA_DEFER_TOOLS"),
+    "CHIMERA_MCP_DEFER": _check_boolean("CHIMERA_MCP_DEFER"),
 }
 
 

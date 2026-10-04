@@ -552,6 +552,16 @@ const en: Dict = {
   "settings.row.showBrowser": "Show the browser window",
   "settings.hint.showBrowser":
     "Chromium opens where you can see it, on the machine running the agent, so you can watch the page it is on. Off, it browses invisibly.",
+  "settings.row.browserSites":
+    "Sites the browser opens without asking",
+  "settings.hint.browserSites":
+    "Hosts, and *.domain for its subdomains. Empty: any public site. A page off the list asks you first; where nobody can be asked, it is not opened.",
+  "settings.row.browserLocalPorts":
+    "Local ports the browser may open",
+  "settings.hint.browserLocalPorts":
+    "Opens localhost on these ports only, so the agent can look at the app it is changing. Never Chimera's own ports or a server that relays to them (like the desktop's own dev server), a private network or cloud metadata. Empty: no local address at all.",
+  "settings.browserReach.invalid":
+    "A value in .env does not parse, so the agent's browser is off in every conversation until it is fixed: {error}",
   "settings.pinned":
     "Fixed in this server's environment. Saving here writes .env, which that environment overrides the next time the server starts.",
   "settings.row.fallbackModels": "Fallback models",
@@ -1646,6 +1656,17 @@ const en: Dict = {
   "settings.hint.researchAgent": "Measured: no better citations or accuracy than the plain loop, at 4.9× the tokens.",
   "settings.row.explorerContract": "Explorer contract",
   "settings.hint.explorerContract": "The explorer cites path:line for each finding and lists its gaps. Not measured yet.",
+  "settings.row.deferTools": "Built-in tools on demand",
+  "settings.hint.deferTools": "Only files and search, plus the shell where the conversation has one, are declared; the other tools are looked up when needed. Bench: −26% prompt tokens per completed task, but 15 of 30 tasks completed against 18 of 30 (McNemar p = 0.125, inconclusive). Off until it is measured better.",
+  "settings.row.mcpDefer": "MCP tools on demand",
+  "settings.hint.mcpDefer": "Connected servers are reached through three lookup tools instead of every schema being declared. Whether the agent still finds the right tool is unmeasured here; the bench above covered built-in tools only.",
+  "settings.defer.saving": "Measured here: {from} → {to} schema characters per step, {pct}% less.",
+  "settings.defer.loss": "Measured here: {from} → {to} schema characters per step — {pct}% MORE. Too few tools for deferral to pay.",
+  "settings.defer.autoloadOff": "Nothing to measure: MCP servers are loaded only while MCP autoload is on.",
+  "settings.defer.notConnected": "MCP servers connect on the first conversation; the measurement appears after that.",
+  "settings.defer.noServers": "No MCP server is connected, so there is nothing to defer.",
+  "settings.defer.unavailable": "Could not measure the saving on this machine.",
+  "settings.defer.mcpUnavailable": "A connected MCP server did not answer its tool listing, so the MCP half could not be measured.",
   "settings.card.systemOne": "System One",
   "settings.systemOne.intro": "Which model answers a typed decision: a yes/no, a choice, a score. On a default install it is asked on its own in one place, the answer check below; otherwise it answers when the governance REVIEW band or the decide tool is on, or when chimera decide is called.",
   "settings.systemOne.backend": "Decision backend",
@@ -2392,6 +2413,16 @@ const pt: Dict = {
   "settings.row.showBrowser": "Mostrar a janela do navegador",
   "settings.hint.showBrowser":
     "O Chromium abre à vista, na máquina que roda o agente, para você acompanhar a página em que ele está. Desligado, ele navega invisível.",
+  "settings.row.browserSites":
+    "Sites que o navegador abre sem perguntar",
+  "settings.hint.browserSites":
+    "Hosts, e *.domínio para os subdomínios. Vazio: qualquer site público. Uma página fora da lista pergunta antes; onde ninguém pode responder, é recusada.",
+  "settings.row.browserLocalPorts":
+    "Portas locais que o navegador pode abrir",
+  "settings.hint.browserLocalPorts":
+    "Abre o localhost só nestas portas, para o agente ver o app que está alterando. Nunca as portas do próprio Chimera ou um servidor que repassa para elas (como o dev server do próprio desktop), rede privada ou metadados de nuvem. Vazio: nenhum endereço local.",
+  "settings.browserReach.invalid":
+    "Um valor no .env não pôde ser lido, então o navegador do agente está desligado em todas as conversas até ser corrigido: {error}",
   "settings.pinned":
     "Fixado no ambiente deste servidor. Salvar aqui grava no .env, que esse ambiente sobrescreve na próxima vez que o servidor subir.",
   "settings.row.fallbackModels": "Modelos de fallback",
@@ -3496,6 +3527,17 @@ const pt: Dict = {
   "settings.hint.researchAgent": "Medido: citações e acertos não melhores que o loop simples, com 4,9× os tokens.",
   "settings.row.explorerContract": "Contrato do explorador",
   "settings.hint.explorerContract": "O explorador cita caminho:linha em cada achado e lista as lacunas. Ainda sem medição.",
+  "settings.row.deferTools": "Ferramentas nativas sob demanda",
+  "settings.hint.deferTools": "Só arquivos e busca, mais o terminal quando a conversa tem um, ficam declarados; as outras ferramentas são consultadas quando necessário. Bench: −26% de tokens de prompt por tarefa concluída, mas 15 de 30 tarefas concluídas contra 18 de 30 (McNemar p = 0,125, inconclusivo). Desligado até haver medição melhor.",
+  "settings.row.mcpDefer": "Ferramentas MCP sob demanda",
+  "settings.hint.mcpDefer": "Os servidores conectados são alcançados por três ferramentas de consulta, em vez de todos os schemas serem declarados. Se o agente ainda acha a ferramenta certa não foi medido aqui; o bench acima cobriu só as ferramentas nativas.",
+  "settings.defer.saving": "Medido aqui: {from} → {to} caracteres de schema por passo, {pct}% a menos.",
+  "settings.defer.loss": "Medido aqui: {from} → {to} caracteres de schema por passo — {pct}% A MAIS. Poucas ferramentas para o adiamento compensar.",
+  "settings.defer.autoloadOff": "Nada a medir: os servidores MCP só são carregados com o autoload de MCP ligado.",
+  "settings.defer.notConnected": "Os servidores MCP conectam na primeira conversa; a medição aparece depois disso.",
+  "settings.defer.noServers": "Nenhum servidor MCP conectado, então não há o que adiar.",
+  "settings.defer.unavailable": "Não foi possível medir a economia nesta máquina.",
+  "settings.defer.mcpUnavailable": "Um servidor MCP conectado não respondeu à listagem de ferramentas, então a metade MCP não pôde ser medida.",
   "settings.card.systemOne": "System One",
   "settings.systemOne.intro": "Qual modelo responde uma decisão tipada: sim/não, uma escolha, uma nota. Numa instalação padrão ele é perguntado sozinho num lugar só, a verificação de respostas abaixo; fora isso responde quando a faixa REVIEW da governança ou a tool decide está ligada, ou quando chimera decide é chamado.",
   "settings.systemOne.backend": "Backend de decisão",
@@ -4281,6 +4323,16 @@ const es: Dict = {
   "settings.row.showBrowser": "Mostrar la ventana del navegador",
   "settings.hint.showBrowser":
     "Chromium se abre a la vista, en la máquina que ejecuta el agente, para que veas la página en la que está. Apagado, navega de forma invisible.",
+  "settings.row.browserSites":
+    "Sitios que el navegador abre sin preguntar",
+  "settings.hint.browserSites":
+    "Hosts, y *.dominio para sus subdominios. Vacío: cualquier sitio público. Una página fuera de la lista pregunta antes; donde nadie puede responder, se rechaza.",
+  "settings.row.browserLocalPorts":
+    "Puertos locales que el navegador puede abrir",
+  "settings.hint.browserLocalPorts":
+    "Abre localhost solo en estos puertos, para que el agente vea la app que está cambiando. Nunca los puertos del propio Chimera ni un servidor que reenvía a ellos (como el servidor de desarrollo del propio escritorio), una red privada ni los metadatos de la nube. Vacío: ninguna dirección local.",
+  "settings.browserReach.invalid":
+    "Un valor del .env no se puede leer, así que el navegador del agente está apagado en todas las conversaciones hasta corregirlo: {error}",
   "settings.pinned":
     "Fijado en el entorno de este servidor. Guardar aquí escribe en .env, que ese entorno sobrescribe la próxima vez que el servidor arranque.",
   "settings.row.fallbackModels": "Modelos de respaldo",
@@ -5358,6 +5410,17 @@ const es: Dict = {
   "settings.hint.researchAgent": "Medido: citas y aciertos no mejores que el bucle simple, con 4,9× los tokens.",
   "settings.row.explorerContract": "Contrato del explorador",
   "settings.hint.explorerContract": "El explorador cita ruta:línea en cada hallazgo y enumera sus lagunas. Aún sin medir.",
+  "settings.row.deferTools": "Herramientas nativas bajo demanda",
+  "settings.hint.deferTools": "Solo archivos y búsqueda, más el terminal cuando la conversación tiene uno, quedan declarados; las demás herramientas se consultan cuando hacen falta. Bench: −26% de tokens de prompt por tarea completada, pero 15 de 30 tareas completadas frente a 18 de 30 (McNemar p = 0,125, no concluyente). Desactivado hasta medirlo mejor.",
+  "settings.row.mcpDefer": "Herramientas MCP bajo demanda",
+  "settings.hint.mcpDefer": "Los servidores conectados se alcanzan con tres herramientas de consulta en lugar de declarar todos los esquemas. Si el agente sigue encontrando la herramienta correcta no se ha medido aquí; el bench de arriba cubrió solo las herramientas nativas.",
+  "settings.defer.saving": "Medido aquí: {from} → {to} caracteres de esquema por paso, {pct}% menos.",
+  "settings.defer.loss": "Medido aquí: {from} → {to} caracteres de esquema por paso — {pct}% MÁS. Muy pocas herramientas para que el aplazamiento compense.",
+  "settings.defer.autoloadOff": "Nada que medir: los servidores MCP solo se cargan con la carga automática de MCP activada.",
+  "settings.defer.notConnected": "Los servidores MCP se conectan en la primera conversación; la medición aparece después.",
+  "settings.defer.noServers": "No hay ningún servidor MCP conectado, así que no hay nada que aplazar.",
+  "settings.defer.unavailable": "No se pudo medir el ahorro en esta máquina.",
+  "settings.defer.mcpUnavailable": "Un servidor MCP conectado no respondió a la lista de herramientas, así que la mitad MCP no se pudo medir.",
   "settings.card.systemOne": "System One",
   "settings.systemOne.intro": "Qué modelo responde una decisión tipada: sí/no, una elección, una puntuación. En una instalación predeterminada se le pregunta por su cuenta en un solo lugar, la verificación de respuestas de abajo; fuera de eso responde cuando la banda REVIEW de la gobernanza o la tool decide está activada, o cuando se llama a chimera decide.",
   "settings.systemOne.backend": "Backend de decisión",
@@ -6147,6 +6210,16 @@ const fr: Dict = {
   "settings.row.showBrowser": "Afficher la fenêtre du navigateur",
   "settings.hint.showBrowser":
     "Chromium s'ouvre en visible, sur la machine qui exécute l'agent, pour que vous voyiez la page où il se trouve. Désactivé, il navigue sans fenêtre.",
+  "settings.row.browserSites":
+    "Sites que le navigateur ouvre sans demander",
+  "settings.hint.browserSites":
+    "Hôtes, et *.domaine pour ses sous-domaines. Vide : n'importe quel site public. Une page hors de la liste demande d'abord ; là où personne ne peut répondre, elle est refusée.",
+  "settings.row.browserLocalPorts":
+    "Ports locaux que le navigateur peut ouvrir",
+  "settings.hint.browserLocalPorts":
+    "Ouvre localhost sur ces ports seulement, pour que l'agent voie l'application qu'il modifie. Jamais les ports de Chimera lui-même ni un serveur qui les relaie (comme le serveur de développement du bureau lui-même), un réseau privé ni les métadonnées du cloud. Vide : aucune adresse locale.",
+  "settings.browserReach.invalid":
+    "Une valeur du .env ne se lit pas, donc le navigateur de l'agent est désactivé dans toutes les conversations tant qu'elle n'est pas corrigée : {error}",
   "settings.pinned":
     "Fixé dans l'environnement de ce serveur. Enregistrer ici écrit dans .env, que cet environnement écrase au prochain démarrage du serveur.",
   "settings.row.fallbackModels": "Modèles de repli",
@@ -7232,6 +7305,17 @@ const fr: Dict = {
   "settings.hint.researchAgent": "Mesuré : citations et exactitude pas meilleures que la boucle simple, pour 4,9× les tokens.",
   "settings.row.explorerContract": "Contrat de l'explorateur",
   "settings.hint.explorerContract": "L'explorateur cite chemin:ligne pour chaque constat et liste ses lacunes. Pas encore mesuré.",
+  "settings.row.deferTools": "Outils intégrés à la demande",
+  "settings.hint.deferTools": "Seuls fichiers et recherche, plus le terminal quand la conversation en a un, sont déclarés ; les autres outils sont consultés au besoin. Bench : −26 % de tokens de prompt par tâche réussie, mais 15 tâches sur 30 réussies contre 18 sur 30 (McNemar p = 0,125, non concluant). Désactivé jusqu'à une meilleure mesure.",
+  "settings.row.mcpDefer": "Outils MCP à la demande",
+  "settings.hint.mcpDefer": "Les serveurs connectés sont atteints via trois outils de consultation au lieu de déclarer tous les schémas. Que l'agent trouve encore le bon outil n'a pas été mesuré ici ; le bench ci-dessus ne couvrait que les outils intégrés.",
+  "settings.defer.saving": "Mesuré ici : {from} → {to} caractères de schéma par étape, {pct} % de moins.",
+  "settings.defer.loss": "Mesuré ici : {from} → {to} caractères de schéma par étape — {pct} % DE PLUS. Trop peu d'outils pour que le report soit rentable.",
+  "settings.defer.autoloadOff": "Rien à mesurer : les serveurs MCP ne sont chargés que si le chargement automatique MCP est activé.",
+  "settings.defer.notConnected": "Les serveurs MCP se connectent à la première conversation ; la mesure apparaît ensuite.",
+  "settings.defer.noServers": "Aucun serveur MCP connecté, donc rien à reporter.",
+  "settings.defer.unavailable": "Impossible de mesurer l'économie sur cette machine.",
+  "settings.defer.mcpUnavailable": "Un serveur MCP connecté n'a pas répondu à la liste de ses outils ; la moitié MCP n'a pas pu être mesurée.",
   "settings.card.systemOne": "System One",
   "settings.systemOne.intro": "Quel modèle répond à une décision typée : oui/non, un choix, une note. Sur une installation par défaut, il est interrogé de lui-même à un seul endroit, la vérification des réponses ci-dessous ; sinon il répond quand la bande REVIEW de la gouvernance ou l'outil decide est activé, ou quand chimera decide est appelé.",
   "settings.systemOne.backend": "Backend de décision",
@@ -8022,6 +8106,16 @@ const de: Dict = {
   "settings.row.showBrowser": "Browserfenster anzeigen",
   "settings.hint.showBrowser":
     "Chromium öffnet sich sichtbar, auf der Maschine, die den Agenten ausführt, damit du die Seite siehst, auf der er ist. Aus surft er unsichtbar.",
+  "settings.row.browserSites":
+    "Websites, die der Browser ohne Nachfrage öffnet",
+  "settings.hint.browserSites":
+    "Hosts, und *.domain für deren Subdomains. Leer: jede öffentliche Website. Eine Seite außerhalb der Liste fragt zuerst; wo niemand antworten kann, wird sie abgelehnt.",
+  "settings.row.browserLocalPorts":
+    "Lokale Ports, die der Browser öffnen darf",
+  "settings.hint.browserLocalPorts":
+    "Öffnet localhost nur auf diesen Ports, damit der Agent die App sieht, die er ändert. Nie die eigenen Ports von Chimera oder ein Server, der an sie weiterleitet (wie der Dev-Server der Desktop-App selbst), ein privates Netz oder Cloud-Metadaten. Leer: keine lokale Adresse.",
+  "settings.browserReach.invalid":
+    "Ein Wert in der .env lässt sich nicht lesen, daher ist der Browser des Agenten in jeder Unterhaltung aus, bis er korrigiert ist: {error}",
   "settings.pinned":
     "Im Environment dieses Servers festgelegt. Speichern schreibt in die .env, die dieses Environment beim nächsten Start wieder überschreibt.",
   "settings.row.fallbackModels": "Ausweichmodelle",
@@ -9107,6 +9201,17 @@ const de: Dict = {
   "settings.hint.researchAgent": "Gemessen: keine besseren Quellenangaben oder Treffer als die einfache Schleife, bei 4,9× den Tokens.",
   "settings.row.explorerContract": "Explorer-Vertrag",
   "settings.hint.explorerContract": "Der Explorer nennt Pfad:Zeile je Fund und listet seine Lücken. Noch nicht gemessen.",
+  "settings.row.deferTools": "Eingebaute Tools bei Bedarf",
+  "settings.hint.deferTools": "Nur Dateien und Suche, dazu die Shell, wo die Unterhaltung eine hat, werden deklariert; die übrigen Tools werden bei Bedarf nachgeschlagen. Bench: −26 % Prompt-Tokens pro erledigter Aufgabe, aber 15 von 30 Aufgaben erledigt gegenüber 18 von 30 (McNemar p = 0,125, nicht schlüssig). Aus, bis es besser gemessen ist.",
+  "settings.row.mcpDefer": "MCP-Tools bei Bedarf",
+  "settings.hint.mcpDefer": "Verbundene Server werden über drei Nachschlage-Tools erreicht, statt alle Schemas zu deklarieren. Ob der Agent das richtige Tool noch findet, ist hier nicht gemessen; der Bench oben deckte nur eingebaute Tools ab.",
+  "settings.defer.saving": "Hier gemessen: {from} → {to} Schema-Zeichen pro Schritt, {pct} % weniger.",
+  "settings.defer.loss": "Hier gemessen: {from} → {to} Schema-Zeichen pro Schritt — {pct} % MEHR. Zu wenige Tools, als dass sich das Aufschieben lohnt.",
+  "settings.defer.autoloadOff": "Nichts zu messen: MCP-Server werden nur bei aktiviertem MCP-Autoload geladen.",
+  "settings.defer.notConnected": "MCP-Server verbinden sich beim ersten Gespräch; die Messung erscheint danach.",
+  "settings.defer.noServers": "Kein MCP-Server verbunden, also nichts aufzuschieben.",
+  "settings.defer.unavailable": "Die Ersparnis konnte auf diesem Rechner nicht gemessen werden.",
+  "settings.defer.mcpUnavailable": "Ein verbundener MCP-Server hat seine Tool-Liste nicht geliefert, daher konnte der MCP-Teil nicht gemessen werden.",
   "settings.card.systemOne": "System One",
   "settings.systemOne.intro": "Welches Modell eine typisierte Entscheidung beantwortet: ja/nein, eine Auswahl, eine Bewertung. Bei einer Standardinstallation wird es an genau einer Stelle von selbst gefragt, bei der Antwortprüfung unten; sonst antwortet es, wenn das REVIEW-Band der Governance oder das Tool decide eingeschaltet ist oder chimera decide aufgerufen wird.",
   "settings.systemOne.backend": "Entscheidungs-Backend",
@@ -9864,6 +9969,16 @@ const zh: Dict = {
   "settings.row.showBrowser": "显示浏览器窗口",
   "settings.hint.showBrowser":
     "Chromium 会在运行智能体的那台机器上开出可见窗口，你能看见它正在浏览哪一页。关闭时它则不显示窗口。",
+  "settings.row.browserSites":
+    "浏览器无需询问即可打开的网站",
+  "settings.hint.browserSites":
+    "主机名，*.域名 表示其子域名。留空：任何公共网站。列表之外的页面会先询问你；无人可问时则拒绝。",
+  "settings.row.browserLocalPorts":
+    "浏览器可以打开的本地端口",
+  "settings.hint.browserLocalPorts":
+    "仅在这些端口上打开 localhost，让智能体查看它正在修改的应用。绝不包括 Chimera 自身的端口或转发到这些端口的服务器（例如桌面应用自己的开发服务器）、私有网络或云元数据。留空：不打开任何本地地址。",
+  "settings.browserReach.invalid":
+    ".env 中有一个值无法解析，因此在修正之前，智能体的浏览器在所有对话中都处于关闭状态：{error}",
   "settings.pinned":
     "由这台服务器的环境变量固定。在这里保存只会写入 .env，服务器下次启动时又会被环境变量盖掉。",
   "settings.row.fallbackModels": "备用模型",
@@ -10896,6 +11011,17 @@ const zh: Dict = {
   "settings.hint.researchAgent": "实测：引用和准确率均不优于普通循环，token 用量为 4.9 倍。",
   "settings.row.explorerContract": "探索器约定",
   "settings.hint.explorerContract": "探索器为每条发现标注 路径:行号 并列出遗漏。尚未测量。",
+  "settings.row.deferTools": "按需使用内置工具",
+  "settings.hint.deferTools": "只声明文件和搜索工具（对话有终端时也声明终端）；其余工具在需要时再查找。基准测试：每个完成任务的提示词 token 减少 26%，但完成 15/30 个任务，对照组为 18/30（McNemar p = 0.125，无定论）。在测得更可靠的结果前保持关闭。",
+  "settings.row.mcpDefer": "按需使用 MCP 工具",
+  "settings.hint.mcpDefer": "已连接的服务器通过三个查找工具访问，而不是声明全部 schema。智能体是否仍能找到正确的工具在此尚未测量；上面的基准只覆盖了内置工具。",
+  "settings.defer.saving": "本机实测：每步 schema 字符数 {from} → {to}，减少 {pct}%。",
+  "settings.defer.loss": "本机实测：每步 schema 字符数 {from} → {to}，增加 {pct}%。工具太少，延迟加载不划算。",
+  "settings.defer.autoloadOff": "无可测量：只有开启 MCP 自动加载时才会加载 MCP 服务器。",
+  "settings.defer.notConnected": "MCP 服务器会在第一次对话时连接，之后才会显示测量结果。",
+  "settings.defer.noServers": "没有已连接的 MCP 服务器，因此没有可延迟的工具。",
+  "settings.defer.unavailable": "无法在本机测量节省量。",
+  "settings.defer.mcpUnavailable": "已连接的 MCP 服务器未返回其工具列表，因此无法测量 MCP 部分。",
   "settings.card.systemOne": "System One",
   "settings.systemOne.intro": "由哪个模型回答类型化决策：是/否、选择、评分。默认安装下只有一处会自行调用它，即下面的回答核查；除此之外，只有在治理的 REVIEW 带或 decide 工具开启时，或调用 chimera decide 时，它才会回答。",
   "settings.systemOne.backend": "决策后端",
@@ -11674,6 +11800,16 @@ const ja: Dict = {
   "settings.row.showBrowser": "ブラウザーのウィンドウを表示する",
   "settings.hint.showBrowser":
     "エージェントを動かしているマシンで Chromium が見える形で開き、いま見ているページを確認できます。オフだと画面に出ずに閲覧します。",
+  "settings.row.browserSites":
+    "ブラウザーが確認なしで開けるサイト",
+  "settings.hint.browserSites":
+    "ホスト名。*.ドメイン でそのサブドメイン。空欄：公開サイトならどこでも。リスト外のページは先に確認し、確認できる人がいない場所では拒否します。",
+  "settings.row.browserLocalPorts":
+    "ブラウザーが開けるローカルポート",
+  "settings.hint.browserLocalPorts":
+    "これらのポートでのみ localhost を開き、エージェントが変更中のアプリを確認できるようにします。Chimera 自身のポートやそこへ中継するサーバー（デスクトップ自身の開発サーバーなど）、プライベートネットワーク、クラウドのメタデータは決して開きません。空欄：ローカルアドレスは一切開きません。",
+  "settings.browserReach.invalid":
+    ".env の値を読み取れないため、修正されるまでエージェントのブラウザはすべての会話で無効です：{error}",
   "settings.pinned":
     "このサーバーの環境変数で固定されています。ここで保存しても .env に書くだけで、次の起動時に環境変数が上書きします。",
   "settings.row.fallbackModels": "フォールバック",
@@ -12744,6 +12880,17 @@ const ja: Dict = {
   "settings.hint.researchAgent": "実測：通常のループより引用も正答率も良くならず、トークンは4.9倍。",
   "settings.row.explorerContract": "エクスプローラーの契約",
   "settings.hint.explorerContract": "エクスプローラーが各所見に パス:行 を付け、見落としを列挙します。未測定。",
+  "settings.row.deferTools": "組み込みツールを必要時に",
+  "settings.hint.deferTools": "ファイルと検索（会話にシェルがある場合はシェルも）だけを宣言し、その他のツールは必要なときに調べます。ベンチ: 完了タスクあたりのプロンプトトークン −26%、ただし完了は 15/30 で対照は 18/30（McNemar p = 0.125、結論なし）。より良く測定できるまでオフ。",
+  "settings.row.mcpDefer": "MCP ツールを必要時に",
+  "settings.hint.mcpDefer": "接続済みサーバーには、すべてのスキーマを宣言する代わりに 3 つの参照ツールで到達します。エージェントが正しいツールを見つけられるかはここでは未測定です。上のベンチは組み込みツールのみが対象でした。",
+  "settings.defer.saving": "この環境で測定: 1 ステップあたりのスキーマ文字数 {from} → {to}、{pct}% 減。",
+  "settings.defer.loss": "この環境で測定: 1 ステップあたりのスキーマ文字数 {from} → {to}、{pct}% 増。ツールが少なすぎて遅延の効果がありません。",
+  "settings.defer.autoloadOff": "測定対象なし: MCP サーバーは MCP 自動読み込みがオンのときだけ読み込まれます。",
+  "settings.defer.notConnected": "MCP サーバーは最初の会話で接続されます。測定はその後に表示されます。",
+  "settings.defer.noServers": "接続中の MCP サーバーがないため、遅延するものはありません。",
+  "settings.defer.unavailable": "このマシンでは節約量を測定できませんでした。",
+  "settings.defer.mcpUnavailable": "接続中の MCP サーバーがツール一覧に応答しなかったため、MCP 側を測定できませんでした。",
   "settings.card.systemOne": "System One",
   "settings.systemOne.intro": "型付き判断（はい/いいえ、選択、スコア）に答えるモデル。既定のインストールで自動的に問い合わせるのは下の回答チェックの 1 か所だけです。それ以外は、ガバナンスの REVIEW 帯か decide ツールが有効なとき、または chimera decide を呼んだときに答えます。",
   "settings.systemOne.backend": "判断バックエンド",
@@ -13495,6 +13642,16 @@ const it: Dict = {
   "settings.row.showBrowser": "Mostra la finestra del browser",
   "settings.hint.showBrowser":
     "Chromium si apre in modo visibile, sulla macchina che esegue l'agente, così puoi vedere la pagina su cui si trova. Spento, naviga invisibile.",
+  "settings.row.browserSites":
+    "Siti che il browser apre senza chiedere",
+  "settings.hint.browserSites":
+    "Host, e *.dominio per i suoi sottodomini. Vuoto: qualsiasi sito pubblico. Una pagina fuori dalla lista chiede prima; dove nessuno può rispondere, viene rifiutata.",
+  "settings.row.browserLocalPorts":
+    "Porte locali che il browser può aprire",
+  "settings.hint.browserLocalPorts":
+    "Apre localhost solo su queste porte, perché l'agente veda l'app che sta modificando. Mai le porte di Chimera stesso o un server che vi inoltra (come il server di sviluppo del desktop stesso), una rete privata o i metadati del cloud. Vuoto: nessun indirizzo locale.",
+  "settings.browserReach.invalid":
+    "Un valore nel .env non si legge, quindi il browser dell'agente è spento in ogni conversazione finché non viene corretto: {error}",
   "settings.pinned":
     "Fissato nell'ambiente di questo server. Salvare qui scrive nel .env, che quell'ambiente sovrascrive al prossimo avvio.",
   "settings.row.fallbackModels": "Modelli di riserva",
@@ -14612,6 +14769,17 @@ const it: Dict = {
   "settings.hint.researchAgent": "Misurato: citazioni e accuratezza non migliori del ciclo semplice, con 4,9× i token.",
   "settings.row.explorerContract": "Contratto dell'esploratore",
   "settings.hint.explorerContract": "L'esploratore cita percorso:riga per ogni risultato ed elenca le lacune. Non ancora misurato.",
+  "settings.row.deferTools": "Strumenti integrati su richiesta",
+  "settings.hint.deferTools": "Sono dichiarati solo file e ricerca, più il terminale quando la conversazione ne ha uno; gli altri strumenti si consultano quando servono. Bench: −26% di token di prompt per attività completata, ma 15 attività su 30 completate contro 18 su 30 (McNemar p = 0,125, non conclusivo). Spento finché non sarà misurato meglio.",
+  "settings.row.mcpDefer": "Strumenti MCP su richiesta",
+  "settings.hint.mcpDefer": "I server connessi si raggiungono con tre strumenti di consultazione invece di dichiarare tutti gli schemi. Se l'agente trova ancora lo strumento giusto non è stato misurato qui; il bench sopra copriva solo gli strumenti integrati.",
+  "settings.defer.saving": "Misurato qui: {from} → {to} caratteri di schema per passo, {pct}% in meno.",
+  "settings.defer.loss": "Misurato qui: {from} → {to} caratteri di schema per passo — {pct}% IN PIÙ. Troppo pochi strumenti perché il rinvio convenga.",
+  "settings.defer.autoloadOff": "Niente da misurare: i server MCP vengono caricati solo con il caricamento automatico MCP attivo.",
+  "settings.defer.notConnected": "I server MCP si connettono alla prima conversazione; la misura compare dopo.",
+  "settings.defer.noServers": "Nessun server MCP connesso, quindi niente da rinviare.",
+  "settings.defer.unavailable": "Impossibile misurare il risparmio su questa macchina.",
+  "settings.defer.mcpUnavailable": "Un server MCP connesso non ha risposto all'elenco dei suoi strumenti, quindi la parte MCP non è stata misurata.",
   "settings.card.systemOne": "System One",
   "settings.systemOne.intro": "Quale modello risponde a una decisione tipizzata: sì/no, una scelta, un punteggio. In un'installazione predefinita viene interrogato da solo in un unico punto, la verifica delle risposte qui sotto; per il resto risponde quando la banda REVIEW della governance o la tool decide è attiva, o quando si chiama chimera decide.",
   "settings.systemOne.backend": "Backend di decisione",
@@ -15360,6 +15528,16 @@ const pl: Dict = {
   "settings.row.showBrowser": "Pokaż okno przeglądarki",
   "settings.hint.showBrowser":
     "Chromium otwiera się widocznie, na maszynie, na której działa agent, więc widzisz stronę, na której jest. Wyłączone — przegląda niewidocznie.",
+  "settings.row.browserSites":
+    "Strony, które przeglądarka otwiera bez pytania",
+  "settings.hint.browserSites":
+    "Hosty oraz *.domena dla jej subdomen. Puste: dowolna strona publiczna. Strona spoza listy najpierw pyta; tam, gdzie nikt nie może odpowiedzieć, jest odrzucana.",
+  "settings.row.browserLocalPorts":
+    "Porty lokalne, które przeglądarka może otwierać",
+  "settings.hint.browserLocalPorts":
+    "Otwiera localhost tylko na tych portach, aby agent widział aplikację, którą zmienia. Nigdy porty samego Chimery ani serwer, który do nich przekazuje (jak serwer deweloperski samej aplikacji desktopowej), sieć prywatna ani metadane chmury. Puste: żaden adres lokalny.",
+  "settings.browserReach.invalid":
+    "Wartości w .env nie da się odczytać, więc przeglądarka agenta jest wyłączona we wszystkich rozmowach, dopóki jej nie poprawisz: {error}",
   "settings.pinned":
     "Ustalone w środowisku tego serwera. Zapis tutaj trafia do .env, które to środowisko nadpisze przy następnym starcie.",
   "settings.row.fallbackModels": "Modele zapasowe",
@@ -16470,6 +16648,17 @@ const pl: Dict = {
   "settings.hint.researchAgent": "Zmierzono: cytowania i trafność nie lepsze niż w zwykłej pętli, przy 4,9× więcej tokenów.",
   "settings.row.explorerContract": "Kontrakt eksploratora",
   "settings.hint.explorerContract": "Eksplorator podaje ścieżka:wiersz przy każdym ustaleniu i wymienia luki. Jeszcze niezmierzone.",
+  "settings.row.deferTools": "Wbudowane narzędzia na żądanie",
+  "settings.hint.deferTools": "Deklarowane są tylko pliki i wyszukiwanie, plus terminal, gdy rozmowa go ma; pozostałe narzędzia są wyszukiwane w razie potrzeby. Bench: −26% tokenów promptu na ukończone zadanie, ale ukończono 15 z 30 zadań wobec 18 z 30 (McNemar p = 0,125, wynik nierozstrzygnięty). Wyłączone, dopóki nie zostanie lepiej zmierzone.",
+  "settings.row.mcpDefer": "Narzędzia MCP na żądanie",
+  "settings.hint.mcpDefer": "Połączone serwery są osiągane przez trzy narzędzia wyszukiwania zamiast deklarowania wszystkich schematów. Czy agent nadal znajduje właściwe narzędzie, nie zostało tu zmierzone; powyższy bench obejmował tylko narzędzia wbudowane.",
+  "settings.defer.saving": "Zmierzono tutaj: {from} → {to} znaków schematu na krok, o {pct}% mniej.",
+  "settings.defer.loss": "Zmierzono tutaj: {from} → {to} znaków schematu na krok — o {pct}% WIĘCEJ. Za mało narzędzi, by odkładanie się opłacało.",
+  "settings.defer.autoloadOff": "Nie ma czego mierzyć: serwery MCP są ładowane tylko przy włączonym automatycznym ładowaniu MCP.",
+  "settings.defer.notConnected": "Serwery MCP łączą się przy pierwszej rozmowie; pomiar pojawi się później.",
+  "settings.defer.noServers": "Brak połączonego serwera MCP, więc nie ma czego odkładać.",
+  "settings.defer.unavailable": "Nie udało się zmierzyć oszczędności na tym komputerze.",
+  "settings.defer.mcpUnavailable": "Połączony serwer MCP nie odpowiedział na listę narzędzi, więc części MCP nie dało się zmierzyć.",
   "settings.card.systemOne": "System One",
   "settings.systemOne.intro": "Który model odpowiada na decyzję typowaną: tak/nie, wybór, ocenę. W domyślnej instalacji pyta go samo tylko jedno miejsce, sprawdzanie odpowiedzi poniżej; poza tym odpowiada, gdy włączone jest pasmo REVIEW governance albo tool decide, lub gdy wywołano chimera decide.",
   "settings.systemOne.backend": "Backend decyzji",
@@ -17221,6 +17410,16 @@ const ru: Dict = {
   "settings.row.showBrowser": "Показывать окно браузера",
   "settings.hint.showBrowser":
     "Chromium открывается видимым окном на машине, где работает агент, — видно, на какой он странице. Выключено — браузер работает незаметно.",
+  "settings.row.browserSites":
+    "Сайты, которые браузер открывает без вопроса",
+  "settings.hint.browserSites":
+    "Хосты и *.домен для его поддоменов. Пусто: любой публичный сайт. Страница вне списка сначала спрашивает; там, где спросить некого, она отклоняется.",
+  "settings.row.browserLocalPorts":
+    "Локальные порты, которые может открывать браузер",
+  "settings.hint.browserLocalPorts":
+    "Открывает localhost только на этих портах, чтобы агент видел приложение, которое он меняет. Никогда — собственные порты Chimera или сервер, который перенаправляет на них (как dev-сервер самого десктопа), частную сеть или метаданные облака. Пусто: никаких локальных адресов.",
+  "settings.browserReach.invalid":
+    "Значение в .env не читается, поэтому браузер агента выключен во всех разговорах, пока его не исправят: {error}",
   "settings.pinned":
     "Задано в окружении этого сервера. Сохранение здесь пишет в .env, а окружение перезапишет его при следующем запуске.",
   "settings.row.fallbackModels": "Запасные модели",
@@ -18335,6 +18534,17 @@ const ru: Dict = {
   "settings.hint.researchAgent": "Измерено: цитирование и точность не лучше обычного цикла, при 4,9× токенов.",
   "settings.row.explorerContract": "Контракт исследователя",
   "settings.hint.explorerContract": "Исследователь указывает путь:строка для каждой находки и перечисляет пробелы. Пока не измерено.",
+  "settings.row.deferTools": "Встроенные инструменты по запросу",
+  "settings.hint.deferTools": "Объявляются только файлы и поиск, а также терминал, если он есть в разговоре; остальные инструменты ищутся по мере надобности. Бенчмарк: −26% токенов промпта на выполненную задачу, но выполнено 15 из 30 задач против 18 из 30 (McNemar p = 0,125, результат неубедителен). Выключено, пока не измерено лучше.",
+  "settings.row.mcpDefer": "Инструменты MCP по запросу",
+  "settings.hint.mcpDefer": "Подключённые серверы доступны через три инструмента поиска вместо объявления всех схем. Находит ли агент нужный инструмент, здесь не измерялось; бенчмарк выше охватывал только встроенные инструменты.",
+  "settings.defer.saving": "Измерено здесь: {from} → {to} символов схемы за шаг, на {pct}% меньше.",
+  "settings.defer.loss": "Измерено здесь: {from} → {to} символов схемы за шаг — на {pct}% БОЛЬШЕ. Слишком мало инструментов, чтобы отложенная загрузка окупалась.",
+  "settings.defer.autoloadOff": "Нечего измерять: серверы MCP загружаются только при включённой автозагрузке MCP.",
+  "settings.defer.notConnected": "Серверы MCP подключаются при первом разговоре; измерение появится после этого.",
+  "settings.defer.noServers": "Нет подключённых серверов MCP, поэтому откладывать нечего.",
+  "settings.defer.unavailable": "Не удалось измерить экономию на этом компьютере.",
+  "settings.defer.mcpUnavailable": "Подключённый сервер MCP не ответил на запрос списка инструментов, поэтому часть MCP измерить не удалось.",
   "settings.card.systemOne": "System One",
   "settings.systemOne.intro": "Какая модель отвечает на типизированное решение: да/нет, выбор, оценка. В установке по умолчанию её спрашивают сами только в одном месте, в проверке ответов ниже; в остальном она отвечает, когда включены полоса REVIEW в governance или tool decide, либо когда вызывается chimera decide.",
   "settings.systemOne.backend": "Бэкенд решений",
