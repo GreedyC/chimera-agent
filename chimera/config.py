@@ -8,6 +8,7 @@ the providers it actually calls (see :mod:`chimera.providers.gateway`).
 from __future__ import annotations
 
 import logging
+import math
 import os
 from collections.abc import Iterable
 from functools import lru_cache
@@ -589,6 +590,28 @@ class Settings(BaseSettings):
     # wearing the manipulation's name. OpenRouter only: other providers may reject the field.
     provider_order: str = Field(default="", validation_alias="CHIMERA_PROVIDER_ORDER")
 
+    # What an OpenRouter route may do with the prompt (study 29, P5.6). OpenRouter forwards a request
+    # to whichever upstream provider serves the model, and some of those providers keep prompts or
+    # train on them; nothing in this project could ask for otherwise, so the VPS's default route sent
+    # every turn, memory recall included, under whatever the cheapest route's policy happened to be.
+    #
+    # `CHIMERA_OPENROUTER_DATA_COLLECTION=deny` sends `provider.data_collection: "deny"` (only routes
+    # that do not store or train on the data may serve it); `CHIMERA_OPENROUTER_ZDR=true` sends
+    # `provider.zdr: true` (only zero-data-retention endpoints). Both ship OFF — `allow`/false send
+    # NOTHING, so a default request is byte-identical to the one before this setting existed — because
+    # each one narrows the routes that may answer: a model whose every route keeps data stops being
+    # reachable, and what is left may be slower. The plan's measurement (for the mandate's models,
+    # how many lose every route and the latency of what remains) has not been taken; until it is,
+    # turning these on is the owner's trade to make, not a default.
+    #
+    # Only `openrouter/` routes carry them; other providers do not know the field. The Decisions API
+    # backend (`chimera/decisions/openrouter.py`) is a separate endpoint and does not send them — the
+    # privacy card on the Security screen says so when that backend is the one configured.
+    openrouter_data_collection: Literal["allow", "deny"] = Field(
+        default="allow", validation_alias="CHIMERA_OPENROUTER_DATA_COLLECTION"
+    )
+    openrouter_zdr: bool = Field(default=False, validation_alias="CHIMERA_OPENROUTER_ZDR")
+
     # `CHIMERA_REVIEW_MODEL` names the model `chimera review` reviews with. Empty (the default) lets
     # the command pick the first model measured as a reviewer whose family differs from the
     # author's (`MEASURED_REVIEWERS` in `chimera/review/family.py`, chosen by `bench/review_reviewer`),
@@ -883,6 +906,16 @@ class Settings(BaseSettings):
         default=False, validation_alias="CHIMERA_KEEP_AWAKE_ON_BATTERY"
     )
 
+    # Where an isolated run's git worktree is checked out (study 29, P5.3; `chimera/core/worktree.py`).
+    # Empty (the default) is the system temp folder, which is what it always was. A worktree is a
+    # full checkout of the repository, so on a machine whose temp lives on a small system drive a
+    # few killed runs are gigabytes on the one disk that must not fill — this lets the owner point
+    # them at another drive. Must be an absolute path OUTSIDE the project: a worktree inside the
+    # repository it was made from would show up in that repository's own status, search and
+    # checkpoints. A value that breaks either rule is ignored with a warning and temp is used.
+    # Read at every worktree creation, so a change applies from the next isolated run.
+    worktree_dir: str = Field(default="", validation_alias="CHIMERA_WORKTREE_DIR")
+
     # Auto-start the messaging adapters (Discord/Telegram) inside `chimera app` at boot, so the agent
     # can reach you on chat without a separate `chimera serve --discord` terminal. OFF by default: it
     # opens a network bot, so it's a deliberate opt-in. The desktop UI's Messaging toggle sets this
@@ -942,6 +975,21 @@ class Settings(BaseSettings):
     # once.
     archive_after_days: float | None = Field(
         default=None, validation_alias="CHIMERA_ARCHIVE_AFTER_DAYS"
+    )
+
+    # Whether a conversation can be shared with a second person at all (`chimera/api/sharing.py`).
+    # ON by default because that is what the app did before the switch existed: a share link is made
+    # only when the owner presses Share, and the network door opens only when they open it. Off
+    # refuses a new link, closes the network door and stops every existing link from opening — the
+    # links stay on disk, listed on the Security card, so turning it back on does not lose them.
+    # Read on every request, so a change applies at once.
+    sharing: bool = Field(default=True, validation_alias="CHIMERA_SHARING")
+    # How long a NEW share link opens its conversation, in hours. Empty (the default), zero or
+    # negative means never — what every link did before this existed. Stamped on the link when it is
+    # made (`Share.expires_at`), so changing it does not reach back to links already handed out; the
+    # Security card lists those with their own expiry and revokes them one by one or all at once.
+    share_expiry_hours: float | None = Field(
+        default=None, validation_alias="CHIMERA_SHARE_EXPIRY_HOURS"
     )
 
     # Base URL for a local Ollama server. A model like `ollama_chat/llama3` runs on your machine
@@ -1296,6 +1344,28 @@ class Settings(BaseSettings):
             )
         return "off"
 
+    @field_validator("openrouter_data_collection", mode="before")
+    @classmethod
+    def _data_collection_word(cls, value: object) -> object:
+        """Empty is unset (`allow`); anything else that is not `allow` is read as `deny`, warned.
+
+        The opposite direction from `keep_awake`'s fallback, on purpose. `allow` is the default, so
+        the only reason anyone writes this line is to ask for `deny`; a typo (`deney`, `no`) falling
+        back to `allow` would send prompts to routes that keep them while the owner believes they
+        asked for the opposite — a failure nobody would ever see. Falling back to `deny` can only
+        cost a route, and a route that fails says so on the receipt."""
+        if not isinstance(value, str):
+            return value
+        word = value.strip().lower()
+        if word in ("", "allow"):
+            return "allow"
+        if word != "deny":
+            _log.warning(
+                "CHIMERA_OPENROUTER_DATA_COLLECTION=%r is not allow or deny; reading it as 'deny'.",
+                word,
+            )
+        return "deny"
+
     @field_validator("daily_usd_cap", mode="before")
     @classmethod
     def _empty_cap_is_no_cap(cls, value: object) -> object:
@@ -1329,6 +1399,31 @@ class Settings(BaseSettings):
                 text,
             )
             return None
+
+    @field_validator("share_expiry_hours", mode="before")
+    @classmethod
+    def _share_expiry_hours_or_never(cls, value: object) -> object:
+        """Empty, zero or negative is "never", and an unreadable value falls back to it with a
+        warning, for the reason `_archive_after_days_or_never` gives: a typo must not stop the app.
+        The Settings row refuses a bad value before writing it (`config_api`), and the Security
+        card shows "never" beside the links, so a hand-edited typo is visible rather than silent."""
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return float(value) if value > 0 else None
+        text = str(value).strip()
+        if not text:
+            return None
+        try:
+            hours = float(text)
+        except ValueError:
+            _log.warning(
+                "CHIMERA_SHARE_EXPIRY_HOURS=%r is not a number of hours; new share links never "
+                "expire.",
+                text,
+            )
+            return None
+        return hours if math.isfinite(hours) and hours > 0 else None
 
     @field_validator("taint_authority", mode="before")
     @classmethod

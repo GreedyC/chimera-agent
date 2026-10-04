@@ -54,6 +54,255 @@
         "title": "AcceptanceOut",
         "type": "object"
       },
+      "AccessBridgeOut": {
+        "description": "The desktop bridge (``chimera/api/desktop_bridge.py``).",
+        "properties": {
+          "active": {
+            "default": false,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "hint": {
+            "default": "",
+            "title": "Hint",
+            "type": "string"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          }
+        },
+        "title": "AccessBridgeOut",
+        "type": "object"
+      },
+      "AccessGuestDoorOut": {
+        "description": "The LAN listener that serves only the guest app (``guest_api.GuestServer``).",
+        "properties": {
+          "open": {
+            "default": false,
+            "title": "Open",
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Port"
+          },
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Urls",
+            "type": "array"
+          }
+        },
+        "title": "AccessGuestDoorOut",
+        "type": "object"
+      },
+      "AccessLinkOut": {
+        "description": "One share link, named by everything except itself.",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "number"
+          },
+          "expired": {
+            "default": false,
+            "title": "Expired",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "hint": {
+            "default": "",
+            "title": "Hint",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "session_title": {
+            "default": "",
+            "title": "Session Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "created_at"
+        ],
+        "title": "AccessLinkOut",
+        "type": "object"
+      },
+      "AccessOut": {
+        "properties": {
+          "bridge": {
+            "$ref": "#/components/schemas/AccessBridgeOut"
+          },
+          "guest_door": {
+            "$ref": "#/components/schemas/AccessGuestDoorOut"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/AccessLinkOut"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "server": {
+            "$ref": "#/components/schemas/AccessServerOut"
+          },
+          "server_token": {
+            "$ref": "#/components/schemas/AccessServerTokenOut"
+          },
+          "sharing": {
+            "$ref": "#/components/schemas/AccessSharingOut"
+          }
+        },
+        "required": [
+          "server",
+          "server_token",
+          "bridge",
+          "sharing",
+          "links",
+          "guest_door"
+        ],
+        "title": "AccessOut",
+        "type": "object"
+      },
+      "AccessRevokeOneOut": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "AccessRevokeOneOut",
+        "type": "object"
+      },
+      "AccessRevokedOut": {
+        "properties": {
+          "revoked": {
+            "title": "Revoked",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revoked"
+        ],
+        "title": "AccessRevokedOut",
+        "type": "object"
+      },
+      "AccessServerOut": {
+        "description": "The app's own listener: where ``chimera desktop`` bound it.\n\n``chimera desktop --host 0.0.0.0`` is a supported option, and then the guest app mounted at\n``/guest`` on this listener answers the network with any share link \u2014 a network door the card\nused to call \"Closed\" because it looked only at the separate LAN listener.",
+        "properties": {
+          "bind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bind"
+          },
+          "network": {
+            "default": false,
+            "title": "Network",
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Port"
+          }
+        },
+        "title": "AccessServerOut",
+        "type": "object"
+      },
+      "AccessServerTokenOut": {
+        "description": "The bearer every guarded route asks for. Whether it is set, and nothing of its value \u2014 the\nSettings row it is changed on reports it the same way (``ServerCfgOut.token_set``).",
+        "properties": {
+          "set": {
+            "default": false,
+            "title": "Set",
+            "type": "boolean"
+          }
+        },
+        "title": "AccessServerTokenOut",
+        "type": "object"
+      },
+      "AccessSharingOut": {
+        "description": "The two settings that narrow sharing (``CHIMERA_SHARING``, ``CHIMERA_SHARE_EXPIRY_HOURS``).",
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "expiry_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Hours"
+          }
+        },
+        "title": "AccessSharingOut",
+        "type": "object"
+      },
       "AgentDefOut": {
         "description": "One agent you can send work to \u2014 as distinct from the one you converse with.\n\nShares its field names with ``AgentIdentityOut`` on purpose: an agent is an agent, and the two\nshould be copyable between each other without a translation layer. What it adds is an ``id``\n(its handle, and the Kanban lane it answers on) and a tool allowlist.",
         "properties": {
@@ -538,6 +787,61 @@
           "tasks"
         ],
         "title": "AgentsRequest",
+        "type": "object"
+      },
+      "AppDiagnosticsOut": {
+        "description": "What a bug report needs, in one place (study 29, P5.3).",
+        "properties": {
+          "backend_version": {
+            "title": "Backend Version",
+            "type": "string"
+          },
+          "crash": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CrashReportOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "home": {
+            "title": "Home",
+            "type": "string"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          },
+          "python": {
+            "title": "Python",
+            "type": "string"
+          },
+          "report": {
+            "title": "Report",
+            "type": "string"
+          },
+          "workspace": {
+            "title": "Workspace",
+            "type": "string"
+          },
+          "worktree_dir": {
+            "title": "Worktree Dir",
+            "type": "string"
+          }
+        },
+        "required": [
+          "backend_version",
+          "python",
+          "platform",
+          "home",
+          "workspace",
+          "worktree_dir",
+          "crash",
+          "report"
+        ],
+        "title": "AppDiagnosticsOut",
         "type": "object"
       },
       "ApproachOut": {
@@ -2001,6 +2305,40 @@
         "title": "CodeProjectOut",
         "type": "object"
       },
+      "CodePythonOut": {
+        "description": "The interpreter ``execute_code`` uses when a snippet runs on this machine.\n\nThe frozen desktop build has no interpreter of its own, so it is whatever PATH holds, or none;\nwithout this, a snippet that could not start reads in a transcript like a model that wrote bad\ncode. Only the host half: whether a container answers instead is ``/api/governance/sandbox``.",
+        "properties": {
+          "frozen": {
+            "default": false,
+            "title": "Frozen",
+            "type": "boolean"
+          },
+          "looked_for": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Looked For",
+            "type": "array"
+          },
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          },
+          "source": {
+            "default": "missing",
+            "enum": [
+              "interpreter",
+              "path",
+              "missing"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "title": "CodePythonOut",
+        "type": "object"
+      },
       "CodeSessionArchiveOut": {
         "description": "A conversation after archiving or bringing it back: ``archived_at`` is None once it is back.\n\nArchiving touches no file, folder or worktree \u2014 it is a timestamp beside the transcripts. A\nrefusal is a 409 with the reason (a turn running, a question waiting), an unknown id a 404.",
         "properties": {
@@ -2709,6 +3047,9 @@
             "title": "Pools",
             "type": "array"
           },
+          "privacy": {
+            "$ref": "#/components/schemas/PrivacyCfgOut"
+          },
           "providers": {
             "items": {
               "$ref": "#/components/schemas/ProviderOut"
@@ -2722,8 +3063,14 @@
           "server": {
             "$ref": "#/components/schemas/ServerCfgOut"
           },
+          "sharing": {
+            "$ref": "#/components/schemas/SharingCfgOut"
+          },
           "spend": {
             "$ref": "#/components/schemas/SpendCfgOut"
+          },
+          "storage": {
+            "$ref": "#/components/schemas/StorageCfgOut"
           }
         },
         "required": [
@@ -2816,6 +3163,30 @@
           }
         },
         "title": "ConversationsCfgOut",
+        "type": "object"
+      },
+      "CrashReportOut": {
+        "description": "The desktop's last ``backend-crash.txt``, with credentials scrubbed before it left disk.",
+        "properties": {
+          "modified": {
+            "title": "Modified",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "modified",
+          "text"
+        ],
+        "title": "CrashReportOut",
         "type": "object"
       },
       "CrewDoneOut": {
@@ -4698,6 +5069,43 @@
         "title": "DictationOut",
         "type": "object"
       },
+      "DiskOut": {
+        "properties": {
+          "free": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          }
+        },
+        "required": [
+          "path",
+          "total",
+          "free"
+        ],
+        "title": "DiskOut",
+        "type": "object"
+      },
       "DoctorOut": {
         "properties": {
           "cache": {
@@ -4708,6 +5116,16 @@
             "default": false,
             "title": "Can Answer",
             "type": "boolean"
+          },
+          "code_python": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CodePythonOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "configured_providers": {
             "items": {
@@ -6938,6 +7356,29 @@
         "title": "LocalRuntimesOut",
         "type": "object"
       },
+      "LogRotateOut": {
+        "properties": {
+          "bytes_freed": {
+            "title": "Bytes Freed",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "rotated": {
+            "title": "Rotated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rotated",
+          "bytes_freed",
+          "failed"
+        ],
+        "title": "LogRotateOut",
+        "type": "object"
+      },
       "MaturityOut": {
         "properties": {
           "available": {
@@ -7674,6 +8115,13 @@
             },
             "title": "Allowed Users",
             "type": "object"
+          },
+          "configured": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Configured",
+            "type": "array"
           }
         },
         "title": "MessagingCfgOut",
@@ -8534,6 +8982,47 @@
         "title": "PresenceOut",
         "type": "object"
       },
+      "PrivacyCfgOut": {
+        "description": "The Security screen's privacy card (``chimera/providers/privacy.py``). Read-only facts plus\nthe two OpenRouter switches; a server without the block is on the shipped defaults, which send\nnothing.",
+        "properties": {
+          "openrouter_data_collection": {
+            "default": "allow",
+            "title": "Openrouter Data Collection",
+            "type": "string"
+          },
+          "openrouter_zdr": {
+            "default": false,
+            "title": "Openrouter Zdr",
+            "type": "boolean"
+          },
+          "routes": {
+            "items": {
+              "$ref": "#/components/schemas/PromptRouteOut"
+            },
+            "title": "Routes",
+            "type": "array"
+          },
+          "telemetry": {
+            "default": false,
+            "title": "Telemetry",
+            "type": "boolean"
+          },
+          "telemetry_requested": {
+            "default": false,
+            "title": "Telemetry Requested",
+            "type": "boolean"
+          },
+          "unscoped": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unscoped",
+            "type": "array"
+          }
+        },
+        "title": "PrivacyCfgOut",
+        "type": "object"
+      },
       "ProfileWorth": {
         "description": "One configuration's record, over the runs that actually happened here.",
         "properties": {
@@ -8713,6 +9202,37 @@
           "max_iterations"
         ],
         "title": "ProjectStateOut",
+        "type": "object"
+      },
+      "PromptRouteOut": {
+        "description": "One provider a configured model role would send a prompt to (``prompt_routes``).",
+        "properties": {
+          "host": {
+            "default": "",
+            "title": "Host",
+            "type": "string"
+          },
+          "local": {
+            "default": false,
+            "title": "Local",
+            "type": "boolean"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "provider"
+        ],
+        "title": "PromptRouteOut",
         "type": "object"
       },
       "ProviderOut": {
@@ -9494,6 +10014,20 @@
           "mode": {
             "title": "Mode",
             "type": "string"
+          },
+          "network": {
+            "default": "none",
+            "enum": [
+              "none",
+              "bridge"
+            ],
+            "title": "Network",
+            "type": "string"
+          },
+          "verify_network": {
+            "default": false,
+            "title": "Verify Network",
+            "type": "boolean"
           }
         },
         "required": [
@@ -9517,6 +10051,16 @@
           "isolated": {
             "title": "Isolated",
             "type": "boolean"
+          },
+          "network": {
+            "default": "host",
+            "enum": [
+              "none",
+              "bridge",
+              "host"
+            ],
+            "title": "Network",
+            "type": "string"
           },
           "platform": {
             "default": "",
@@ -9746,6 +10290,17 @@
             "title": "Created At",
             "type": "number"
           },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
           "label": {
             "default": "",
             "title": "Label",
@@ -9793,6 +10348,29 @@
           "shares"
         ],
         "title": "SharesOut",
+        "type": "object"
+      },
+      "SharingCfgOut": {
+        "description": "Whether conversations may be shared and how long a new link opens one (``CHIMERA_SHARING``,\n``CHIMERA_SHARE_EXPIRY_HOURS``). A server without the block is on the shipped default: sharing\non, links that never expire \u2014 what sharing did before either setting existed.",
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "expiry_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Hours"
+          }
+        },
+        "title": "SharingCfgOut",
         "type": "object"
       },
       "ShellPrefsIn": {
@@ -10151,6 +10729,168 @@
           }
         },
         "title": "SpendCfgOut",
+        "type": "object"
+      },
+      "StorageCategoryOut": {
+        "description": "One kind of thing this install keeps on disk. ``bytes`` null = not measured, never zero.",
+        "properties": {
+          "bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bytes"
+          },
+          "files": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Paths",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "bytes",
+          "files",
+          "paths",
+          "note"
+        ],
+        "title": "StorageCategoryOut",
+        "type": "object"
+      },
+      "StorageCfgOut": {
+        "description": "``CHIMERA_WORKTREE_DIR`` as set; empty is the system temp folder (the default).",
+        "properties": {
+          "worktree_dir": {
+            "default": "",
+            "title": "Worktree Dir",
+            "type": "string"
+          }
+        },
+        "title": "StorageCfgOut",
+        "type": "object"
+      },
+      "StorageConfirmIn": {
+        "description": "The two storage actions remove files; each must be asked for in so many words.",
+        "properties": {
+          "confirm": {
+            "default": false,
+            "title": "Confirm",
+            "type": "boolean"
+          }
+        },
+        "title": "StorageConfirmIn",
+        "type": "object"
+      },
+      "StorageOut": {
+        "description": "What this install keeps on disk, by kind (study 29, P5.3). Nullable like `ResourcesOut`.",
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/StorageCategoryOut"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "disks": {
+            "items": {
+              "$ref": "#/components/schemas/DiskOut"
+            },
+            "title": "Disks",
+            "type": "array"
+          },
+          "home": {
+            "title": "Home",
+            "type": "string"
+          },
+          "rotatable_logs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rotatable Logs",
+            "type": "array"
+          },
+          "worktree_dir": {
+            "title": "Worktree Dir",
+            "type": "string"
+          },
+          "worktrees": {
+            "items": {
+              "$ref": "#/components/schemas/StorageWorktreeOut"
+            },
+            "title": "Worktrees",
+            "type": "array"
+          }
+        },
+        "required": [
+          "home",
+          "worktree_dir",
+          "categories",
+          "worktrees",
+          "disks",
+          "rotatable_logs"
+        ],
+        "title": "StorageOut",
+        "type": "object"
+      },
+      "StorageWorktreeOut": {
+        "description": "One isolated worktree folder, and whether the prune would collect it.\n\n``state`` is ``live`` (a run is using it, or it is too new to judge), ``orphan`` (the prune\nremoves it) or ``kept`` (its maker cannot be identified, so it is not called dead on a guess).\n``reason`` is a fixed word a screen translates.",
+        "properties": {
+          "bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bytes"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "bytes",
+          "state",
+          "reason"
+        ],
+        "title": "StorageWorktreeOut",
         "type": "object"
       },
       "SubtaskOut": {
@@ -11452,6 +12192,39 @@
           "works"
         ],
         "title": "WorksOut",
+        "type": "object"
+      },
+      "WorktreePruneOut": {
+        "properties": {
+          "bytes_freed": {
+            "title": "Bytes Freed",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "kept": {
+            "title": "Kept",
+            "type": "integer"
+          },
+          "live": {
+            "title": "Live",
+            "type": "integer"
+          },
+          "removed": {
+            "title": "Removed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "removed",
+          "bytes_freed",
+          "kept",
+          "live",
+          "failed"
+        ],
+        "title": "WorktreePruneOut",
         "type": "object"
       },
       "WorthReport": {
@@ -14217,6 +14990,24 @@
         "summary": "Label Decision"
       }
     },
+    "/api/diagnostics": {
+      "get": {
+        "operationId": "diagnostics_endpoint_api_diagnostics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppDiagnosticsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Diagnostics Endpoint"
+      }
+    },
     "/api/dictation": {
       "get": {
         "description": "Can speech become text here? Asked before the microphone opens, not after.",
@@ -16919,6 +17710,124 @@
         "summary": "Respond Run"
       }
     },
+    "/api/security/access": {
+      "get": {
+        "description": "Every way into this machine right now, with no secret in the answer.",
+        "operationId": "access_api_security_access_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Access"
+      }
+    },
+    "/api/security/access/bridge/rotate": {
+      "post": {
+        "description": "A new bridge token; the old one stops working now. 409 while the bridge is off.",
+        "operationId": "rotate_bridge_api_security_access_bridge_rotate_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessBridgeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rotate Bridge"
+      }
+    },
+    "/api/security/access/links": {
+      "delete": {
+        "description": "Every link, or every link of one conversation when ``session_id`` names it.",
+        "operationId": "revoke_links_api_security_access_links_delete",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessRevokedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Links"
+      }
+    },
+    "/api/security/access/links/{link_id}": {
+      "delete": {
+        "operationId": "revoke_link_api_security_access_links__link_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessRevokeOneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Link"
+      }
+    },
     "/api/sessions": {
       "get": {
         "operationId": "list_sessions_api_sessions_get",
@@ -17470,6 +18379,103 @@
           }
         },
         "summary": "Retire Skill"
+      }
+    },
+    "/api/storage": {
+      "get": {
+        "description": "What this install keeps on disk, by kind. A category that could not be counted is null.",
+        "operationId": "storage_endpoint_api_storage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Storage Endpoint"
+      }
+    },
+    "/api/storage/logs/rotate": {
+      "post": {
+        "description": "Rotate the diagnostic traces now \u2014 the rename their writers make at the size cap.",
+        "operationId": "rotate_logs_endpoint_api_storage_logs_rotate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorageConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogRotateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rotate Logs Endpoint"
+      }
+    },
+    "/api/storage/worktrees/prune": {
+      "post": {
+        "description": "Collect orphaned worktrees. A live run's worktree, or one whose maker cannot be\nidentified, is never touched \u2014 see `chimera.core.worktree.classify_worktree_dir`.",
+        "operationId": "prune_worktrees_endpoint_api_storage_worktrees_prune_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorageConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorktreePruneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prune Worktrees Endpoint"
       }
     },
     "/api/suggestions/event": {

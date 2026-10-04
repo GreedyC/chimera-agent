@@ -593,6 +593,17 @@ def doctor(
         )
     console.print(caps)
 
+    # What this install keeps on disk — the same rows the app's Storage card and its Copy button
+    # show (`chimera.core.storage.summary_rows`), so the terminal and the screen cannot disagree.
+    # Here because the VPS has no screen, and the drive that fills there is the same kind of drive.
+    from chimera.core.storage import measure, summary_rows
+
+    disk = Table(title="Storage", show_header=False, title_style="bold")
+    # The workspace every CLI command defaults to (`-w .`): where "worktree location" is decided for.
+    for label, value in summary_rows(measure(settings.home, Path.cwd())):
+        disk.add_row(label, value)
+    console.print(disk)
+
     if providers and probe:
         # One token, on the default model, through the same gateway a real run uses — including its
         # failover, so "the primary is down and a fallback answered" reads as ready, which it is.
@@ -3195,6 +3206,10 @@ def desktop_app(
     # Bind BEFORE announcing so the URL reflects the real port (a busy 8765 falls back to a free one
     # instead of crashing). The bound socket is handed to uvicorn, so there is no close-then-rebind gap.
     sock, port = _bind_app_socket(host, port)
+    # The access card reports where this listener is: with `--host 0.0.0.0` the guest app mounted at
+    # /guest answers the network with any share link, and the card has to say so rather than
+    # describe only the separate LAN door.
+    api.state.bound_address = (host, port)
     url = f"http://{host}:{port}"
     if emit_port_file:  # discovery channel for a parent process (the Tauri sidecar reads this)
         Path(emit_port_file).write_text(url, encoding="utf-8")

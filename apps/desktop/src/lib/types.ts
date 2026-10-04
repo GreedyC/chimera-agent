@@ -13,6 +13,10 @@ export type SessionMeta = Schemas["SessionMetaOut"];
 // Sharing a conversation with a second person: the token, and the state of the network door.
 export type ShareInfo = Schemas["ShareOut"];
 export type NetworkShare = Schemas["NetworkShareOut"];
+/** Every way into this machine, for the Security tab's access card. Never a token: at most its last
+ *  four characters (`chimera/api/access_api.py`). */
+export type AccessState = Schemas["AccessOut"];
+export type AccessLink = Schemas["AccessLinkOut"];
 /** A background work of a conversation: a coding turn on the strong model, running while the
  *  conversation goes on (`chimera.api.works`). */
 export type WorkInfo = Schemas["WorkOut"];
@@ -81,6 +85,12 @@ export type WeeklyReview = Schemas["WeeklyReviewOut"];
  *  MCP half is absent when it is. `saving_pct` is negative when deferral would cost more. */
 export type DeferSaving = Schemas["DeferSavingOut"];
 export type DeferSavingHalf = Schemas["DeferSavingHalfOut"];
+// What this install keeps on disk, by kind; `bytes: null` is "not measured", never zero (P5.3).
+export type StorageReport = Schemas["StorageOut"];
+export type StorageCategory = Schemas["StorageCategoryOut"];
+export type WorktreePrune = Schemas["WorktreePruneOut"];
+export type LogRotate = Schemas["LogRotateOut"];
+export type AppDiagnostics = Schemas["AppDiagnosticsOut"];
 export type AgentIdentity = Schemas["AgentIdentityOut"];
 /** An agent you dispatch work to, as opposed to the one you converse with. */
 export type AgentDef = Schemas["AgentDefOut"];

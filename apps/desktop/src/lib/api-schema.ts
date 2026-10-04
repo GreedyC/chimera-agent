@@ -1369,6 +1369,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Diagnostics Endpoint */
+        get: operations["diagnostics_endpoint_api_diagnostics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dictation": {
         parameters: {
             query?: never;
@@ -2857,6 +2874,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/security/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Access
+         * @description Every way into this machine right now, with no secret in the answer.
+         */
+        get: operations["access_api_security_access_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/security/access/bridge/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate Bridge
+         * @description A new bridge token; the old one stops working now. 409 while the bridge is off.
+         */
+        post: operations["rotate_bridge_api_security_access_bridge_rotate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/security/access/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Links
+         * @description Every link, or every link of one conversation when ``session_id`` names it.
+         */
+        delete: operations["revoke_links_api_security_access_links_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/security/access/links/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Link */
+        delete: operations["revoke_link_api_security_access_links__link_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions": {
         parameters: {
             query?: never;
@@ -3130,6 +3224,67 @@ export interface paths {
         put?: never;
         /** Retire Skill */
         post: operations["retire_skill_api_skills__name__retire_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Storage Endpoint
+         * @description What this install keeps on disk, by kind. A category that could not be counted is null.
+         */
+        get: operations["storage_endpoint_api_storage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/storage/logs/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate Logs Endpoint
+         * @description Rotate the diagnostic traces now — the rename their writers make at the size cap.
+         */
+        post: operations["rotate_logs_endpoint_api_storage_logs_rotate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/storage/worktrees/prune": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prune Worktrees Endpoint
+         * @description Collect orphaned worktrees. A live run's worktree, or one whose maker cannot be
+         *     identified, is never touched — see `chimera.core.worktree.classify_worktree_dir`.
+         */
+        post: operations["prune_worktrees_endpoint_api_storage_worktrees_prune_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3424,6 +3579,142 @@ export interface components {
             shown: number;
         };
         /**
+         * AccessBridgeOut
+         * @description The desktop bridge (``chimera/api/desktop_bridge.py``).
+         */
+        AccessBridgeOut: {
+            /**
+             * Active
+             * @default false
+             */
+            active: boolean;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Hint
+             * @default
+             */
+            hint: string;
+            /** Tier */
+            tier?: string | null;
+        };
+        /**
+         * AccessGuestDoorOut
+         * @description The LAN listener that serves only the guest app (``guest_api.GuestServer``).
+         */
+        AccessGuestDoorOut: {
+            /**
+             * Open
+             * @default false
+             */
+            open: boolean;
+            /** Port */
+            port?: number | null;
+            /** Urls */
+            urls?: string[];
+        };
+        /**
+         * AccessLinkOut
+         * @description One share link, named by everything except itself.
+         */
+        AccessLinkOut: {
+            /** Created At */
+            created_at: number;
+            /**
+             * Expired
+             * @default false
+             */
+            expired: boolean;
+            /** Expires At */
+            expires_at?: number | null;
+            /**
+             * Hint
+             * @default
+             */
+            hint: string;
+            /** Id */
+            id: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /** Session Id */
+            session_id: string;
+            /**
+             * Session Title
+             * @default
+             */
+            session_title: string;
+        };
+        /** AccessOut */
+        AccessOut: {
+            bridge: components["schemas"]["AccessBridgeOut"];
+            guest_door: components["schemas"]["AccessGuestDoorOut"];
+            /** Links */
+            links: components["schemas"]["AccessLinkOut"][];
+            server: components["schemas"]["AccessServerOut"];
+            server_token: components["schemas"]["AccessServerTokenOut"];
+            sharing: components["schemas"]["AccessSharingOut"];
+        };
+        /** AccessRevokeOneOut */
+        AccessRevokeOneOut: {
+            /** Ok */
+            ok: boolean;
+        };
+        /** AccessRevokedOut */
+        AccessRevokedOut: {
+            /** Revoked */
+            revoked: number;
+        };
+        /**
+         * AccessServerOut
+         * @description The app's own listener: where ``chimera desktop`` bound it.
+         *
+         *     ``chimera desktop --host 0.0.0.0`` is a supported option, and then the guest app mounted at
+         *     ``/guest`` on this listener answers the network with any share link — a network door the card
+         *     used to call "Closed" because it looked only at the separate LAN listener.
+         */
+        AccessServerOut: {
+            /** Bind */
+            bind?: string | null;
+            /**
+             * Network
+             * @default false
+             */
+            network: boolean;
+            /** Port */
+            port?: number | null;
+        };
+        /**
+         * AccessServerTokenOut
+         * @description The bearer every guarded route asks for. Whether it is set, and nothing of its value — the
+         *     Settings row it is changed on reports it the same way (``ServerCfgOut.token_set``).
+         */
+        AccessServerTokenOut: {
+            /**
+             * Set
+             * @default false
+             */
+            set: boolean;
+        };
+        /**
+         * AccessSharingOut
+         * @description The two settings that narrow sharing (``CHIMERA_SHARING``, ``CHIMERA_SHARE_EXPIRY_HOURS``).
+         */
+        AccessSharingOut: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Expiry Hours */
+            expiry_hours?: number | null;
+        };
+        /**
          * AgentDefOut
          * @description One agent you can send work to — as distinct from the one you converse with.
          *
@@ -3646,6 +3937,27 @@ export interface components {
             workspace?: string | null;
             /** Write Region */
             write_region?: string[] | null;
+        };
+        /**
+         * AppDiagnosticsOut
+         * @description What a bug report needs, in one place (study 29, P5.3).
+         */
+        AppDiagnosticsOut: {
+            /** Backend Version */
+            backend_version: string;
+            crash: components["schemas"]["CrashReportOut"] | null;
+            /** Home */
+            home: string;
+            /** Platform */
+            platform: string;
+            /** Python */
+            python: string;
+            /** Report */
+            report: string;
+            /** Workspace */
+            workspace: string;
+            /** Worktree Dir */
+            worktree_dir: string;
         };
         /** ApproachOut */
         ApproachOut: {
@@ -4444,6 +4756,34 @@ export interface components {
             shell_granted: boolean;
         };
         /**
+         * CodePythonOut
+         * @description The interpreter ``execute_code`` uses when a snippet runs on this machine.
+         *
+         *     The frozen desktop build has no interpreter of its own, so it is whatever PATH holds, or none;
+         *     without this, a snippet that could not start reads in a transcript like a model that wrote bad
+         *     code. Only the host half: whether a container answers instead is ``/api/governance/sandbox``.
+         */
+        CodePythonOut: {
+            /**
+             * Frozen
+             * @default false
+             */
+            frozen: boolean;
+            /** Looked For */
+            looked_for?: string[];
+            /**
+             * Path
+             * @default
+             */
+            path: string;
+            /**
+             * Source
+             * @default missing
+             * @enum {string}
+             */
+            source: "interpreter" | "path" | "missing";
+        };
+        /**
          * CodeSessionArchiveOut
          * @description A conversation after archiving or bringing it back: ``archived_at`` is None once it is back.
          *
@@ -4739,11 +5079,14 @@ export interface components {
             pinned?: string[];
             /** Pools */
             pools?: components["schemas"]["PoolOut"][];
+            privacy?: components["schemas"]["PrivacyCfgOut"];
             /** Providers */
             providers: components["schemas"]["ProviderOut"][];
             sandbox: components["schemas"]["SandboxCfgOut"];
             server: components["schemas"]["ServerCfgOut"];
+            sharing?: components["schemas"]["SharingCfgOut"];
             spend?: components["schemas"]["SpendCfgOut"];
+            storage?: components["schemas"]["StorageCfgOut"];
         };
         /** ConfigTestOut */
         ConfigTestOut: {
@@ -4779,6 +5122,18 @@ export interface components {
         ConversationsCfgOut: {
             /** Archive After Days */
             archive_after_days?: number | null;
+        };
+        /**
+         * CrashReportOut
+         * @description The desktop's last ``backend-crash.txt``, with credentials scrubbed before it left disk.
+         */
+        CrashReportOut: {
+            /** Modified */
+            modified: string;
+            /** Path */
+            path: string;
+            /** Text */
+            text: string;
         };
         /** CrewDoneOut */
         CrewDoneOut: {
@@ -5668,6 +6023,15 @@ export interface components {
             /** Support */
             support: string;
         };
+        /** DiskOut */
+        DiskOut: {
+            /** Free */
+            free: number | null;
+            /** Path */
+            path: string;
+            /** Total */
+            total: number | null;
+        };
         /** DoctorOut */
         DoctorOut: {
             /** Cache */
@@ -5677,6 +6041,7 @@ export interface components {
              * @default false
              */
             can_answer: boolean;
+            code_python?: components["schemas"]["CodePythonOut"] | null;
             /** Configured Providers */
             configured_providers: string[];
             /** Default Model */
@@ -6765,6 +7130,15 @@ export interface components {
             /** Runtimes */
             runtimes?: components["schemas"]["LocalRuntimeOut"][];
         };
+        /** LogRotateOut */
+        LogRotateOut: {
+            /** Bytes Freed */
+            bytes_freed: number;
+            /** Failed */
+            failed: number;
+            /** Rotated */
+            rotated: number;
+        };
         /** MaturityOut */
         MaturityOut: {
             /** Available */
@@ -7057,6 +7431,8 @@ export interface components {
             allowed_users?: {
                 [key: string]: string[];
             };
+            /** Configured */
+            configured?: string[];
         };
         /**
          * MessagingPlatformOut
@@ -7480,6 +7856,38 @@ export interface components {
             names: string[];
         };
         /**
+         * PrivacyCfgOut
+         * @description The Security screen's privacy card (``chimera/providers/privacy.py``). Read-only facts plus
+         *     the two OpenRouter switches; a server without the block is on the shipped defaults, which send
+         *     nothing.
+         */
+        PrivacyCfgOut: {
+            /**
+             * Openrouter Data Collection
+             * @default allow
+             */
+            openrouter_data_collection: string;
+            /**
+             * Openrouter Zdr
+             * @default false
+             */
+            openrouter_zdr: boolean;
+            /** Routes */
+            routes?: components["schemas"]["PromptRouteOut"][];
+            /**
+             * Telemetry
+             * @default false
+             */
+            telemetry: boolean;
+            /**
+             * Telemetry Requested
+             * @default false
+             */
+            telemetry_requested: boolean;
+            /** Unscoped */
+            unscoped?: string[];
+        };
+        /**
          * ProfileWorth
          * @description One configuration's record, over the runs that actually happened here.
          */
@@ -7557,6 +7965,26 @@ export interface components {
             plan_approved: boolean;
             /** Status */
             status: string;
+        };
+        /**
+         * PromptRouteOut
+         * @description One provider a configured model role would send a prompt to (``prompt_routes``).
+         */
+        PromptRouteOut: {
+            /**
+             * Host
+             * @default
+             */
+            host: string;
+            /**
+             * Local
+             * @default false
+             */
+            local: boolean;
+            /** Provider */
+            provider: string;
+            /** Roles */
+            roles?: string[];
         };
         /**
          * ProviderOut
@@ -7888,6 +8316,17 @@ export interface components {
             image: string;
             /** Mode */
             mode: string;
+            /**
+             * Network
+             * @default none
+             * @enum {string}
+             */
+            network: "none" | "bridge";
+            /**
+             * Verify Network
+             * @default false
+             */
+            verify_network: boolean;
         };
         /**
          * SandboxStateOut
@@ -7906,6 +8345,12 @@ export interface components {
             configured: string;
             /** Isolated */
             isolated: boolean;
+            /**
+             * Network
+             * @default host
+             * @enum {string}
+             */
+            network: "none" | "bridge" | "host";
             /**
              * Platform
              * @default
@@ -8017,6 +8462,8 @@ export interface components {
         ShareOut: {
             /** Created At */
             created_at: number;
+            /** Expires At */
+            expires_at?: number | null;
             /**
              * Label
              * @default
@@ -8033,6 +8480,21 @@ export interface components {
         SharesOut: {
             /** Shares */
             shares: components["schemas"]["ShareOut"][];
+        };
+        /**
+         * SharingCfgOut
+         * @description Whether conversations may be shared and how long a new link opens one (``CHIMERA_SHARING``,
+         *     ``CHIMERA_SHARE_EXPIRY_HOURS``). A server without the block is on the shipped default: sharing
+         *     on, links that never expire — what sharing did before either setting existed.
+         */
+        SharingCfgOut: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Expiry Hours */
+            expiry_hours?: number | null;
         };
         /**
          * ShellPrefsIn
@@ -8210,6 +8672,80 @@ export interface components {
         SpendCfgOut: {
             /** Daily Usd Cap */
             daily_usd_cap?: number | null;
+        };
+        /**
+         * StorageCategoryOut
+         * @description One kind of thing this install keeps on disk. ``bytes`` null = not measured, never zero.
+         */
+        StorageCategoryOut: {
+            /** Bytes */
+            bytes: number | null;
+            /** Files */
+            files: number | null;
+            /** Key */
+            key: string;
+            /** Note */
+            note: string;
+            /** Paths */
+            paths: string[];
+        };
+        /**
+         * StorageCfgOut
+         * @description ``CHIMERA_WORKTREE_DIR`` as set; empty is the system temp folder (the default).
+         */
+        StorageCfgOut: {
+            /**
+             * Worktree Dir
+             * @default
+             */
+            worktree_dir: string;
+        };
+        /**
+         * StorageConfirmIn
+         * @description The two storage actions remove files; each must be asked for in so many words.
+         */
+        StorageConfirmIn: {
+            /**
+             * Confirm
+             * @default false
+             */
+            confirm: boolean;
+        };
+        /**
+         * StorageOut
+         * @description What this install keeps on disk, by kind (study 29, P5.3). Nullable like `ResourcesOut`.
+         */
+        StorageOut: {
+            /** Categories */
+            categories: components["schemas"]["StorageCategoryOut"][];
+            /** Disks */
+            disks: components["schemas"]["DiskOut"][];
+            /** Home */
+            home: string;
+            /** Rotatable Logs */
+            rotatable_logs: string[];
+            /** Worktree Dir */
+            worktree_dir: string;
+            /** Worktrees */
+            worktrees: components["schemas"]["StorageWorktreeOut"][];
+        };
+        /**
+         * StorageWorktreeOut
+         * @description One isolated worktree folder, and whether the prune would collect it.
+         *
+         *     ``state`` is ``live`` (a run is using it, or it is too new to judge), ``orphan`` (the prune
+         *     removes it) or ``kept`` (its maker cannot be identified, so it is not called dead on a guess).
+         *     ``reason`` is a fixed word a screen translates.
+         */
+        StorageWorktreeOut: {
+            /** Bytes */
+            bytes: number | null;
+            /** Path */
+            path: string;
+            /** Reason */
+            reason: string;
+            /** State */
+            state: string;
         };
         /** SubtaskOut */
         SubtaskOut: {
@@ -8862,6 +9398,19 @@ export interface components {
         WorksOut: {
             /** Works */
             works: components["schemas"]["WorkOut"][];
+        };
+        /** WorktreePruneOut */
+        WorktreePruneOut: {
+            /** Bytes Freed */
+            bytes_freed: number;
+            /** Failed */
+            failed: number;
+            /** Kept */
+            kept: number;
+            /** Live */
+            live: number;
+            /** Removed */
+            removed: number;
         };
         /**
          * WorthReport
@@ -11020,6 +11569,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    diagnostics_endpoint_api_diagnostics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppDiagnosticsOut"];
                 };
             };
         };
@@ -13225,6 +13794,108 @@ export interface operations {
             };
         };
     };
+    access_api_security_access_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessOut"];
+                };
+            };
+        };
+    };
+    rotate_bridge_api_security_access_bridge_rotate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessBridgeOut"];
+                };
+            };
+        };
+    };
+    revoke_links_api_security_access_links_delete: {
+        parameters: {
+            query?: {
+                session_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRevokedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_link_api_security_access_links__link_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRevokeOneOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_sessions_api_sessions_get: {
         parameters: {
             query?: never;
@@ -13670,6 +14341,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RetiredOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    storage_endpoint_api_storage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageOut"];
+                };
+            };
+        };
+    };
+    rotate_logs_endpoint_api_storage_logs_rotate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StorageConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogRotateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prune_worktrees_endpoint_api_storage_worktrees_prune_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StorageConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorktreePruneOut"];
                 };
             };
             /** @description Validation Error */

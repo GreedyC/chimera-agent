@@ -518,6 +518,13 @@ class CacheCfgOut(BaseModel):
 class SandboxCfgOut(BaseModel):
     mode: str
     image: str
+    network: Literal["none", "bridge"] = "none"
+    """The docker sandbox's network as the factory reads it. Means something only when the sandbox
+    that answers is a container — see ``SandboxStateOut.network`` for what a command can reach."""
+    verify_network: bool = False
+    """``CHIMERA_VERIFY_NETWORK``: the verifier's own exception to ``network``. On, a docker sandbox
+    is rebuilt for the verify command with the network open, and under a kernel sandbox a verify
+    command the user typed runs on the host (``chimera.core.verify``)."""
 
 
 class FusionKinshipOut(BaseModel):
@@ -718,6 +725,9 @@ class MessagingCfgOut(BaseModel):
     """
 
     allowed_users: dict[str, list[str]] = Field(default_factory=dict)
+    configured: list[str] = Field(default_factory=list)
+    """The platforms whose bot has what it needs to start (``allowlist.bot_configured``). A server
+    that predates the field omits it, and the card then treats every platform as connected."""
 
 
 class GuardCfgOut(BaseModel):
@@ -822,6 +832,21 @@ class KeepAwakeCfgOut(BaseModel):
     on_battery: bool = False
 
 
+class StorageCfgOut(BaseModel):
+    """``CHIMERA_WORKTREE_DIR`` as set; empty is the system temp folder (the default)."""
+
+    worktree_dir: str = ""
+
+
+class SharingCfgOut(BaseModel):
+    """Whether conversations may be shared and how long a new link opens one (``CHIMERA_SHARING``,
+    ``CHIMERA_SHARE_EXPIRY_HOURS``). A server without the block is on the shipped default: sharing
+    on, links that never expire — what sharing did before either setting existed."""
+
+    enabled: bool = True
+    expiry_hours: float | None = None
+
+
 class KeepAwakeOut(BaseModel):
     """Whether this process is holding the machine awake right now, and why.
 
@@ -840,6 +865,40 @@ class KeepAwakeOut(BaseModel):
     on_battery_allowed: bool = False
 
 
+class PromptRouteOut(BaseModel):
+    """One provider a configured model role would send a prompt to (``prompt_routes``)."""
+
+    provider: str
+    local: bool = False
+    """A keyless runtime whose URL is a loopback address — the prompt stays on this machine."""
+    host: str = ""
+    """For a keyless-runtime prefix (``ollama_chat/``, ``lm_studio/``…) that is NOT local: the host it
+    is sent to (Ollama Cloud, a remote server). Empty for a local or a hosted provider."""
+    roles: list[str] = Field(default_factory=list)
+    """``default``, ``weak``, ``fusion_judge``, ``embeddings``, ``decisions``… — why it is listed."""
+
+
+class PrivacyCfgOut(BaseModel):
+    """The Security screen's privacy card (``chimera/providers/privacy.py``). Read-only facts plus
+    the two OpenRouter switches; a server without the block is on the shipped defaults, which send
+    nothing."""
+
+    openrouter_data_collection: str = "allow"
+    """``allow`` (the default: nothing sent) or ``deny`` (only routes that keep no prompts)."""
+    openrouter_zdr: bool = False
+    routes: list[PromptRouteOut] = Field(default_factory=list)
+    telemetry: bool = False
+    """Whether anything is exported: OpenTelemetry asked for (``CHIMERA_OTEL`` or
+    ``OTEL_EXPORTER_OTLP_ENDPOINT``) AND the ``[otel]`` extra installed."""
+    telemetry_requested: bool = False
+    """Whether it was asked for, installed or not — so "requested, nothing exported" can be said."""
+    unscoped: list[str] = Field(default_factory=list)
+    """Surfaces that reach OpenRouter WITHOUT the preference above, so the card can say so instead of
+    letting ``deny`` read as covering every call: ``decisions`` (the Decisions API is the chosen
+    backend) or ``decisions_fallback`` (it stands behind the local verifier — verified answers on,
+    ``local_logprob``, an OpenRouter key)."""
+
+
 class ConfigOut(BaseModel):
     models: ModelsCfgOut
     fusion: FusionCfgOut = Field(default_factory=FusionCfgOut)
@@ -853,12 +912,15 @@ class ConfigOut(BaseModel):
     decisions: DecisionsCfgOut = Field(default_factory=DecisionsCfgOut)
     spend: SpendCfgOut = Field(default_factory=SpendCfgOut)
     keep_awake: KeepAwakeCfgOut = Field(default_factory=KeepAwakeCfgOut)
+    storage: StorageCfgOut = Field(default_factory=StorageCfgOut)
+    sharing: SharingCfgOut = Field(default_factory=SharingCfgOut)
     autonomy: AutonomyCfgOut
     server: ServerCfgOut
     mcp: McpCfgOut
     automation: AutomationCfgOut
     conversations: ConversationsCfgOut = Field(default_factory=ConversationsCfgOut)
     messaging: MessagingCfgOut = Field(default_factory=MessagingCfgOut)
+    privacy: PrivacyCfgOut = Field(default_factory=PrivacyCfgOut)
     guard: GuardCfgOut
     providers: list[ProviderOut]
     pools: list[PoolOut] = Field(default_factory=list)
@@ -1198,6 +1260,88 @@ class ResourcesOut(BaseModel):
     notes: list[str]
 
 
+class StorageCategoryOut(BaseModel):
+    """One kind of thing this install keeps on disk. ``bytes`` null = not measured, never zero."""
+
+    key: str
+    bytes: int | None
+    files: int | None
+    paths: list[str]  # the existing places counted, so the owner can go and look
+    note: str  # why `bytes` is null, in a few words; empty when it is a measurement
+
+
+class StorageWorktreeOut(BaseModel):
+    """One isolated worktree folder, and whether the prune would collect it.
+
+    ``state`` is ``live`` (a run is using it, or it is too new to judge), ``orphan`` (the prune
+    removes it) or ``kept`` (its maker cannot be identified, so it is not called dead on a guess).
+    ``reason`` is a fixed word a screen translates.
+    """
+
+    path: str
+    bytes: int | None
+    state: str
+    reason: str
+
+
+class DiskOut(BaseModel):
+    path: str
+    total: int | None
+    free: int | None
+
+
+class StorageOut(BaseModel):
+    """What this install keeps on disk, by kind (study 29, P5.3). Nullable like `ResourcesOut`."""
+
+    home: str
+    worktree_dir: str  # where the NEXT worktree goes: the configured folder, or temp
+    categories: list[StorageCategoryOut]
+    worktrees: list[StorageWorktreeOut]
+    disks: list[DiskOut]
+    rotatable_logs: list[str]  # the only logs the rotate action moves — named, not implied
+
+
+class StorageConfirmIn(BaseModel):
+    """The two storage actions remove files; each must be asked for in so many words."""
+
+    confirm: bool = False
+
+
+class WorktreePruneOut(BaseModel):
+    removed: int
+    bytes_freed: int
+    kept: int  # maker unknown — left alone
+    live: int  # a run is using it — left alone
+    failed: int  # could not be deleted (a file held open)
+
+
+class LogRotateOut(BaseModel):
+    rotated: int
+    bytes_freed: int  # only the dropped previous generations; a first rotation frees nothing
+    failed: int
+
+
+class CrashReportOut(BaseModel):
+    """The desktop's last ``backend-crash.txt``, with credentials scrubbed before it left disk."""
+
+    path: str
+    modified: str
+    text: str
+
+
+class AppDiagnosticsOut(BaseModel):
+    """What a bug report needs, in one place (study 29, P5.3)."""
+
+    backend_version: str
+    python: str
+    platform: str
+    home: str
+    workspace: str
+    worktree_dir: str
+    crash: CrashReportOut | None  # null when there is none, or outside the desktop's layout
+    report: str  # the plain-text summary the Copy button puts on the clipboard, scrubbed
+
+
 class ExternalAgentOut(BaseModel):
     """One ACP agent Chimera knows how to launch, and whether it is here."""
 
@@ -1225,6 +1369,20 @@ class EditorCapabilityOut(BaseModel):
     hint: str
 
 
+class CodePythonOut(BaseModel):
+    """The interpreter ``execute_code`` uses when a snippet runs on this machine.
+
+    The frozen desktop build has no interpreter of its own, so it is whatever PATH holds, or none;
+    without this, a snippet that could not start reads in a transcript like a model that wrote bad
+    code. Only the host half: whether a container answers instead is ``/api/governance/sandbox``.
+    """
+
+    path: str = ""
+    source: Literal["interpreter", "path", "missing"] = "missing"
+    frozen: bool = False
+    looked_for: list[str] = Field(default_factory=list)
+
+
 class DoctorOut(BaseModel):
     has_any_key: bool
     #: The default model runs on this machine and needs no key (``ollama_chat/…``, ``lm_studio/…``).
@@ -1244,6 +1402,8 @@ class DoctorOut(BaseModel):
     #: Whether the default model can be priced. A spend cap stops on a call it cannot price,
     #: so an unpriced default is a cap that refuses to work — said here, before one is set.
     spend: EditorCapabilityOut | None = None
+    #: Which Python ``execute_code`` runs on THIS machine — see ``CodePythonOut``.
+    code_python: CodePythonOut | None = None
 
 
 class ConfigTestOut(BaseModel):
@@ -1453,6 +1613,11 @@ class SandboxStateOut(BaseModel):
     not know falls back to ``reason``: a new cause must degrade to English, never to silence."""
     platform: str = ""
     """The OS, because the answer is different on each and the reason names it."""
+    network: Literal["none", "bridge", "host"] = "host"
+    """What a command can reach on the network here. ``none``: a container without one, or a kernel
+    sandbox (which has none to give). ``bridge``: a container given the bridge — every destination,
+    not an allowlist. ``host``: no fence, the machine's own network. Defaults to ``host`` because a
+    reader that cannot tell must not be told the network is closed."""
 
 
 class CronCreateIn(BaseModel):

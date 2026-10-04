@@ -49,8 +49,13 @@ import type {
   ShellPrefsChange,
   WeeklyReview,
   DeferSaving,
+  StorageReport,
+  WorktreePrune,
+  LogRotate,
+  AppDiagnostics,
   LocalRuntimes,
   NetworkShare,
+  AccessState,
   ShareInfo,
   WorkInfo,
   OllamaModels,
@@ -182,6 +187,21 @@ export const patchShellPrefs = (change: ShellPrefsChange) =>
 export const getWeeklyReview = () => json<WeeklyReview>("/api/cron/weekly-review");
 export const putWeeklyReview = (enabled: boolean) =>
   json<WeeklyReview>("/api/cron/weekly-review", { method: "PUT", body: JSON.stringify({ enabled }) });
+// The Storage card (study 29, P5.3). The two actions remove files, so the server refuses either one
+// without `confirm: true`; the card sends it only from its own confirmation step.
+export const getStorage = () => json<StorageReport>("/api/storage");
+export const pruneWorktrees = () =>
+  json<WorktreePrune>("/api/storage/worktrees/prune", {
+    method: "POST",
+    body: JSON.stringify({ confirm: true }),
+  });
+export const rotateLogs = () =>
+  json<LogRotate>("/api/storage/logs/rotate", {
+    method: "POST",
+    body: JSON.stringify({ confirm: true }),
+  });
+// Versions, paths, the last crash report and the text to copy — credentials scrubbed server-side.
+export const getAppDiagnostics = () => json<AppDiagnostics>("/api/diagnostics");
 export const getInstructions = () => json<AgentIdentity>("/api/instructions");
 // The agents you send work to. Every call returns the WHOLE registry, so a screen never has
 // to guess what the list looks like after a change it just made.
@@ -1867,6 +1887,21 @@ export const openNetworkShare = (port = 0) =>
   json<NetworkShare>("/api/code/share/network", { method: "POST", body: JSON.stringify({ port }) });
 export const closeNetworkShare = () =>
   json<NetworkShare>("/api/code/share/network", { method: "DELETE" });
+
+// Every way into this machine, on the Security tab's access card (`chimera/api/access_api.py`). No
+// token travels in either direction: a link is revoked by its id, a digest of the token.
+export const getAccess = () => json<AccessState>("/api/security/access");
+export const rotateBridgeToken = () =>
+  json<AccessState["bridge"]>("/api/security/access/bridge/rotate", { method: "POST" });
+export const revokeAccessLink = (linkId: string) =>
+  json<{ ok: boolean }>(`/api/security/access/links/${encodeURIComponent(linkId)}`, {
+    method: "DELETE",
+  });
+export const revokeAllAccessLinks = (sessionId = "") =>
+  json<{ revoked: number }>(
+    `/api/security/access/links${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`,
+    { method: "DELETE" },
+  );
 
 // Background works (`chimera.api.works`): the conversation's list, and the two things a person
 // (or the voice, through the talking model's tools) does to one. State changes arrive on the

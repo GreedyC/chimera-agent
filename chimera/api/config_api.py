@@ -23,6 +23,7 @@ from typing import Any
 from chimera.config import Settings, get_settings, pinned_by_environment
 from chimera.memory.backend import resolve_memory_backend
 from chimera.providers.catalog import PROVIDERS
+from chimera.providers.privacy import privacy_snapshot
 
 # Credential env-vars (secret) and the non-secret settings the UI may edit. Anything outside this set
 # is rejected by patch_config, so the endpoint can't be used to write arbitrary .env lines.
@@ -106,6 +107,14 @@ _EDITABLE_SETTINGS = {
     # NOT here, by design: CHIMERA_APPROVE_VIA_CHAT. Answering a pending approval from a chat bot
     # widens who can approve to whoever holds that channel, so turning it on stays a deliberate
     # edit of `.env` by the owner — never a switch a screen (or the desktop bridge) can flip.
+    # Where isolated runs check their worktrees out (`chimera/core/worktree.py`). Read at every
+    # worktree creation, so no APPLIES_WHEN entry: it applies from the next isolated run.
+    "CHIMERA_WORKTREE_DIR",
+    # Whether a conversation may be shared at all, and how long a new link opens it. Both only
+    # narrow, and both are read per request, so neither needs an APPLIES_WHEN entry. The bridge may
+    # write neither (`bridge_routes.OWNER_ONLY_SETTINGS`): their other direction widens.
+    "CHIMERA_SHARING",
+    "CHIMERA_SHARE_EXPIRY_HOURS",
     "CHIMERA_APP_MESSAGING",  # auto-start messaging adapters in the desktop app at boot
     # Who may talk to each bot. Not secrets — platform ids — so they are read back in full, like the
     # egress list: a list the owner cannot read is a list they cannot correct, and the failure it
@@ -118,6 +127,12 @@ _EDITABLE_SETTINGS = {
     "CHIMERA_GUARD_CHAT",  # assemble the chat agent with the coding turn's denylist + taint ledger
     "CHIMERA_SANDBOX",
     "CHIMERA_SANDBOX_IMAGE",
+    # The docker sandbox's network: `none` (the default) or `bridge`. It existed, was read by
+    # `get_sandbox`, and had no row — so a task that needs `pip install` inside the container had
+    # no way to get it but a file the app never mentions. Saved values are checked
+    # (`_check_sandbox_network`): anything but the two the factory understands would be stored,
+    # shown, and silently read as `none`.
+    "CHIMERA_SANDBOX_NETWORK",
     # Watch the page the agent is on. The setting was written, wired and reachable only by editing
     # `.env`: `default_registry` has always passed `settings.browser_headless` to the browser tool,
     # and `PATCH /api/config` has always refused the key. So the one way to see what the agent is
@@ -189,6 +204,11 @@ _EDITABLE_SETTINGS = {
     # turn, so it applies from the next question. The threshold stays in `.env`: 0.8 is the
     # registered number, and a slider would invite moving it without a measurement.
     "CHIMERA_VERIFIED_ANSWERS",
+    # What an OpenRouter route may do with a prompt (study 29, P5.6). Both narrow the routes that may
+    # answer, so they ship off; editable because a privacy choice only reachable in `.env` is one the
+    # owner of the desktop app cannot make. Read per call by the gateway, so no APPLIES_WHEN entry.
+    "CHIMERA_OPENROUTER_DATA_COLLECTION",
+    "CHIMERA_OPENROUTER_ZDR",
 }
 # The settings that turn a tool ON, which the Tools screen switches (`chimera/tools/conditional.py`).
 # Named there, once, and read here, so the screen can never offer a switch this endpoint refuses.
@@ -223,6 +243,11 @@ def is_editable(key: str) -> bool:
 #: gateway and the request handlers read through instead of holding a boot-time snapshot.
 NEXT_CONVERSATION = "next_conversation"
 NEXT_LAUNCH = "next_launch"
+#: Two moments at once: what builds its sandbox per use (a `!` command, a workflow or cron shell
+#: step, the verifier) takes the new value immediately, while an open conversation keeps the tools
+#: it was built with. Saying only "next conversation" would describe the side that WIDENS access as
+#: later than it is.
+COMMANDS_NOW = "commands_now"
 APPLIES_WHEN: dict[str, str] = {
     # Decided when a conversation is built (`factory()` in `chimera app`), so an open conversation
     # keeps the behaviour it started with — deliberately: changing a running chat's guard or backend
@@ -249,6 +274,13 @@ APPLIES_WHEN: dict[str, str] = {
     # is the scope that is true on both; an open chat keeps the tool list it started with.
     "CHIMERA_DEFER_TOOLS": NEXT_CONVERSATION,
     "CHIMERA_MCP_DEFER": NEXT_CONVERSATION,
+    # Read at two points. `default_registry` builds the chat's shell and code tools, each with its
+    # own sandbox object (`get_sandbox()` in `chimera/tools/builtin.py`), so an open chat keeps the
+    # network its tools were built with; a Code turn builds them afresh. But three callers build the
+    # sandbox on every use and so take a save at once: the user's `!` command
+    # (`api/exec_stream.py`), a workflow or cron shell step (`workflow/executors.py`, unattended),
+    # and the verifier (`core/verify.py`). Hence COMMANDS_NOW, not NEXT_CONVERSATION.
+    "CHIMERA_SANDBOX_NETWORK": COMMANDS_NOW,
     # The governance band builds its decider once per assembly (`governance/band.py::build_band`), so
     # a chat already running keeps the instrument it started with; the next one reads the new pair.
     # `POST /api/decide` and the `decide` tool rebuild on the next call.
@@ -429,9 +461,11 @@ def read_config(settings: Settings) -> dict[str, Any]:
         )
     ladder = settings.tier_ladder()
     pools = read_pools(settings)
+    from chimera.sandbox import sandbox_network
+
     # Imported here: `chimera.server` pulls in every adapter and the HTTP server, which a settings
     # read has no other reason to load.
-    from chimera.server.allowlist import ALLOWLIST_FIELDS, allowed_ids
+    from chimera.server.allowlist import ALLOWLIST_FIELDS, allowed_ids, bot_configured
 
     return {
         "models": {
@@ -473,11 +507,18 @@ def read_config(settings: Settings) -> dict[str, Any]:
             "embed_model": settings.embed_model,
         },
         "cache": {"completion": settings.cache, "prompt": settings.prompt_cache},
-        "sandbox": {"mode": settings.sandbox, "image": settings.sandbox_image},
-        # The site list and the declared ports as written, not a mask: statements the owner made and
-        # has to be able to read back. A value `.env` holds that does not parse leaves the lists
-        # empty AND says why in `invalid`: empty alone would read "any public site" for a browser
-        # that is left out of every conversation (`default_registry`).
+        "sandbox": {
+            "mode": settings.sandbox,
+            "image": settings.sandbox_image,
+            # As the factory reads it, not as typed: `get_sandbox` opens the bridge for `bridge` and
+            # for nothing else, so a hand-edited `.env` holding anything else is `none` in fact and
+            # must not be shown as something else on the row that edits it.
+            "network": sandbox_network(settings),
+            # The one exception to that network, read where it acts (`core/verify.py`): the verifier
+            # rebuilds a container with the network on, and under a kernel sandbox runs a command
+            # the user typed on the host. A row reading "no network" has to be able to say so.
+            "verify_network": settings.verify_network,
+        },
         "browser": {
             "headless": settings.browser_headless,
             **_browser_reach_lists(settings),
@@ -495,6 +536,14 @@ def read_config(settings: Settings) -> dict[str, Any]:
         "keep_awake": {
             "mode": settings.keep_awake,
             "on_battery": settings.keep_awake_on_battery,
+        },
+        # As set; empty is the system temp folder. Where the next worktree actually goes (after the
+        # rules that can refuse a value) is `GET /api/storage`'s `worktree_dir`.
+        "storage": {"worktree_dir": settings.worktree_dir},
+        # The two settings that narrow sharing. Which links exist is `GET /api/security/access`.
+        "sharing": {
+            "enabled": settings.sharing,
+            "expiry_hours": settings.share_expiry_hours,
         },
         # Which backend answers a typed decision, and which model; empty = the backend's default.
         "decisions": {
@@ -548,7 +597,15 @@ def read_config(settings: Settings) -> dict[str, Any]:
             "allowed_users": {
                 platform: allowed_ids(settings, platform) for platform in ALLOWLIST_FIELDS
             },
+            # The platforms whose bot has what it needs to start, so an empty list can be read as
+            # "anyone" only where a bot exists. Booleans, never the tokens.
+            "configured": [
+                platform for platform in ALLOWLIST_FIELDS if bot_configured(settings, platform)
+            ],
         },
+        # Who receives a prompt and what the OpenRouter route may keep — the Security screen's
+        # privacy card. See `chimera/providers/privacy.py`.
+        "privacy": privacy_snapshot(settings),
         "providers": providers,
         "pools": pools,
         # Keys absent here apply to the next call; see APPLIES_WHEN.
@@ -567,6 +624,7 @@ def doctor(settings: Settings) -> dict[str, Any]:
     """A config-health snapshot (no live provider pings): which providers have keys, the model ladder."""
     from chimera.acp.agents import available_agents
     from chimera.providers.discovery import is_local_model
+    from chimera.tools.code import host_python_report
 
     ladder = settings.tier_ladder()
     return {
@@ -589,6 +647,11 @@ def doctor(settings: Settings) -> dict[str, Any]:
         # a downloaded app is the exact place where "it should be installed" stops being evidence,
         # and the answer a new user needs is "what do I install", not "something is unavailable".
         "editor": editor_capabilities(settings),
+        # Which Python `execute_code` runs on THIS machine. In the frozen desktop build there is no
+        # interpreter of its own, so it is whatever PATH holds, or none — and a snippet that cannot
+        # start reads in a transcript like a model that wrote bad code. Saying which one is what
+        # tells the two apart.
+        "code_python": host_python_report(),
     }
 
 
@@ -697,6 +760,23 @@ def _check_daily_cap(value: str) -> None:
         )
 
 
+def _check_share_expiry(value: str) -> None:
+    """Empty (never) or a positive number of hours. Zero and negatives are refused rather than read
+    as "never", for the reason `_check_daily_cap` gives: saved, they would look like a choice and
+    mean its opposite."""
+    text = value.strip()
+    if not text:
+        return
+    try:
+        hours = float(text)
+    except ValueError as exc:
+        raise ValueError(f"CHIMERA_SHARE_EXPIRY_HOURS must be a number of hours, not {text!r}") from exc
+    if not math.isfinite(hours) or hours <= 0:
+        raise ValueError(
+            "CHIMERA_SHARE_EXPIRY_HOURS must be more than zero; leave it empty for links that never expire"
+        )
+
+
 def _check_keep_awake(value: str) -> None:
     if value.strip().lower() not in ("off", "working", "always"):
         raise ValueError("CHIMERA_KEEP_AWAKE must be one of off, working, always")
@@ -736,6 +816,46 @@ def _check_browser_ports(value: str) -> None:
     parse_ports(value)
 
 
+def _check_worktree_dir(value: str, workspace: Path | None = None) -> None:
+    """Empty (temp) or an absolute path outside the project. Refused here, at the save, rather than
+    ignored with a warning in a log the owner never reads.
+
+    A relative path would resolve against wherever the backend happened to start, which for a
+    packaged app is the install folder. A folder inside the workspace is passed over for temp by
+    `GitWorktree.create` — the project's own status, search and checkpoints would read the run's
+    checkout — so saving it would be a setting that silently does nothing for that project."""
+    text = value.strip()
+    if text and not Path(text).expanduser().is_absolute():
+        raise ValueError("CHIMERA_WORKTREE_DIR must be an absolute path, or empty for the temp folder")
+    if text and workspace is not None:
+        from chimera.core.worktree import is_inside
+
+        if is_inside(Path(text).expanduser(), workspace):
+            raise ValueError(
+                f"CHIMERA_WORKTREE_DIR may not be inside the project ({workspace}); "
+                "a worktree there would be read as part of it"
+            )
+
+
+def _check_sandbox_network(value: str) -> None:
+    """``none`` or ``bridge``, and nothing else.
+
+    ``get_sandbox`` reads anything but ``bridge`` as ``none``, so a stray value would not open the
+    network — it would be saved, shown on the row as if it meant something, and do nothing. And the
+    one docker value it would be natural to try, ``host``, is the one that must never be accepted:
+    it shares this machine's network stack with the container, which is no boundary at all.
+    """
+    if value.strip().lower() not in ("none", "bridge"):
+        raise ValueError("CHIMERA_SANDBOX_NETWORK must be none or bridge")
+
+
+def _check_data_collection(value: str) -> None:
+    # Refused here rather than read as `deny` by the settings validator: that fallback exists for a
+    # hand-edited `.env`, and a screen that offers two words has no business saving a third.
+    if value.strip().lower() not in ("allow", "deny"):
+        raise ValueError("CHIMERA_OPENROUTER_DATA_COLLECTION must be allow or deny")
+
+
 def _check_boolean(key: str) -> Callable[[str], None]:
     def check(value: str) -> None:
         if value.strip().lower() not in ("true", "false", "1", "0", "yes", "no", "on", "off"):
@@ -759,6 +879,12 @@ _VALUE_CHECKS: dict[str, Callable[[str], None]] = {
     # worse than a refusal here.
     "CHIMERA_DEFER_TOOLS": _check_boolean("CHIMERA_DEFER_TOOLS"),
     "CHIMERA_MCP_DEFER": _check_boolean("CHIMERA_MCP_DEFER"),
+    # CHIMERA_WORKTREE_DIR is checked in `patch_config` itself: its check needs the workspace.
+    "CHIMERA_SANDBOX_NETWORK": _check_sandbox_network,
+    "CHIMERA_SHARING": _check_boolean("CHIMERA_SHARING"),
+    "CHIMERA_SHARE_EXPIRY_HOURS": _check_share_expiry,
+    "CHIMERA_OPENROUTER_DATA_COLLECTION": _check_data_collection,
+    "CHIMERA_OPENROUTER_ZDR": _check_boolean("CHIMERA_OPENROUTER_ZDR"),
 }
 
 
@@ -780,7 +906,9 @@ def _check_decision_choice(updates: dict[str, str]) -> None:
     check_choice(backend, model, list_models() if model.strip() else SystemOneListing(models=()))
 
 
-def patch_config(updates: dict[str, str], *, env_path: Path | None = None) -> dict[str, Any]:
+def patch_config(
+    updates: dict[str, str], *, env_path: Path | None = None, workspace: Path | None = None
+) -> dict[str, Any]:
     """Persist ``updates`` (env-var -> value) to ``.env`` after allowlisting the keys.
 
     Returns ``{"updated": [keys]}``. Raises ``ValueError`` naming any rejected key (so the endpoint
@@ -799,6 +927,10 @@ def patch_config(updates: dict[str, str], *, env_path: Path | None = None) -> di
         check = _VALUE_CHECKS.get(key)
         if check is not None:
             check(str(value))
+    if "CHIMERA_WORKTREE_DIR" in updates:
+        # The one check that needs to know which project the backend serves; `workspace` is the
+        # API's, and a caller without one (the CLI) gets the path check above only.
+        _check_worktree_dir(str(updates["CHIMERA_WORKTREE_DIR"]), workspace)
     _check_decision_choice(updates)
     path = env_path or Path(".env")
     for key, value in updates.items():
