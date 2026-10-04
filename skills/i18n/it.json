@@ -1,6 +1,10 @@
 {
   "_why": "Translated DISPLAY text for the skill cards: the description, the five body sections, and the trigger chips.\n\nNone of it is the payload. SKILL.md stays byte-identical, so the SHA-256 published on the page still attests to the exact bytes the CLI imports and the agent reads at runtime. The agent always reads the English; a translation lives beside the card and never in place of it. What the page owes the reader in exchange is to say so, which it does.\n\nEvery block declares the source_sha256 of the English it was made from, so a translation of text that has since changed falls back to English instead of being shown as current. The unit of that hash is deliberate: a description hashes alone, the five sections hash as one joined body, and the triggers hash as one joined list — a card that gains a section or a trigger retires all of its siblings together, because a page mixing a current Trigger with a stale Avoid gives the reader no way to tell which is which.\n\nAn earlier version of this note read \"descriptions, and only the descriptions\" and argued the body could never be translated. That was true of the mechanism at the time, not of the rule it appealed to.",
   "descriptions": {
+    "check-the-provider-before-you-catalog": {
+      "source_sha256": "d9da55b74dc00236b701eedb54e39ff292a9d34f9fbfa25acc282ddaadd93d94",
+      "text": "Verifica l’indice live della rotta prima di registrare slug, prezzo o finestra di contesto effettivamente servita."
+    },
     "assert-what-the-generator-found": {
       "source_sha256": "059b66d7e09a1aa6ce2b31647672f3c724dbafb4d8b75c1b599d79c0762823f2",
       "text": "Un generatore che va in crash ti dice che ha fallito; uno che produce output plausibile non ti dice nulla. Verifica ciò che ha trovato, mai che è stato eseguito."
@@ -99,6 +103,14 @@
     }
   },
   "sections": {
+    "check-the-provider-before-you-catalog": {
+      "Trigger": "Stai modificando un catalogo di modelli. Identificatori, prezzi, limiti, modalità e strumenti possono cambiare indipendentemente.",
+      "Do": "Prendi slug esatto, prezzo e finestra servita dall’indice live di OpenRouter tramite `chimera.providers.listing`; registra fonte e data. Se il prezzo differisce, conserva la vecchia coppia in `also_seen` senza sovrascriverne la cronologia. Mantieni i valori sconosciuti come `None`, senza indovinarli. Controlla i duplicati. Se la fonte è ambigua, lascia la voce invariata e chiedi.",
+      "Avoid": "Non copiare prezzi o finestre da pagine commerciali del fornitore o da altri modelli. Non sovrascrivere la cronologia di `also_seen`. La finestra pubblicizzata non è necessariamente quella servita dalla rotta.",
+      "Check": "Esegui i test unitari del catalogo e `tests/test_catalog_is_live.py` (test di rete eseguito su main), poi ispeziona la voce tramite CLI. I campi non vuoti, da soli, non ne provano la correttezza.",
+      "Risk": "L’indice live può cambiare dopo il merge con rotte e prezzi. Fonti e date rendono tracciabili gli aggiornamenti, senza garantire la precisione futura. Le ricevute sono valorizzate dall’indice live; la voce del catalogo è un ripiego.",
+      "source_sha256": "92ff4d5f76ab364b62e5cd77ec3aff582c4c9e087f38c4e63905adaa5f60122e"
+    },
     "assert-what-the-generator-found": {
       "Avoid": "`assert build()` — passa anche quando il generatore restituisce una lista vuota, una lista\nparziale, o una lista in cui ogni elemento è del tipo sbagliato in modo subdolo.\n\nEvita anche di fidarti di `isinstance` quando attraversi una struttura di terze parti. Le librerie\nvendorizzano le proprie dipendenze: un `TyperGroup` non è un'istanza del `click.Group` importato dal\ntuo file, perché Typer distribuisce una propria copia di Click. Chiediti se l'oggetto *ha* ciò di cui\nhai bisogno — una mappa `commands`, un metodo `items` — piuttosto che quale classe dichiara di\nessere. Il duck-typing sopravvive a una dipendenza vendorizzata e a un major version bump; un\ncontrollo di classe non sopravvive a nessuno dei due, e fallisce classificando male anziché\nsollevando un errore.",
       "Check": "Rompi il generatore di proposito e osserva il test fallire. Commenta la ricorsione nei\nsottocomandi, oppure fai in modo che il controllo di tipo rifiuti tutto, e lancia la suite.\n\nSe la suite passa comunque, il test verifica solo che il generatore sia stato eseguito, e hai\nscritto esattamente il test che questa skill esiste per evitare.",
@@ -293,6 +305,15 @@
     }
   },
   "triggers": {
+    "check-the-provider-before-you-catalog": {
+      "source_sha256": "f5f410f476ccf8d5b990159cd6a72ab1cfdfee486b9176c83c6f7031d078980e",
+      "text": [
+        "aggiunta di un modello al catalogo del fornitore",
+        "aggiornamento dei prezzi o delle finestre di contesto",
+        "il fornitore ha rinominato un modello",
+        "una voce del catalogo sembra obsoleta"
+      ]
+    },
     "assert-what-the-generator-found": {
       "source_sha256": "f1c6556d0db88b15fe341dd2a55b5b8e029159c35107063139b91ae998d52259",
       "text": [
