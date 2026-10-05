@@ -18,6 +18,74 @@ class PathEscapesWorkspaceError(ValueError):
     """Raised when a requested path resolves outside the workspace root."""
 
 
+class ProtectedPathError(PathEscapesWorkspaceError):
+    """The path is Chimera's own ``.env`` or inside its data folder (`chimera/core/own_files.py`).
+
+    A subclass of the escape error so every caller that already refuses an escape refuses this too,
+    with no new branch to forget."""
+
+
+def chimera_home() -> Path | None:
+    """The data folder the running process uses, or None when settings cannot be read."""
+    try:
+        from chimera.config import get_settings
+
+        return Path(get_settings().home).expanduser()
+    except Exception:  # noqa: BLE001 — a guard must not crash a tool; None protects the .env only
+        return None
+
+
+def own_env_readable() -> bool:
+    """Whether the owner lets the agent's read tools read Chimera's own ``.env``.
+
+    ``CHIMERA_AGENT_READS_OWN_ENV``, on by default (the owner's decision of 2026-10-04). Read at
+    every call, so a change applies from the next tool call. Settings that cannot be read leave the
+    default.
+    """
+    try:
+        from chimera.config import get_settings
+
+        return bool(get_settings().agent_reads_own_env)
+    except Exception:  # noqa: BLE001 — a guard must not crash a tool; the default is the answer
+        return True
+
+
+def hides_own_env(path: Path, *, forced: bool = False) -> bool:
+    """Whether a read tool must leave ``path`` out: it is Chimera's own ``.env`` and the owner has
+    switched the agent's reading of it off. Recognised by identity (`chimera/core/own_files.py`), so
+    ``ENV~1``, ``.env `` and ``.env::$DATA`` are the same file here."""
+    if not forced and own_env_readable():
+        return False
+    from chimera.core.own_files import is_own_env
+
+    return is_own_env(path)
+
+
+def refuse_own_env_read(candidate: Path, *, forced: bool = False) -> None:
+    """Refuse a read of Chimera's own ``.env`` when the owner has switched that off."""
+    if hides_own_env(candidate, forced=forced):
+        raise ProtectedPathError(
+            f"{candidate} is Chimera's own .env, and the owner keeps it from the agent's read "
+            "tools (Settings › Security › Privacy). Do not retry."
+        )
+
+
+def refuse_own_files(candidate: Path, verb: str) -> None:
+    """Refuse ``candidate`` when it is Chimera's own ``.env`` or inside its data folder.
+
+    For the agent's write tools (every turn, every posture) and the app's file routes (every
+    caller). A workspace that happens to contain the install folder — an app started from the home
+    directory — put both within reach of `write_file`: the posture and the keys in ``.env``, and the
+    approval queue in ``<home>/approvals``, where a written answer file answers a question. Another
+    project's ``.env`` is ordinary work and is not touched by this: only Chimera's own, by identity.
+    """
+    from chimera.core.own_files import protected_reason
+
+    reason = protected_reason(candidate, chimera_home())
+    if reason is not None:
+        raise ProtectedPathError(f"no tool may {verb} {candidate}: {reason}. Do not retry.")
+
+
 def resolve_in_workspace(workspace: Path, path: str) -> Path:
     """Resolve ``path`` against ``workspace`` and ensure it stays inside it.
 
@@ -76,7 +144,7 @@ def resolve_for(tool: Any, path: str, *, verb: str) -> Path:
         root = workspace.resolve()
         candidate = (root / path).resolve()
         # Before the question, not after it: a yes cannot grant this one (see SHELL_OWNED_ENV).
-        _refuse_shell_owned(candidate, verb)
+        _refuse_shell_owned(candidate, verb, hidden=bool(getattr(tool, "hide_own_env", False)))
         name = str(getattr(tool, "name", "") or "tool")
         question = BoundaryQuestion(
             reason=f"{verb} outside the project folder: {candidate} — the project is {root}",
@@ -87,7 +155,7 @@ def resolve_for(tool: Any, path: str, *, verb: str) -> Path:
         raise PathEscapesWorkspaceError(
             f"path {path!r} escapes workspace {root} — a person was asked and refused. Do not retry."
         ) from None
-    _refuse_shell_owned(inside, verb)
+    _refuse_shell_owned(inside, verb, hidden=bool(getattr(tool, "hide_own_env", False)))
     return inside
 
 
@@ -102,9 +170,17 @@ SHELL_OWNED_ENV = ("CHIMERA_SHELL_PREFS", "CHIMERA_SHELL_STATE")
 _READ_VERBS = frozenset({"read", "list", "search"})
 
 
-def _refuse_shell_owned(candidate: Path, verb: str) -> None:
+def _refuse_shell_owned(candidate: Path, verb: str, *, hidden: bool = False) -> None:
     if verb in _READ_VERBS:
+        # Reading: only Chimera's own `.env`, and only when the owner switched that off. A listing
+        # or a search ROOTED at a folder is not refused for holding it; the tools leave the file
+        # out of what they return (`hides_own_env`).
+        if verb == "read":
+            refuse_own_env_read(candidate, forced=hidden)
         return
+    # Chimera's own `.env` and data folder, for every write a tool makes — inside the workspace or
+    # outside it with a person's yes, which cannot grant this one either.
+    refuse_own_files(candidate, verb)
     for env in SHELL_OWNED_ENV:
         owned = os.environ.get(env, "").strip()
         if owned and Path(owned).resolve() == candidate:

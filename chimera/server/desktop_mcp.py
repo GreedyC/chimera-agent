@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote, urlencode
 
-from chimera.api.bridge_routes import ROUTES, areas, scrub
+from chimera.api.bridge_routes import OWNER_DECISION_ROUTES, ROUTES, areas, scrub
 
 NOT_RUNNING = (
     "Chimera desktop is not running, or 'Allow Claude to operate this app' is off in Settings."
@@ -99,8 +99,16 @@ _AREA_TITLES: dict[str, str] = {
     ),
     "insights": "Spend, worth, benchmarks, health.",
     "app": "How the app is set up. Credentials are reported only as set/unset.",
-    "approve": "FULL CONTROL: answer approvals and gated steps on the owner's behalf.",
-    "settings": "FULL CONTROL: edit settings (never credentials), identity, agents, run a command.",
+    "approve": (
+        "FULL CONTROL: answer approvals and gated steps on the owner's behalf. Never a settings "
+        "suggestion: the owner answers those in the app."
+    ),
+    "settings": (
+        "FULL CONTROL: edit settings (never credentials; the model and scheduling ones are only "
+        "suggested to the owner, who approves them in the app), the agent's identity, remove an "
+        "MCP server. Granting a folder's commands, running a command, starting a messaging bot "
+        "and saving an agent are the owner's, in the app."
+    ),
 }
 
 
@@ -154,26 +162,29 @@ class DesktopMCP:
                 "type": "string",
                 "description": "Project folder; omit for the app's own.",
             },
-            "model": {
-                "type": "string",
-                "description": "Model for this turn; omit for the default.",
-            },
             "wait_seconds": {
                 "type": "number",
                 "description": "How long to wait before returning what happened so far (max 300).",
                 "default": 60,
             },
         }
-        extra = ""
+        # Every tier: the turn runs on the owner's models and reaches no further than the owner's
+        # posture (the owner's decisions of 2026-10-04). Full control may still NARROW a turn.
+        extra = (
+            " The turn runs on the models the owner configured and under the owner's posture; "
+            "neither can be changed or widened from here."
+        )
         if full:
             props["posture"] = {
                 "type": "object",
-                "description": "Full control only: {reach: read_only|workspace|workspace_shell, "
-                "approval: always|suspicious|never}. Omit for the owner's configured posture.",
+                "description": "Full control only, and only to NARROW: {reach: read_only|workspace|"
+                "workspace_shell, approval: always|suspicious|never}, no wider than the owner's "
+                "configured posture (a wider one is refused). Omit for the owner's posture.",
             }
-            props["allow_host_exec"] = {"type": "boolean"}
-        else:
-            extra = " The turn runs under the owner's configured posture; you cannot widen it."
+            props["allow_host_exec"] = {
+                "type": "boolean",
+                "description": "Accepted only where the owner's posture already runs commands.",
+            }
         return {
             "name": "desktop_send",
             "description": (
@@ -280,7 +291,7 @@ class DesktopMCP:
         if name == "desktop_send":
             body = {
                 k: arguments[k]
-                for k in ("message", "session_id", "workspace", "model")
+                for k in ("message", "session_id", "workspace")
                 if arguments.get(k) not in (None, "")
             }
             if full:
@@ -297,6 +308,10 @@ class DesktopMCP:
         if area == "runs" and action == "read":
             return self._run_by_index(url, token, params)
         route_id = f"{area}.{action}"
+        if route_id in OWNER_DECISION_ROUTES:
+            # Said here as well as by the app: a client holding a list from before these closed
+            # should read why, not "unknown action".
+            return f"Refused: {OWNER_DECISION_ROUTES[route_id]}"
         if route_id not in ROUTES:
             return f"Unknown action {action!r} for {name}."
         return self._call(

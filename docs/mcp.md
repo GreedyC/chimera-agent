@@ -127,10 +127,25 @@ stay with you: `desktop_approvals` lists them and nothing more. When a turn stop
 app; `desktop_job` reports how it ends.
 
 The second switch, **Full control**, adds `desktop_approve` (answer approvals and gated
-steps) and `desktop_settings` (edit settings, the agent's identity and saved agents, run a
-command in the Runner). With it on, Claude can approve actions without you — and a
-prompt-injected page or message the agent reads could lead it to. Those two tools are not
-listed at all while it is off, and the app refuses them if called anyway.
+steps) and `desktop_settings` (edit settings and the agent's identity). With it on, Claude can
+approve actions without you — and a prompt-injected page or message the agent reads could lead
+it to. Those two tools are not listed at all while it is off, and the app refuses them if
+called anyway.
+
+Some decisions stay yours whichever switch is on. Which model answers — every model setting,
+the fallback chain, the fusion panel, judge and synthesizer, the cost mode, the cascade and
+verified answers — and whether the app runs scheduled jobs, Claude can only *suggest*: nothing
+is written, and the app shows you a card with each setting's value now and the value proposed,
+to approve or refuse there. Claude cannot answer that card, by any route; if the setting changed
+before you approve, nothing is applied. And granting a folder its commands, running a command in
+the Runner, starting a messaging bot and saving an agent with its tool grants are refused
+through the bridge altogether: you do them in the app.
+
+And a run Claude starts, under either switch, runs on the models you configured and reaches no
+further than the posture you configured. A request that names a model, a role plan, a profile, a
+fusion panel or another agent is refused; so is a wider posture — more reach, looser approvals,
+host execution or a `verify` command where you granted no shell, or auto-approval. Asking a run to
+do less (read only, or approvals always) is allowed.
 
 What neither switch allows: reading or writing an API key, token or webhook. Settings
 edits refuse credential names, the routes that carry keys or share links are not reachable,

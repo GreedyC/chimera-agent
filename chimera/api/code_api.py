@@ -232,6 +232,12 @@ class CodeSeams(BaseModel):
     """Give the agent an isolated read-only Context Explorer for repository search, so localisation
     ("where does X live?") costs a cheap sub-agent rather than turns of the main loop."""
 
+    hide_own_env: bool = False
+    """Keep Chimera's own ``.env`` from this run's read tools whatever ``CHIMERA_AGENT_READS_OWN_ENV``
+    says. Narrowing only. The desktop bridge sets it on every run it starts (the owner's decision of
+    2026-10-04: a bridge client never gets that file), and the owner's own runs leave it off and
+    follow the setting."""
+
     allow_tools: list[str] | None = None
     """Session allowlist of tool names. None = every tool. An explicit list — *including an empty
     one* — is an allowlist, so ``[]`` is a fully locked, read-nothing session."""
@@ -698,6 +704,12 @@ def assemble_registry(
         for tool in registry.tools():
             if hasattr(tool, "workspace"):
                 tool.ask_outside = owner  # type: ignore[attr-defined]
+    # A run the bridge started: every file tool keeps Chimera's own `.env` out, inside the
+    # workspace or outside it with a person's yes, whatever the owner's setting (`hides_own_env`).
+    if seams.hide_own_env:
+        for tool in registry.tools():
+            if hasattr(tool, "workspace"):
+                tool.hide_own_env = True  # type: ignore[attr-defined]
     # `open_pull_request` asks the owner on every call, and `owner` above is NOT the approver for
     # it: under CHIMERA_APPROVAL_MODE=allow that one says yes to everything, which is a choice about
     # taint and policy reviews, not about publishing the owner's code. `always_ask` reads `allow` as
@@ -3500,8 +3512,9 @@ def register_code_api(
     def grant_code_workspace(body: CodeProjectGrantIn) -> list[dict[str, Any]]:
         """Grant or revoke commands in one folder — the record every coding turn is held to.
 
-        Its own route rather than a field on the PATCH above, so the bridge can hold granting to its
-        Full tier while pinning and hiding stay at operate. Behind the same guard as the rest of the
+        Its own route rather than a field on the PATCH above, so the bridge can be kept out of
+        granting altogether (`bridge_routes.OWNER_DECISION_ROUTES`, every tier) while pinning and
+        hiding stay at operate. Behind the same guard as the rest of the
         API: with no ``CHIMERA_SERVER_TOKEN`` set, a local process can reach this as it can reach
         every other route. What moving the grant here changes is that a REQUEST no longer carries
         it; recording one is a separate act, listed in the Folders card where it can be revoked.

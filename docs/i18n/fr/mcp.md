@@ -1,5 +1,5 @@
 ---
-source_sha256: 0b37c6a629b664aa240e9c6470ce524d074bd195b985dfb116d34c593901f615
+source_sha256: d22206c6ec0698203967231fc3c0f48518dfe6d9338bd8f49c273feafa6ae093
 ---
 
 # Connecter des serveurs MCP
@@ -139,11 +139,27 @@ vôtres : `desktop_approvals` ne fait que les lister. Quand un tour s'arrête su
 indique comment il se termine.
 
 Le second interrupteur, **Contrôle total**, ajoute `desktop_approve` (répondre aux approbations et
-aux étapes soumises à validation) et `desktop_settings` (modifier les réglages, l'identité de
-l'agent et les agents enregistrés, lancer une commande dans le Runner). Activé, il permet à
-Claude d'approuver des actions sans vous — et une page ou un message piégé par injection de
-prompt, lu par l'agent, pourrait l'y amener. Ces deux outils ne sont pas listés tant qu'il est
-désactivé, et l'app les refuse s'ils sont appelés malgré tout.
+aux étapes soumises à validation) et `desktop_settings` (modifier les réglages et l'identité de
+l'agent). Activé, il permet à Claude d'approuver des actions sans vous — et une page ou un message
+piégé par injection de prompt, lu par l'agent, pourrait l'y amener. Ces deux outils ne sont pas
+listés tant qu'il est désactivé, et l'app les refuse s'ils sont appelés malgré tout.
+
+Certaines décisions restent les vôtres, quel que soit l'interrupteur. Quel modèle répond — chaque
+réglage de modèle, la chaîne de repli, le panel, le juge et le synthétiseur de la fusion, le mode
+de coût, la cascade et les réponses vérifiées — et si l'app exécute les tâches planifiées, Claude
+peut seulement le *suggérer* : rien n'est écrit, et l'app vous montre une carte avec la valeur
+actuelle et la valeur proposée de chaque réglage, à approuver ou refuser sur place. Claude ne peut
+répondre à cette carte par aucune voie ; si le réglage a changé avant votre approbation, rien
+n'est appliqué. Et autoriser les commandes dans un dossier, lancer une commande dans le Runner,
+démarrer un bot de messagerie et enregistrer un agent avec ses droits d'outils sont refusés
+entièrement par le pont : vous les faites dans l'app.
+
+Et une exécution lancée par Claude, quel que soit l'interrupteur, utilise les modèles que vous
+avez configurés et ne va pas plus loin que la posture que vous avez configurée. Une demande qui
+nomme un modèle, un plan de rôles, un profil, un panel de fusion ou un autre agent est refusée ; de
+même une posture plus large — plus de portée, des approbations plus lâches, l'exécution sur l'hôte
+ou une commande `verify` là où vous n'avez accordé aucun shell, ou l'approbation automatique.
+Demander à une exécution d'en faire moins (lecture seule, ou approbation toujours) est permis.
 
 Ce qu'aucun interrupteur ne permet : lire ou écrire une clé d'API, un jeton ou un webhook. Les
 modifications de réglages refusent les noms d'identifiants, les routes qui portent des clés ou

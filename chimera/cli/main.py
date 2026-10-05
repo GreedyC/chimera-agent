@@ -93,15 +93,23 @@ console = Console()
 
 
 def _set_env_var(path: Path, key: str, value: str) -> None:
-    """Set KEY=value in a .env file, replacing the line if present, appending otherwise."""
-    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    """Set KEY=value in a .env file, replacing the line if present, appending otherwise.
+
+    Held to the same rule as every other writer of the file: the value is encoded so every reader
+    reads it back unchanged (`key_vault.encode_env_value`, which refuses what no spelling makes
+    safe), and the file is split on newlines only.
+    """
+    from chimera.api.key_vault import encode_env_value, env_lines
+
+    line_for = f"{key}={encode_env_value(key, value)}"
+    lines = env_lines(path.read_text(encoding="utf-8")) if path.exists() else []
     prefix = f"{key}="
     for i, line in enumerate(lines):
         if line.strip().startswith(prefix):
-            lines[i] = f"{key}={value}"
+            lines[i] = line_for
             break
     else:
-        lines.append(f"{key}={value}")
+        lines.append(line_for)
     # Atomic write: a crash mid-write to .env must not truncate the user's secrets/config.
     tmp = path.parent / (path.name + ".tmp")
     tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -6671,6 +6679,39 @@ def approve(
         # whichever way the default fell, half the answers would be the one nobody chose.
         console.print("[yellow]say which: --yes or --no[/yellow]")
         raise typer.Exit(code=1)
+    from chimera.governance import setting_suggestions
+
+    if setting_suggestions.is_suggestion(home, request_id):
+        if yes:
+            # Approved only in the app. Not because a terminal is less the owner's than a screen:
+            # the change is applied by the app's own save, which also updates the RUNNING app, and a
+            # `.env` written from here could be another folder's and would reach the app only at its
+            # next launch. And a shell the agent was given could run this line.
+            console.print(
+                f"[yellow]{request_id} is a settings change somebody suggested; approve it in the "
+                "app (the card shows the value now and the value proposed). From here it can only "
+                "be refused: chimera approve <id> --no[/yellow]"
+            )
+            raise typer.Exit(code=1)
+
+        def _never(_updates: dict[str, str]) -> None:  # a refusal applies nothing
+            raise ValueError("a refusal applies nothing")
+
+        outcome, _ = setting_suggestions.resolve(
+            home,
+            request_id,
+            False,
+            via="cli",
+            current_of=lambda _key: "",
+            check=_never,
+            apply=_never,
+            allowed=lambda _key: False,
+        )
+        if outcome != "refused":
+            console.print(f"[yellow]no question waiting with id {request_id}[/yellow]")
+            raise typer.Exit(code=1)
+        console.print(f"[green]refused[/green] {request_id}")
+        return
     if not responder(home, request_id, yes, via="cli"):
         console.print(f"[yellow]no question waiting with id {request_id}[/yellow]")
         raise typer.Exit(code=1)

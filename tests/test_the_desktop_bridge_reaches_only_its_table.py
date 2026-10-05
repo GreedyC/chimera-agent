@@ -413,18 +413,27 @@ def test_an_operate_body_cannot_widen_the_run(
     assert seen == []
 
 
-def test_with_full_control_the_client_may_set_the_posture(
+def test_with_full_control_the_client_may_narrow_the_posture_and_never_widen_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Until 2026-10-04 this test asserted the opposite: Full control could send any posture, host
+    execution included. The owner decided that a run the bridge starts reaches no further than his
+    own posture at ANY tier; narrower is still the client's to ask for. The whole rule is held in
+    `test_a_run_the_bridge_starts_runs_on_the_owners_models_and_posture.py`."""
     app = _app(tmp_path, monkeypatch, full=True)
     seen = _capture_route(app, monkeypatch)
     wide = {"reach": "workspace_shell", "approval": "never"}
+    narrow = {"reach": "read_only", "approval": "always"}
 
     with TestClient(app) as client:
-        _call(
+        refused = _call(
             client, app, "test.seams", body={"task": "x", "posture": wide, "allow_host_exec": True}
         )
-    assert seen[0]["posture"] == wide and seen[0]["allow_host_exec"] is True
+        narrowed = _call(client, app, "test.seams", body={"task": "x", "posture": narrow})
+    assert refused.status_code == 403
+    assert "the posture is the owner's decision" in refused.json()["detail"]
+    assert narrowed.status_code == 200
+    assert [body["posture"] for body in seen] == [narrow]
 
 
 # ---- folder grants (study 29, P4.3) ---------------------------------------------------------------
@@ -469,10 +478,15 @@ def test_a_folder_grant_does_not_lift_the_owners_read_only(
     assert seen[0]["posture"]["reach"] == "read_only" and seen[0]["allow_host_exec"] is False
 
 
-def test_pinning_is_operate_and_granting_needs_full_control(
+def test_pinning_is_operate_and_granting_is_the_owners_at_every_tier(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Pinning and hiding only narrow (hiding revokes); granting widens, so it is Full."""
+    """Pinning and hiding only narrow (hiding revokes); granting widens, so it is the owner's.
+
+    Until 2026-10-04 granting was Full control's, and this test asserted that a full-control client
+    could grant. The owner decided otherwise: a folder's command grant is the posture itself, and
+    the bridge now refuses it at every tier (`bridge_routes.OWNER_DECISION_ROUTES`). The owner's
+    own route still grants, and the bridge reads that grant (the tests above)."""
     folder = tmp_path / "proj"
     folder.mkdir()
     operate = _app(tmp_path, monkeypatch)
@@ -489,15 +503,22 @@ def test_pinning_is_operate_and_granting_needs_full_control(
 
     full = _app(tmp_path, monkeypatch, full=True)
     with TestClient(full) as client:
-        granted = _call(
+        still_refused = _call(
             client,
             full,
             "settings.folder_grant",
             body={"path": str(folder), "shell_granted": True},
         )
         listed = _call(client, full, "projects.list")
-    assert granted.status_code == 200
-    assert listed.json()["data"][0]["shell_granted"] is True
+        owner = client.put(
+            "/api/code/workspaces/grant", json={"path": str(folder), "shell_granted": True}
+        )
+        after_owner = _call(client, full, "projects.list")
+    assert still_refused.status_code == 403
+    assert "owner's decision" in still_refused.json()["detail"]
+    assert listed.json()["data"][0]["shell_granted"] is False
+    assert owner.status_code == 200
+    assert after_owner.json()["data"][0]["shell_granted"] is True
 
 
 def test_the_widening_scan_reads_nested_bodies_and_ignores_empty_values() -> None:
@@ -511,7 +532,7 @@ def test_the_widening_scan_reads_nested_bodies_and_ignores_empty_values() -> Non
 def test_settings_edit_refuses_credentials_and_the_switches_even_with_full_control(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    app = _app(tmp_path, monkeypatch, full=True, CHIMERA_DEFAULT_MODEL="before/model")
+    app = _app(tmp_path, monkeypatch, full=True, CHIMERA_SANDBOX_IMAGE="before:image")
 
     with TestClient(app) as client:
         for key in (
@@ -524,10 +545,13 @@ def test_settings_edit_refuses_credentials_and_the_switches_even_with_full_contr
             "CHIMERA_TELEGRAM_BOT_TOKEN",
         ):
             assert _call(client, app, "settings.edit", body={key: "x"}).status_code == 403, key
-        ok = _call(client, app, "settings.edit", body={"CHIMERA_DEFAULT_MODEL": "after/model"})
+        # A setting the bridge still writes. It was the default model until 2026-10-04, when the
+        # model choices became the owner's to write and the bridge's only to suggest
+        # (`tests/test_the_bridge_may_only_suggest_which_model_answers.py`).
+        ok = _call(client, app, "settings.edit", body={"CHIMERA_SANDBOX_IMAGE": "after:image"})
     assert ok.status_code == 200 and ok.json()["status"] == 200
     env = (tmp_path / ".env").read_text(encoding="utf-8")
-    assert "CHIMERA_DEFAULT_MODEL=after/model" in env
+    assert "CHIMERA_SANDBOX_IMAGE=after:image" in env
     assert "API_KEY" not in env and "BRIDGE" not in env
     get_settings.cache_clear()
 
@@ -681,6 +705,40 @@ def test_a_workspace_on_or_around_the_apps_data_is_refused_at_every_tier(
                 place
             )
     assert not (directory / "q1.answer.json").exists()
+
+
+def test_a_file_in_the_apps_data_is_refused_when_the_call_names_no_workspace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The check above read only a workspace the call NAMED. A call that names none runs in the
+    app's own folder, and this app's own folder (the test's `tmp_path`, like an app started from the
+    home folder) contains its data: a plain `files.write` of the answer file answered the question,
+    at the operate tier, with no workspace field for the check to see."""
+    app = _app(tmp_path, monkeypatch)  # operate: no switch that allows answering
+    home = tmp_path / "home"
+    directory = _ask(home)
+
+    with TestClient(app) as client:
+        absolute = _call(
+            client,
+            app,
+            "files.write",
+            body={"path": str(directory / "q1.answer.json"), "content": '{"approved": true}'},
+        )
+        relative = _call(
+            client,
+            app,
+            "files.write",
+            body={"path": "home/approvals/q1.answer.json", "content": '{"approved": true}'},
+        )
+        read = _call(client, app, "files.read", params={"path": "home/approvals/q1.ask.json"})
+        elsewhere = _call(
+            client, app, "files.write", body={"path": "notes.txt", "content": "still fine"}
+        )
+    assert (absolute.status_code, relative.status_code, read.status_code) == (403, 403, 403)
+    assert not (directory / "q1.answer.json").exists()
+    assert elsewhere.status_code == 200 and elsewhere.json()["status"] == 200
+    assert (tmp_path / "notes.txt").read_text(encoding="utf-8") == "still fine"
 
 
 def test_credential_files_are_unreadable_unwritable_and_unsearchable(

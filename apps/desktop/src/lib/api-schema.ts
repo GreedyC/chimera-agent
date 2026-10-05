@@ -160,6 +160,11 @@ export interface paths {
          *     `ok: False` is a stale click — the question timed out (silence refused it) or was answered
          *     from the CLI — and is a 200, because a verdict on a question that already resolved is
          *     exactly what a late button press sends and there is nothing to do about it.
+         *
+         *     A settings suggestion (`governance/setting_suggestions.py`) is resolved HERE, by this route
+         *     and no other, and never for a request the desktop bridge forwarded: the bridge suggested it,
+         *     and a door that could approve its own suggestion would make the suggestion a write with one
+         *     extra step. The bridge's mark is in the ASGI scope, which only this process can set.
          */
         post: operations["answer_approval_api_approvals__request_id__post"];
         delete?: never;
@@ -968,8 +973,9 @@ export interface paths {
          * Grant Code Workspace
          * @description Grant or revoke commands in one folder — the record every coding turn is held to.
          *
-         *     Its own route rather than a field on the PATCH above, so the bridge can hold granting to its
-         *     Full tier while pinning and hiding stay at operate. Behind the same guard as the rest of the
+         *     Its own route rather than a field on the PATCH above, so the bridge can be kept out of
+         *     granting altogether (`bridge_routes.OWNER_DECISION_ROUTES`, every tier) while pinning and
+         *     hiding stay at operate. Behind the same guard as the rest of the
          *     API: with no ``CHIMERA_SERVER_TOKEN`` set, a local process can reach this as it can reach
          *     every other route. What moving the grant here changes is that a REQUEST no longer carries
          *     it; recording one is a separate act, listed in the Folders card where it can be revoked.
@@ -4247,6 +4253,11 @@ export interface components {
             /** Fusion Synthesizer */
             fusion_synthesizer?: string | null;
             /**
+             * Hide Own Env
+             * @default false
+             */
+            hide_own_env: boolean;
+            /**
              * Max Attempts
              * @default 3
              */
@@ -4338,11 +4349,17 @@ export interface components {
         ApprovalAnswerIn: {
             /** Approved */
             approved: boolean;
+            /** Digest */
+            digest?: string | null;
         };
         /** ApprovalAnswerOut */
         ApprovalAnswerOut: {
+            /** Detail */
+            detail?: string | null;
             /** Ok */
             ok: boolean;
+            /** Outcome */
+            outcome?: string | null;
         };
         /**
          * ApprovalOut
@@ -4377,6 +4394,11 @@ export interface components {
             decision_id: string;
             /** Id */
             id: string;
+            /**
+             * Kind
+             * @default
+             */
+            kind: string;
             /** P */
             p?: number | null;
             /** Reason */
@@ -4391,6 +4413,7 @@ export interface components {
              * @default
              */
             session_id: string;
+            suggestion?: components["schemas"]["SettingsSuggestionOut"] | null;
             /**
              * Work
              * @default
@@ -5427,6 +5450,11 @@ export interface components {
             fusion_panel?: string[] | null;
             /** Fusion Synthesizer */
             fusion_synthesizer?: string | null;
+            /**
+             * Hide Own Env
+             * @default false
+             */
+            hide_own_env: boolean;
             /** Max Steps */
             max_steps?: number | null;
             /** Max Usd */
@@ -5868,6 +5896,11 @@ export interface components {
             fusion_panel?: string[] | null;
             /** Fusion Synthesizer */
             fusion_synthesizer?: string | null;
+            /**
+             * Hide Own Env
+             * @default false
+             */
+            hide_own_env: boolean;
             /** Max Steps */
             max_steps?: number | null;
             /** Max Usd */
@@ -7768,6 +7801,11 @@ export interface components {
             /** Fusion Synthesizer */
             fusion_synthesizer?: string | null;
             /**
+             * Hide Own Env
+             * @default false
+             */
+            hide_own_env: boolean;
+            /**
              * Max Attempts
              * @default 2
              */
@@ -8633,6 +8671,11 @@ export interface components {
          */
         PrivacyCfgOut: {
             /**
+             * Agent Reads Own Env
+             * @default true
+             */
+            agent_reads_own_env: boolean;
+            /**
              * Openrouter Data Collection
              * @default allow
              */
@@ -9169,6 +9212,11 @@ export interface components {
              */
             gen_tests: boolean;
             /**
+             * Hide Own Env
+             * @default false
+             */
+            hide_own_env: boolean;
+            /**
              * Max Attempts
              * @default 3
              */
@@ -9397,6 +9445,43 @@ export interface components {
             turns: number;
             /** Updated At */
             updated_at: number;
+        };
+        /**
+         * SettingChangeOut
+         * @description One setting a suggestion would change: what it holds now, and what was proposed.
+         */
+        SettingChangeOut: {
+            /** Current */
+            current: string;
+            /** Key */
+            key: string;
+            /** Proposed */
+            proposed: string;
+        };
+        /**
+         * SettingsSuggestionOut
+         * @description A settings change the desktop bridge suggested (`governance/setting_suggestions.py`).
+         *
+         *     Nothing has been written: the owner's yes on this card is what writes it, and only if every key
+         *     still holds ``current`` when the yes arrives.
+         */
+        SettingsSuggestionOut: {
+            /** Changes */
+            changes: components["schemas"]["SettingChangeOut"][];
+            /**
+             * Client Hint
+             * @default
+             */
+            client_hint: string;
+            /**
+             * Digest
+             * @default
+             */
+            digest: string;
+            /** Expires At */
+            expires_at: number;
+            /** Suggested By */
+            suggested_by: string;
         };
         /** ShareIn */
         ShareIn: {

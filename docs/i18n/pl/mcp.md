@@ -1,5 +1,5 @@
 ---
-source_sha256: 0b37c6a629b664aa240e9c6470ce524d074bd195b985dfb116d34c593901f615
+source_sha256: d22206c6ec0698203967231fc3c0f48518dfe6d9338bd8f49c273feafa6ae093
 ---
 
 # Podłączanie serwerów MCP
@@ -134,11 +134,27 @@ zatrzyma się na którymś, `desktop_send` od razu odpowiada, że czeka na ciebi
 w aplikacji; `desktop_job` mówi, jak się kończy.
 
 Drugi przełącznik, **Pełna kontrola**, dodaje `desktop_approve` (odpowiadanie na zatwierdzenia i
-kroki z bramką) oraz `desktop_settings` (edycja ustawień, tożsamości agenta i zapisanych agentów,
-uruchomienie polecenia w Runnerze). Gdy jest włączony, Claude może zatwierdzać działania bez
-ciebie — a strona lub wiadomość z prompt injection przeczytana przez agenta może go do tego
-skłonić. Te dwa narzędzia w ogóle nie są wymieniane, dopóki jest wyłączony, a aplikacja je
-odrzuca, jeśli mimo to zostaną wywołane.
+kroki z bramką) oraz `desktop_settings` (edycja ustawień i tożsamości agenta). Gdy jest włączony,
+Claude może zatwierdzać działania bez ciebie — a strona lub wiadomość z prompt injection
+przeczytana przez agenta może go do tego skłonić. Te dwa narzędzia w ogóle nie są wymieniane,
+dopóki jest wyłączony, a aplikacja je odrzuca, jeśli mimo to zostaną wywołane.
+
+Niektóre decyzje zostają twoje, niezależnie od przełącznika. Który model odpowiada — każde
+ustawienie modelu, łańcuch zapasowy, panel, sędzia i syntezator fuzji, tryb kosztów, kaskada i
+weryfikowane odpowiedzi — oraz czy aplikacja uruchamia zaplanowane zadania, Claude może tylko
+*zasugerować*: nic nie jest zapisywane, a aplikacja pokazuje ci kartę z obecną i proponowaną
+wartością każdego ustawienia, do zatwierdzenia lub odrzucenia na miejscu. Claude nie może
+odpowiedzieć na tę kartę żadną drogą; jeśli ustawienie zmieniło się przed twoim zatwierdzeniem,
+nic nie zostaje zastosowane. A nadanie folderowi prawa do poleceń, uruchomienie polecenia w
+Runnerze, start bota komunikatora i zapisanie agenta z jego uprawnieniami do narzędzi są przez
+most całkowicie odrzucane: robisz to w aplikacji.
+
+A uruchomienie, które rozpoczyna Claude, przy każdym przełączniku działa na modelach, które
+ustawiłeś, i nie sięga dalej niż ustawiona przez ciebie postawa. Prośba, która wskazuje model, plan
+ról, profil, panel fuzji albo innego agenta, jest odrzucana; tak samo szersza postawa — większy
+zasięg, luźniejsze zatwierdzanie, wykonanie na hoście lub polecenie `verify` tam, gdzie nie dałeś
+powłoki, albo automatyczne zatwierdzanie. Poproszenie, by uruchomienie robiło mniej (tylko odczyt
+albo zawsze pytaj), jest dozwolone.
 
 Czego nie pozwala żaden przełącznik: czytać ani zapisywać klucza API, tokenu czy webhooka.
 Edycje ustawień odrzucają nazwy poświadczeń, trasy niosące klucze lub linki udostępniania są

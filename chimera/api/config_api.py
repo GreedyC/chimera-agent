@@ -22,6 +22,7 @@ from typing import Any
 
 from chimera.api.key_vault import (
     SCREEN_STORABLE,
+    encode_env_value,
     move_to_file,
     move_to_vault,
     vault_snapshot,
@@ -245,6 +246,9 @@ _EDITABLE_SETTINGS = {
     # direction sends the next key typed here back into a plain-text file. Read at every save, so
     # no APPLIES_WHEN entry.
     "CHIMERA_KEY_VAULT",
+    # Whether the agent's read tools may read Chimera's own `.env` (owner's decision, 2026-10-04).
+    # On by default. Owner-only (`bridge_routes.PRIVACY_SETTINGS`): on is the direction that loosens.
+    "CHIMERA_AGENT_READS_OWN_ENV",
 }
 # The settings that turn a tool ON, which the Tools screen switches (`chimera/tools/conditional.py`).
 # Named there, once, and read here, so the screen can never offer a switch this endpoint refuses.
@@ -452,6 +456,7 @@ def pool_add(provider: str, key: str, *, env_path: Path | None = None) -> dict[s
         raise ValueError("key may not contain a comma — that is the separator between pool entries")
     if any(c in candidate for c in "\r\n"):
         raise ValueError("key may not contain a newline")
+    encode_env_value("key", candidate)
     if candidate.startswith("…") or set(candidate) <= {"*", "•", "·"}:
         # A client echoing back what it displayed. Cheap to check, and it fails loudly here instead
         # of quietly replacing a working pool with its own mask.
@@ -975,6 +980,7 @@ _VALUE_CHECKS: dict[str, Callable[[str], None]] = {
     "CHIMERA_OPENROUTER_DATA_COLLECTION": _check_data_collection,
     "CHIMERA_OPENROUTER_ZDR": _check_boolean("CHIMERA_OPENROUTER_ZDR"),
     "CHIMERA_KEY_VAULT": _check_boolean("CHIMERA_KEY_VAULT"),
+    "CHIMERA_AGENT_READS_OWN_ENV": _check_boolean("CHIMERA_AGENT_READS_OWN_ENV"),
     "CHIMERA_PULL_REQUESTS": _check_boolean("CHIMERA_PULL_REQUESTS"),
     "CHIMERA_BRANCH_PREFIX": _check_branch_prefix,
 }
@@ -998,6 +1004,128 @@ def _check_decision_choice(updates: dict[str, str]) -> None:
     check_choice(backend, model, list_models() if model.strip() else SystemOneListing(models=()))
 
 
+def check_updates(updates: dict[str, str], *, workspace: Path | None = None) -> None:
+    """Every refusal ``patch_config`` makes before it writes, without writing. ``ValueError`` names it.
+
+    Its own function so a write that happens LATER than the request — a settings suggestion the
+    owner approves a day after it was made (`governance/setting_suggestions.py`) — is held to the
+    same checks at both moments, by the same code.
+    """
+    rejected = [k for k in updates if not is_editable(k)]
+    if rejected:
+        raise ValueError(f"not editable: {', '.join(sorted(rejected))}")
+    # Allowlisting the KEY isn't enough: a line break in the VALUE would split into extra .env lines
+    # and inject arbitrary env vars (a provider key, the posture). Every character that breaks a line
+    # anywhere — not only \r and \n, see `key_vault.check_env_value` — and every control character;
+    # and what no spelling can make every .env reader read back as written (`encode_env_value`).
+    for key, value in updates.items():
+        encode_env_value(key, str(value))
+    for key, value in updates.items():
+        check = _VALUE_CHECKS.get(key)
+        if check is not None:
+            check(str(value))
+    if "CHIMERA_WORKTREE_DIR" in updates:
+        # The one check that needs to know which project the backend serves; `workspace` is the
+        # API's, and a caller without one (the CLI) gets the path check above only.
+        _check_worktree_dir(str(updates["CHIMERA_WORKTREE_DIR"]), workspace)
+    _check_decision_choice(updates)
+    # Last: a value Settings cannot parse from .env would stop the app at its next read.
+    check_parses(updates)
+
+
+def check_parses(updates: dict[str, str]) -> None:
+    """Refuse a value ``Settings`` could not read back from ``.env`` — ``CHIMERA_CASCADE=maybe``.
+
+    A value Settings cannot parse takes the whole app down at its next read: the review of
+    2026-10-04 had the bridge write ``CHIMERA_BROWSER_SITUATION='x"'`` (a 200), after which
+    ``get_settings()`` raised until someone hand-edited the file. So every save asks this
+    (:func:`check_updates` calls it), the owner's included.
+
+    Asked the way the app will ask it: the values are written, encoded as the save would encode
+    them, into a scratch ``.env`` that a Settings reading NOTHING else parses — so a list or JSON
+    field is decoded exactly as at startup, and the encoding itself is part of what is checked. Only
+    errors located AT one of the keys count: a cross-field rule evaluated against defaults would
+    refuse for reasons the real settings do not have.
+    """
+    import tempfile
+
+    from pydantic import ValidationError
+    from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
+
+    from chimera.api.key_vault import encode_env_value
+
+    fields = {
+        str(f.validation_alias or name).upper()
+        for name, f in Settings.model_fields.items()
+    }
+    from chimera.api.bridge_routes import is_secret_setting
+
+    # NEVER a credential. The probe is a file, and a key written to the temp folder for a moment is a
+    # key in clear text outside `.env` and the vault — left there for good if the process dies first
+    # (review of 2026-10-04: every key save did it, defeating CHIMERA_KEY_VAULT). Credentials are
+    # plain strings (one key) or comma lists (a pool) that cannot fail to parse, and their spelling
+    # is already checked by `encode_env_value`; nothing is lost by leaving them out.
+    probe = {
+        k: str(v)
+        for k, v in updates.items()
+        if k.upper() in fields and not is_secret_setting(k) and k not in SCREEN_STORABLE
+    }
+    if not probe:
+        return
+
+    class _OnlyThisFile(Settings):
+        @classmethod
+        def settings_customise_sources(
+            cls,
+            settings_cls: type[BaseSettings],
+            init_settings: PydanticBaseSettingsSource,
+            env_settings: PydanticBaseSettingsSource,
+            dotenv_settings: PydanticBaseSettingsSource,
+            file_secret_settings: PydanticBaseSettingsSource,
+        ) -> tuple[PydanticBaseSettingsSource, ...]:
+            return (dotenv_settings,)
+
+    with tempfile.TemporaryDirectory() as scratch:
+        env = Path(scratch) / "probe.env"
+        env.write_text(
+            "".join(f"{k}={encode_env_value(k, v)}\n" for k, v in probe.items()), encoding="utf-8"
+        )
+        try:
+            _OnlyThisFile(_env_file=env)  # type: ignore[call-arg]  # pydantic-settings' init kwarg
+        except ValidationError as exc:
+            wrong = sorted(
+                {
+                    str(err["loc"][0])
+                    for err in exc.errors()
+                    if err.get("loc") and str(err["loc"][0]).upper() in {k.upper() for k in probe}
+                }
+            )
+            if wrong:
+                raise ValueError(f"not a valid value for {', '.join(wrong)}") from None
+
+
+def setting_value(settings: Settings, key: str) -> str:
+    """The value ``key`` holds in ``settings``, written the way ``.env`` would hold it.
+
+    What a settings suggestion shows as "now" and compares at apply time, so both readings go
+    through one function: a list is comma-joined (the documented form), a boolean is
+    ``true``/``false``, an unset value is "". ``ValueError`` for a key no field reads.
+    """
+    for name, field in type(settings).model_fields.items():
+        if str(field.validation_alias or "").upper() == key.upper():
+            value = getattr(settings, name)
+            break
+    else:
+        raise ValueError(f"no setting reads {key}")
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (list, tuple)):
+        return ",".join(str(v) for v in value)
+    return str(value)
+
+
 def patch_config(
     updates: dict[str, str], *, env_path: Path | None = None, workspace: Path | None = None
 ) -> dict[str, Any]:
@@ -1012,23 +1140,7 @@ def patch_config(
     becomes a marker (``in_vault``); with no vault on the machine it goes to ``.env`` and is named
     in ``vault_fallback``. See `chimera/api/key_vault.py`.
     """
-    rejected = [k for k in updates if not is_editable(k)]
-    if rejected:
-        raise ValueError(f"not editable: {', '.join(sorted(rejected))}")
-    # Allowlisting the KEY isn't enough: a newline in the VALUE would split into extra .env lines and
-    # inject arbitrary env vars (e.g. a provider key, or disabling the sandbox). Reject control chars.
-    for key, value in updates.items():
-        if any(c in str(value) for c in "\r\n"):
-            raise ValueError(f"value for {key} may not contain a newline")
-    for key, value in updates.items():
-        check = _VALUE_CHECKS.get(key)
-        if check is not None:
-            check(str(value))
-    if "CHIMERA_WORKTREE_DIR" in updates:
-        # The one check that needs to know which project the backend serves; `workspace` is the
-        # API's, and a caller without one (the CLI) gets the path check above only.
-        _check_worktree_dir(str(updates["CHIMERA_WORKTREE_DIR"]), workspace)
-    _check_decision_choice(updates)
+    check_updates(updates, workspace=workspace)
     path = env_path or Path(".env")
     texts = {key: str(value) for key, value in updates.items()}
     vault_on = (

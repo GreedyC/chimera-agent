@@ -1,5 +1,5 @@
 ---
-source_sha256: 0b37c6a629b664aa240e9c6470ce524d074bd195b985dfb116d34c593901f615
+source_sha256: d22206c6ec0698203967231fc3c0f48518dfe6d9338bd8f49c273feafa6ae093
 ---
 
 # Conectando servidores MCP
@@ -136,11 +136,27 @@ turno se detiene en una, `desktop_send` vuelve enseguida diciendo que te está e
 turno sigue en la app; `desktop_job` informa de cómo termina.
 
 El segundo interruptor, **Control total**, añade `desktop_approve` (responder aprobaciones y
-pasos con compuerta) y `desktop_settings` (editar ajustes, la identidad del agente y los agentes
-guardados, ejecutar un comando en el Runner). Con él activado, Claude puede aprobar acciones sin
-ti — y una página o mensaje con inyección de prompt que lea el agente podría llevarlo a hacerlo.
-Esas dos herramientas no aparecen en la lista mientras está desactivado, y la app las rechaza si
-se llaman de todos modos.
+pasos con compuerta) y `desktop_settings` (editar ajustes y la identidad del agente). Con él
+activado, Claude puede aprobar acciones sin ti — y una página o mensaje con inyección de prompt
+que lea el agente podría llevarlo a hacerlo. Esas dos herramientas no aparecen en la lista
+mientras está desactivado, y la app las rechaza si se llaman de todos modos.
+
+Algunas decisiones siguen siendo tuyas, esté el interruptor que esté. Qué modelo responde — cada
+ajuste de modelo, la cadena de respaldo, el panel, el juez y el sintetizador de la fusión, el modo
+de coste, la cascada y las respuestas verificadas — y si la app ejecuta tareas programadas, Claude
+solo puede *sugerirlo*: no se escribe nada, y la app te muestra una tarjeta con el valor actual y
+el propuesto de cada ajuste, para aprobar o rechazar allí. Claude no puede responder esa tarjeta
+por ninguna vía; si el ajuste cambió antes de que apruebes, no se aplica nada. Y dar permiso de
+comandos a una carpeta, ejecutar un comando en el Runner, iniciar un bot de mensajería y guardar
+un agente con sus permisos de herramientas se rechazan del todo a través del puente: los haces tú
+en la app.
+
+Y una ejecución que Claude inicia, con cualquiera de los interruptores, usa los modelos que
+configuraste y no llega más lejos que la postura que configuraste. Se rechaza una petición que nombre
+un modelo, un plan de roles, un perfil, un panel de fusión u otro agente; y también una postura más
+amplia — más alcance, aprobaciones más laxas, ejecución en el host o un comando `verify` donde no
+concediste shell, o la aprobación automática. Pedir que una ejecución haga menos (solo lectura, o
+aprobar siempre) está permitido.
 
 Lo que ningún interruptor permite: leer o escribir una clave de API, un token o un webhook. Las
 ediciones de ajustes rechazan nombres de credenciales, las rutas que llevan claves o enlaces

@@ -8,12 +8,17 @@ it cannot be reached through the bridge, however the request is phrased.
 Two tiers, because the owner asked for two switches:
 
 * ``operate`` — what the screens do: conversations, runs, boards, memory, files, git. Runs started
-  this way carry the owner's configured posture, and a body that tries to widen it is refused.
-* ``full`` — what the screens reserve for the person: answering approvals, editing settings,
-  running a command outside the agent's governance. Listed and served only when the second switch
-  is on.
+  this way carry the owner's configured posture and models, and a body that tries to widen the one
+  or choose the other is refused — at this tier and at the next (:func:`wider_than`,
+  :func:`model_choices_in`).
+* ``full`` — what the screens reserve for the person: answering approvals, editing the settings
+  that are not the owner's, replacing the agent's identity. Listed and served only when the second
+  switch is on.
 
-And one exclusion that no switch lifts: credentials. The routes that take or return a key, a token
+Two exclusions that no switch lifts. The routes that WIDEN what the agent may reach — granting a
+folder's commands, running a command outside governance, starting a messaging bot, saving an agent
+with its tool grants — are the owner's decision in the app (:data:`OWNER_DECISION_ROUTES`); the
+bridge answers them with that sentence at every tier. And credentials. The routes that take or return a key, a token
 or a share link are simply absent (``/api/config/pool``, ``/api/config/test``, ``POST /api/mcp``,
 sharing), settings edits refuse credential names (:func:`is_secret_setting`), and every response
 passes through :func:`scrub` before it leaves.
@@ -63,10 +68,8 @@ ROUTES: dict[str, BridgeRoute] = {
     "projects.add": _r("POST", "/api/code/workspaces", "Register a project. body: {path, alias?}"),
     "projects.remove": _r("DELETE", "/api/code/workspaces", "Forget a project. params: {path}"),
     # Pinning and hiding only ever narrow what the agent may do (hiding revokes a grant), so they
-    # are operate. GRANTING commands in a folder is the posture itself, so it is Full, and lives in
-    # the `settings` area below rather than here: the MCP server makes one tool per area and holds
-    # a whole area to one tier, so a Full action in `projects` would take the list away from
-    # operate.
+    # are operate. GRANTING commands in a folder is the posture itself: it is the owner's, in the
+    # app, and not in this table at all (`OWNER_DECISION_ROUTES`).
     "projects.flag": _r(
         "PATCH",
         "/api/code/workspaces",
@@ -131,7 +134,7 @@ ROUTES: dict[str, BridgeRoute] = {
     "runs.start": _r(
         "POST",
         "/api/runs",
-        "Start a run. body: {task, workspace?, model?, max_attempts?}",
+        "Start a run on the owner's models and posture. body: {task, workspace?, max_attempts?}",
         stream=True,
         seams=True,
     ),
@@ -380,9 +383,13 @@ ROUTES: dict[str, BridgeRoute] = {
     "settings.edit": _r(
         "PATCH",
         "/api/config",
-        "Edit settings: body {ENV_NAME: value}. Credentials are refused, and so are the owner's "
-        "settings: posture, guards, approvals, where the agent may reach, who may reach it, and where "
-        "prompts may go.",
+        "Edit settings: body {ENV_NAME: value}. Which model answers (every *_MODEL, the fallback "
+        "chain, the fusion panel, judge and synthesizer, the cost mode, the cascade, verified "
+        "answers) and whether the app runs scheduled jobs are only SUGGESTED: nothing is written, "
+        "the owner gets a card in the app with the current and the proposed value and decides "
+        "there (send them alone, not mixed with other settings). Credentials are refused, and so "
+        "are the owner's settings: posture, guards, approvals, where the agent may reach, who may "
+        "reach it, and where prompts may go.",
         tier="full",
     ),
     "settings.instructions": _r(
@@ -391,46 +398,158 @@ ROUTES: dict[str, BridgeRoute] = {
         "Replace the agent's identity. body: {name, language, instructions}",
         tier="full",
     ),
-    "settings.agent_upsert": _r(
-        "PUT",
-        "/api/agents/registry",
-        "Save an agent definition (with its tool grants).",
-        tier="full",
-    ),
-    "settings.folder_grant": _r(
-        "PUT",
-        "/api/code/workspaces/grant",
-        "Let the agent run commands in one folder, or stop it. body: {path, shell_granted}. The "
-        "same record the Code screen's switch and the Folders card write.",
-        tier="full",
-    ),
     "settings.mcp_remove": _r(
         "DELETE", "/api/mcp/{name}", "Remove an MCP server. params: {name}", tier="full"
     ),
-    "settings.messaging_start": _r(
+    "settings.exec_cancel": _r(
         "POST",
-        "/api/messaging/{platform}/start",
-        "Start an adapter. params: {platform}",
+        "/api/fs/exec/cancel",
+        "Stop a command the owner started in the Runner. body: {id}",
         tier="full",
     ),
-    "settings.exec": _r(
-        "POST",
-        "/api/fs/exec",
-        "Run a shell command in the Runner, OUTSIDE the agent's governance. "
-        "body: {command, workspace?, cwd?, timeout?}",
-        tier="full",
-        stream=True,
-    ),
-    "settings.exec_cancel": _r("POST", "/api/fs/exec/cancel", "Stop it. body: {id}", tier="full"),
 }
 
-#: Body fields that widen what a run may do. In the operate tier a body carrying any of them with a
-#: truthy value is refused: ``verify`` and ``provider_command`` are shell commands, ``provider`` hands
-#: the workspace to another agent with its own tools, ``auto_approve`` answers a project's gates
-#: without the person, and ``posture``/``allow_host_exec`` are the posture itself.
+#: The app routes that WIDEN what the agent may reach, and the sentence the bridge answers with —
+#: at every tier, full control included. They were Full routes until 2026-10-04, when the owner
+#: decided otherwise: a folder's command grant and a command run outside governance are the posture
+#: itself; a messaging bot started is a new way INTO the agent, for whoever its allowlist admits;
+#: and a saved agent carries its own tool grants, so saving one is granting tools. Each is one call
+#: for a client that read one poisoned page, and "the owner can turn full control off afterwards"
+#: comes after the reach was already handed out.
+#:
+#: Out of :data:`ROUTES`, so the MCP server never lists them and nothing can forward to their path;
+#: named here, so a client that asks gets the reason instead of "no such route". The owner's own
+#: screens call the same app routes as before — only the bridge's door is shut.
+OWNER_DECISION_ROUTES: dict[str, str] = {
+    "settings.folder_grant": (
+        "settings.folder_grant is the owner's decision: whether the agent may run commands in a "
+        "folder is granted or revoked by the owner in the app (Settings > Folders, or the Code "
+        "screen's switch), never through the bridge."
+    ),
+    "settings.exec": (
+        "settings.exec is the owner's decision: a command outside the agent's governance is run by "
+        "the owner in the app's Runner, never through the bridge."
+    ),
+    "settings.messaging_start": (
+        "settings.messaging_start is the owner's decision: a messaging bot is a new way to reach "
+        "the agent, and the owner starts it in the app (Settings > Messaging), never through the "
+        "bridge."
+    ),
+    "settings.agent_upsert": (
+        "settings.agent_upsert is the owner's decision: a saved agent carries its own tool grants, "
+        "so the owner saves it in the app (the Agents screen), never through the bridge."
+    ),
+}
+
+#: Body fields that widen what a run may do: ``verify`` and ``provider_command`` are shell commands,
+#: ``provider`` hands the workspace to another agent with its own tools, ``auto_approve`` answers a
+#: project's gates without the person, and ``posture``/``allow_host_exec`` are the posture itself.
+#: Until 2026-10-04 they were refused below Full control and accepted at it. Since then no tier
+#: widens: :func:`model_choices_in` refuses ``provider``/``provider_command`` everywhere, and
+#: :func:`wider_than` accepts the rest only when they are no wider than the owner's posture.
 FULL_ONLY_BODY_KEYS = frozenset(
     {"posture", "allow_host_exec", "provider", "provider_command", "verify", "auto_approve"}
 )
+
+#: Body fields that choose which model (or which outside agent) does the work. The owner's decision
+#: of 2026-10-04: a run, turn, chat or batch the bridge starts uses the CONFIGURED models, at every
+#: tier — the model choices are the owner's to write (`SUGGESTABLE_SETTINGS`), and a per-run field
+#: that picked one would be the same choice made one run at a time. The audit of every body the
+#: bridge forwards (CodeTurnRequest, RunRequest, AgentsRequest, CrewRunIn, LifecycleRunIn,
+#: HierarchyRunIn, KanbanRunIn, ChatRequest, and the CodeSeams they share) found these:
+MODEL_CHOICE_KEYS = frozenset(
+    {
+        "model",  # the turn's, run's, batch's or board's model
+        "roles",  # the role plan: explore/plan/edit/review models, fused plan and review
+        "profile",  # the economy/balanced/max preset, which picks the role models
+        "fuse",  # whether a panel of models answers
+        "fusion_panel",
+        "fusion_judge",
+        "fusion_synthesizer",
+        "cascade",  # weak -> mid -> fusion routing for the run
+        "verifier_model",  # the hierarchy's verifier
+        "provider",  # another agent (an outside CLI) instead of Chimera's models
+        "provider_command",
+        "retry_of",  # "redone on another model by the owner's choice" - the owner's sentence
+    }
+)
+
+#: Routes whose body only DESCRIBES (what posture would mean, which models a profile would give):
+#: they start nothing, so naming a model or a posture there chooses nothing. And the settings
+#: edit, whose keys are setting names and is policed on its own.
+DESCRIBE_ONLY_ROUTES = frozenset({"app.posture", "app.roles", "settings.edit"})
+
+_REACH_ORDER = {"read_only": 0, "workspace": 1, "workspace_shell": 2}
+_APPROVAL_STRICTNESS = {"never": 0, "suspicious": 1, "always": 2}
+#: What a posture object means for a field it leaves out (`chimera/api/posture.py`).
+_POSTURE_DEFAULTS = {"reach": "workspace", "approval": "suspicious"}
+
+
+def _truthy(value: Any) -> bool:
+    return value not in (None, False, "", [], {})
+
+
+def model_choices_in(body: Any) -> list[str]:
+    """Every model-choosing field carried with a value, anywhere in ``body``, sorted."""
+    found: set[str] = set()
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key in MODEL_CHOICE_KEYS and _truthy(value):
+                    found.add(str(key))
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(body)
+    return sorted(found)
+
+
+def wider_than(body: Any, *, reach: str, approval: str) -> list[str]:
+    """Every field of ``body`` that would make a run reach further than the owner's posture.
+
+    Equal or narrower passes: a client may ask for ``read_only``, or for approval ``always``, where
+    the owner allows more. Wider is refused — a reach past the owner's, an approval looser than the
+    owner's, host execution or a ``verify`` shell command where the owner's reach has no shell, and
+    ``auto_approve`` always (it answers gates without the person), and ``deliver_to`` always (the
+    webhook a scheduled job posts its answers to). A posture value this module does not know is
+    wider by definition.
+    """
+    found: set[str] = set()
+    shell = reach == "workspace_shell"
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key == "posture" and _truthy(value):
+                    if not isinstance(value, dict):
+                        found.add("posture")
+                    else:
+                        r = str(value.get("reach") or _POSTURE_DEFAULTS["reach"])
+                        a = str(value.get("approval") or _POSTURE_DEFAULTS["approval"])
+                        if _REACH_ORDER.get(r, 99) > _REACH_ORDER.get(reach, -1):
+                            found.add("posture.reach")
+                        if _APPROVAL_STRICTNESS.get(a, -1) < _APPROVAL_STRICTNESS.get(approval, 99):
+                            found.add("posture.approval")
+                elif key in {"allow_host_exec", "verify"} and _truthy(value) and not shell:
+                    found.add(str(key))
+                elif key == "auto_approve" and _truthy(value):
+                    found.add("auto_approve")
+                elif key == "deliver_to" and _truthy(value):
+                    # A scheduled job's answer posted to a webhook the CLIENT names: an outbound
+                    # channel for whatever the job reads, firing unattended. Where the owner's data
+                    # goes is the owner's (the approval webhook is owner-only for the same reason);
+                    # a job created through the bridge reports in the app (audit of 2026-10-04).
+                    found.add("deliver_to")
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(body)
+    return sorted(found)
 
 #: The two switches themselves. Never editable through the bridge, full control or not: a client
 #: that could write them could widen its own access.
@@ -521,15 +640,20 @@ PRIVACY_SETTINGS = frozenset(
         # from, but a client that could switch it off would send the next key the owner types into
         # a plain-text file. Its name matches no credential pattern, so it has to be listed.
         "CHIMERA_KEY_VAULT",
+        # Whether the agent's read tools may read Chimera's own `.env` and so put the provider keys
+        # in front of the model (owner's decision, 2026-10-04). Off narrows; a client that could
+        # write it could turn it back on.
+        "CHIMERA_AGENT_READS_OWN_ENV",
     }
 )
 
-#: Settings only the owner writes, full control or not. The rule is the project's: whatever WIDENS
-#: what the agent can reach, loosens a guard or a privacy fence, or changes who answers an approval
-#: is the owner's decision — a client that could write one could widen its own access, or undo a
-#: narrowing the owner chose. Full control is for operating the app, not for setting its limits.
-#: Every other editable setting (models, caches, memory, scheduling, display, the tool switches
-#: that stay inside the reach above) stays writable: `tests/
+#: Settings only the owner writes, full control or not, refused flat (403). The rule is the
+#: project's: whatever WIDENS what the agent can reach, loosens a guard or a privacy fence, or
+#: changes who answers an approval is the owner's decision — a client that could write one could
+#: widen its own access, or undo a narrowing the owner chose. Full control is for operating the
+#: app, not for setting its limits. The settings the bridge may SUGGEST are a separate set
+#: (:data:`SUGGESTABLE_SETTINGS`); every other editable setting (caches, memory, display, the tool
+#: switches that stay inside the reach above) stays writable: `tests/
 #: test_the_bridge_may_not_write_the_settings_that_set_its_limits.py` holds the whole allowlist
 #: classified, so a new setting cannot arrive unclassified.
 OWNER_ONLY_SETTINGS = (
@@ -540,6 +664,55 @@ OWNER_ONLY_SETTINGS = (
     | MESSAGING_SETTINGS
     | PRIVACY_SETTINGS
 )
+
+#: Which model or route a prompt goes to, and whether the app runs scheduled jobs: the owner's to
+#: WRITE (decided 2026-10-04), but the bridge may SUGGEST a change. A `settings.edit` naming only
+#: these writes nothing; it leaves a card for the owner (`chimera/governance/setting_suggestions.py`)
+#: with the key, the value now and the value proposed, and the owner approves or refuses it in the
+#: app. Why not a flat refusal like the set above: none of these widens reach — the model choices
+#: stay among the providers the owner holds keys for, behind the privacy fences — but each one
+#: decides what is spent and which vendor reads the owner's prompts, and the unattended scheduler
+#: decides what runs while nobody watches. A client is often right about which model suits a task;
+#: it is the owner who pays for it and reads what it costs.
+#:
+#: The audit of the editable allowlist that produced this list, key by key: every ``*_MODEL`` the
+#: allowlist holds (default, weak, mid, orchestrator, embed, complete, voice, voice work — the embed
+#: model reads every fact remembered, the completion model reads the code being typed), the
+#: fallback chain, the three fusion roles, ``CHIMERA_COST_MODE`` (fills every unpinned rung of the
+#: model ladder), ``CHIMERA_CASCADE`` (routes a turn weak -> mid -> fusion) and
+#: ``CHIMERA_VERIFIED_ANSWERS`` (sends a grounded answer to the decision backend and, when it is
+#: not supported, has the stronger model answer instead). Left out on purpose:
+#: ``CHIMERA_DECISION_MODEL`` is already refused flat (it is the governance band's instrument,
+#: :data:`GUARD_SETTINGS`); ``CHIMERA_SEMANTIC_MEMORY`` and ``CHIMERA_DECIDE_TOOL`` switch a
+#: feature on whose model is one of the keys here or one of the owner's, so the choice of model
+#: stays guarded through that key; ``CHIMERA_RESEARCH_AGENT`` runs on the models already chosen.
+SUGGESTABLE_SETTINGS = frozenset(
+    {
+        "CHIMERA_DEFAULT_MODEL",
+        "CHIMERA_WEAK_MODEL",
+        "CHIMERA_MID_MODEL",
+        "CHIMERA_ORCHESTRATOR_MODEL",
+        "CHIMERA_FALLBACK_MODELS",
+        "CHIMERA_EMBED_MODEL",
+        "CHIMERA_COMPLETE_MODEL",
+        "CHIMERA_VOICE_MODEL",
+        "CHIMERA_VOICE_WORK_MODEL",
+        "CHIMERA_FUSION_PANEL",
+        "CHIMERA_FUSION_JUDGE",
+        "CHIMERA_FUSION_SYNTHESIZER",
+        "CHIMERA_COST_MODE",
+        "CHIMERA_CASCADE",
+        "CHIMERA_VERIFIED_ANSWERS",
+        # Whether the app runs the cron daemon at all — the jobs that run unattended.
+        "CHIMERA_APP_CRON",
+    }
+)
+
+#: The ASGI scope key the bridge sets on every request it forwards in-process (`asgi_call`). Set in
+#: the SCOPE, not in a header: a header is whatever a client sends, and a scope key exists only when
+#: this process built the request itself — no request from a socket can carry it. A handler that
+#: must tell the owner's screen from the bridge (answering a settings suggestion) reads it there.
+VIA_BRIDGE_SCOPE_KEY = "chimera.via_desktop_bridge"
 
 _SECRET_NAME = re.compile(
     r"(API_?KEY|_KEYS$|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|PRIVATE|WEBHOOK)", re.IGNORECASE
@@ -564,9 +737,21 @@ _SECRET_FILE = re.compile(
 
 
 def is_secret_file(path: str) -> bool:
-    """Whether any component of ``path`` names a credential file (``.env``, a private key, ...)."""
+    """Whether any component of ``path`` names a credential file (``.env``, a private key, ...).
+
+    Each component as Windows OPENS it (:func:`chimera.core.own_files.normal_name`): ``.env ``,
+    ``.env.`` and ``.env::$DATA`` are the file ``.env``, and matching the raw text let all three read
+    and write it through the bridge at the operate tier (review of 2026-10-04). An 8.3 short name
+    (``ENV~1``) has no text to match; the bridge also checks the name the path RESOLVES to.
+    """
+    from chimera.core.own_files import normal_name
+
     parts = re.split(r"[\\/]+", str(path))
-    return any(_SECRET_FILE.match(part) for part in parts if part)
+    return any(
+        _SECRET_FILE.match(part) or _SECRET_FILE.match(normal_name(part))
+        for part in parts
+        if part
+    )
 
 
 def is_secret_setting(name: str) -> bool:

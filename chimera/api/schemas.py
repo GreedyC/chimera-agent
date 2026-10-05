@@ -958,6 +958,10 @@ class PrivacyCfgOut(BaseModel):
     openrouter_data_collection: str = "allow"
     """``allow`` (the default: nothing sent) or ``deny`` (only routes that keep no prompts)."""
     openrouter_zdr: bool = False
+    agent_reads_own_env: bool = True
+    """Whether the agent's read tools may read Chimera's own ``.env`` (``CHIMERA_AGENT_READS_OWN_ENV``,
+    on by default). On, the provider keys saved there can reach the model; off, that one file is
+    refused or hidden by every read tool."""
     routes: list[PromptRouteOut] = Field(default_factory=list)
     telemetry: bool = False
     """Whether anything is exported: OpenTelemetry asked for (``CHIMERA_OTEL`` or
@@ -2272,8 +2276,37 @@ class HitlOut(BaseModel):
     # accept/edit/ignore conclude on the reviewed output without re-running the worker.
 
 
+class SettingChangeOut(BaseModel):
+    """One setting a suggestion would change: what it holds now, and what was proposed."""
+
+    key: str
+    current: str
+    proposed: str
+
+
+class SettingsSuggestionOut(BaseModel):
+    """A settings change the desktop bridge suggested (`governance/setting_suggestions.py`).
+
+    Nothing has been written: the owner's yes on this card is what writes it, and only if every key
+    still holds ``current`` when the yes arrives."""
+
+    changes: list[SettingChangeOut]
+    suggested_by: str  # the surface — `desktop_bridge`
+    client_hint: str = ""  # which bridge token: its last four characters, as Settings shows it
+    expires_at: float  # server epoch seconds; past it the card is retired as a timeout
+    digest: str = ""
+    """A hash of everything above. The screen sends it back with a yes (``ApprovalAnswerIn.digest``):
+    a card whose file changed after it was shown is not applied."""
+
+
 class ApprovalOut(BaseModel):
     """One question waiting for a person, written by `pending.ask_durably` from an attended surface."""
+
+    kind: str = ""
+    """Empty for a question a tool call is parked on; ``settings_suggestion`` for a settings change
+    waiting for the owner, whose ``suggestion`` says exactly what would change."""
+
+    suggestion: SettingsSuggestionOut | None = None
 
     #: Which turn asked, which conversation it belongs to, and in which folder: what a card needs to
     #: say where it comes from, with several conversations working at once. Empty when unknown (a
@@ -2319,10 +2352,22 @@ class ApprovalOut(BaseModel):
 
 class ApprovalAnswerIn(BaseModel):
     approved: bool
+    digest: str | None = None
+    """For a settings suggestion: the ``suggestion.digest`` the card was drawn from. A yes without
+    it, or with one the card no longer matches, is ``changed`` and writes nothing."""
 
 
 class ApprovalAnswerOut(BaseModel):
     ok: bool  # False when no question with that id is waiting — a stale click, 200, not a 404
+    outcome: str | None = None
+    """For a settings suggestion only: ``applied`` | ``refused`` | ``stale`` (a key no longer holds
+    the value the card showed) | ``changed`` (the card's file changed after it was shown) |
+    ``invalid`` (the value fails a check now) | ``expired``. Only
+    ``applied`` wrote anything. Absent for every other question, whose answer stays ``{ok}``."""
+
+    detail: str | None = None
+    """The keys applied, the keys that moved, or the check that refused — for the sentence the
+    screen shows. Never a value."""
 
 
 class DecisionLabelIn(BaseModel):

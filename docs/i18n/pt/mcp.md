@@ -1,5 +1,5 @@
 ---
-source_sha256: 0b37c6a629b664aa240e9c6470ce524d074bd195b985dfb116d34c593901f615
+source_sha256: d22206c6ec0698203967231fc3c0f48518dfe6d9338bd8f49c273feafa6ae093
 ---
 
 # Conectando servidores MCP
@@ -135,11 +135,26 @@ para em uma, `desktop_send` volta na hora dizendo que está esperando por você,
 no app; `desktop_job` informa como ele termina.
 
 A segunda chave, **Controle total**, acrescenta `desktop_approve` (responder aprovações e etapas
-com portão) e `desktop_settings` (editar configurações, a identidade do agente e agentes salvos,
-rodar um comando no Runner). Com ela ligada, o Claude pode aprovar ações sem você — e uma
-página ou mensagem com injeção de prompt lida pelo agente pode levá-lo a isso. Essas duas tools
-nem aparecem na lista enquanto ela está desligada, e o app as recusa se forem chamadas mesmo
-assim.
+com portão) e `desktop_settings` (editar configurações e a identidade do agente). Com ela ligada,
+o Claude pode aprovar ações sem você — e uma página ou mensagem com injeção de prompt lida pelo
+agente pode levá-lo a isso. Essas duas tools nem aparecem na lista enquanto ela está desligada, e
+o app as recusa se forem chamadas mesmo assim.
+
+Algumas decisões continuam suas, qualquer que seja a chave ligada. Qual modelo responde — cada
+configuração de modelo, a cadeia de fallback, o painel, o juiz e o sintetizador da fusão, o modo
+de custo, a cascata e as respostas verificadas — e se o app roda tarefas agendadas, o Claude só
+pode *sugerir*: nada é gravado, e o app mostra um cartão com o valor atual e o proposto de cada
+configuração, para você aprovar ou recusar ali. O Claude não consegue responder esse cartão por
+nenhum caminho; se a configuração mudou antes da sua aprovação, nada é aplicado. E liberar
+comandos numa pasta, rodar um comando no Runner, iniciar um bot de mensagens e salvar um agente
+com as permissões de ferramentas dele são recusados de vez pela ponte: isso você faz no app.
+
+E uma execução que o Claude inicia, com qualquer uma das chaves, roda nos modelos que você
+configurou e não vai além da postura que você configurou. Um pedido que indique um modelo, um plano
+de papéis, um perfil, um painel de fusão ou outro agente é recusado; também uma postura mais ampla —
+mais alcance, aprovações mais frouxas, execução no host ou um comando `verify` onde você não liberou
+shell, ou aprovação automática. Pedir que uma execução faça menos (só leitura, ou aprovar sempre) é
+permitido.
 
 O que nenhuma das chaves permite: ler ou gravar uma chave de API, token ou webhook. Edições de
 configuração recusam nomes de credenciais, as rotas que carregam chaves ou links de
