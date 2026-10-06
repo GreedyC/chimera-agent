@@ -44,6 +44,54 @@ def test_fusion_runs_full_pipeline() -> None:
     assert trace.final == "FINAL"
 
 
+class RecordingBackend:
+    """Panel members answer from a fixed table; the judge's prompt is recorded."""
+
+    def __init__(self, answers: dict[str, str]) -> None:
+        self.answers = answers
+        self.judge_prompt = ""
+
+    def complete(self, messages: list[Any], *, model: str | None = None, **kwargs: Any) -> CompletionResult:
+        if model == "judge":
+            self.judge_prompt = str(messages[-1].content)
+            return CompletionResult(content="analysis", model="judge")
+        if model == "synth":
+            return CompletionResult(content="FINAL", model="synth")
+        return CompletionResult(content=self.answers[str(model)], model=str(model))
+
+
+THREE = FusionConfig(panel=["m1", "m2", "m3"], judge="judge", synthesizer="synth")
+
+
+def test_duplicate_answers_are_all_shown_by_default() -> None:
+    """Two members saying the same thing is agreement, and agreement is evidence for the judge.
+    S30-52 did not show collapsing leaves real outputs unchanged, so it is off unless asked for."""
+    backend = RecordingBackend({"m1": "ANSWER: 7", "m2": "ANSWER: 7", "m3": "ANSWER: 9"})
+    FusionEngine(backend, THREE).run([{"role": "user", "content": "hi"}])
+    assert backend.judge_prompt.count("ANSWER: 7") == 2
+
+
+def test_opt_in_collapse_shows_one_copy_of_identical_answers() -> None:
+    config = FusionConfig(
+        panel=["m1", "m2", "m3"], judge="judge", synthesizer="synth", collapse_duplicate_answers=True
+    )
+    backend = RecordingBackend({"m1": "ANSWER: 7", "m2": "ANSWER: 7", "m3": "ANSWER: 9"})
+    FusionEngine(backend, config).run([{"role": "user", "content": "hi"}])
+    assert backend.judge_prompt.count("ANSWER: 7") == 1
+    assert backend.judge_prompt.count("ANSWER: 9") == 1
+
+
+def test_collapse_never_drops_an_answer_that_is_only_a_prefix_of_another() -> None:
+    """The first version also hid any answer that was a prefix of a longer one — and "4" is a
+    prefix of "42". That silently removed a dissenting answer from the judge's view."""
+    config = FusionConfig(
+        panel=["m1", "m2"], judge="judge", synthesizer="synth", collapse_duplicate_answers=True
+    )
+    backend = RecordingBackend({"m1": "ANSWER: 4", "m2": "ANSWER: 42"})
+    FusionEngine(backend, config).run([{"role": "user", "content": "hi"}])
+    assert backend.judge_prompt.count("ANSWER: 4") == 2  # once alone, once inside "ANSWER: 42"
+
+
 def test_fusion_complete_returns_final() -> None:
     result = FusionEngine(FakeBackend(), CONFIG).complete([{"role": "user", "content": "hi"}])
     assert result.content == "FINAL"
