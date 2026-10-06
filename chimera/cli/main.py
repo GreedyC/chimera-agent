@@ -5336,6 +5336,7 @@ def solve(
                 else TaintLedger(
                     authority=settings.taint_authority,
                     egress_allow=settings.egress_allow.split(","),
+                    rope_lite=settings.taint_rope_lite,
                 )
             )
             # The user's own words, so a fetch of a page or a file the task names is recorded as
@@ -5348,6 +5349,7 @@ def solve(
 
             registry = ledger_registry(
                 registry, ledger, audit=allow_audit, narrow_on_taint=True, approve=approve,
+                rope_lite=settings.taint_rope_lite,
                 # A send to an address nobody mentioned asks only a person at this terminal (study
                 # 24, M2); a solve under cron or a pipe sends and records, rather than waiting on a
                 # durable question the owner never asked for.
@@ -5799,6 +5801,7 @@ def solve_batch(
             ledger = TaintLedger(
                 authority=settings.taint_authority,
                 egress_allow=settings.egress_allow.split(","),
+                rope_lite=settings.taint_rope_lite,
             )
             ledger.set_instruction(one_task, workspace=ws)
             ledgers[name] = ledger
@@ -5969,6 +5972,7 @@ def crew_isolated(
                 shared=shared_taint,
                 authority=settings.taint_authority,
                 egress_allow=settings.egress_allow.split(","),
+                rope_lite=settings.taint_rope_lite,
             )
             # Both halves are the person's own words: the shared task and this worker's brief.
             ledger.set_instruction(f"{task}\n{prompt}", workspace=ws)
