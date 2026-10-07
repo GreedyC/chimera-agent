@@ -252,6 +252,10 @@ class FusionConfig:
     # every other task, and any logic task without a majority, still uses judge -> synthesizer.
     task_typed: bool = False
     vote_threshold: float = 0.85
+    # On the disagreement path, optionally restore candidate texts after the judge analysis.
+    # Off by default to preserve the established prompt byte-for-byte until a paired bench supports
+    # changing it.
+    candidates_visible: bool = False
     # Blind presentation (arXiv 2609.08016): the judge and the agreed-path synthesiser see the panel
     # as ``Answer A / B / C`` in a shuffled order, never as ``Answer 1 (model <vendor slug>)`` in
     # arrival order — the vendor name and the position are not evidence about an answer, and a judge
@@ -384,6 +388,23 @@ def _without_tools(messages: list[MessageLike]) -> list[MessageLike]:
             data["content"] = f"{_content_text(data.get('content', ''))}\n\n{_NO_TOOLS_NOTE}"
             return [data, *messages[1:]]
     return [{"role": "system", "content": _NO_TOOLS_NOTE}, *messages]
+
+
+def _render_panel(panel: list[PanelResponse], shown: list[int] | None) -> str:
+    """The panel as text: blind ``Answer A / B`` in ``shown`` order, or named in panel order.
+
+    One renderer for the judge and the candidate-visible synthesiser, so both read the same labels
+    and an analysis that cites ``Answer B`` points at the same text in either prompt.
+    """
+    if shown is None:
+        named = [i for i, r in enumerate(panel) if r.error is None]
+        return "\n\n".join(
+            f"--- Answer {p} (model {panel[i].model}) ---\n{panel[i].content}"
+            for p, i in enumerate(named, 1)
+        )
+    return "\n\n".join(
+        f"--- Answer {chr(ord('A') + p)} ---\n{panel[i].content}" for p, i in enumerate(shown)
+    )
 
 
 def _conversation_text(messages: list[MessageLike]) -> str:
@@ -563,7 +584,7 @@ class FusionEngine:
             _log.debug("fusion task-typed: logic task with panel majority -> vote (skipped judge+synth)")
             return "", winner, "vote", None, None, None
         judge, shown = self._run_judge(messages, panel)
-        synth = self._run_synth(messages, judge.content)
+        synth = self._run_synth(messages, judge.content, panel, shown)
         return judge.content, synth.content, "synth", judge, synth, shown
 
     def _vote(self, messages: list[MessageLike], panel: list[PanelResponse]) -> str | None:
@@ -607,7 +628,7 @@ class FusionEngine:
         if not judge.content.strip():
             return self._fallback(panel, "judge", _empty_reason(judge), judge=judge, shown=shown)
         try:
-            synth = self._run_synth(messages, judge.content)
+            synth = self._run_synth(messages, judge.content, panel, shown)
         except Exception as exc:  # noqa: BLE001 - same rule for the synthesiser
             if _must_propagate(exc):
                 raise
@@ -855,16 +876,9 @@ class FusionEngine:
                     unique.append(i)
             shown = unique
         if not self.config.blind_panel:
-            text = "\n\n".join(
-                f"--- Answer {p} (model {panel[i].model}) ---\n{panel[i].content}"
-                for p, i in enumerate(shown, 1)
-            )
-            return text, None
+            return _render_panel(panel, None), None
         random.shuffle(shown)
-        text = "\n\n".join(
-            f"--- Answer {chr(ord('A') + p)} ---\n{panel[i].content}" for p, i in enumerate(shown)
-        )
-        return text, shown
+        return _render_panel(panel, shown), shown
 
     def _run_judge(
         self, messages: list[MessageLike], panel: list[PanelResponse]
@@ -878,11 +892,22 @@ class FusionEngine:
         )
         return result, shown
 
-    def _run_synth(self, messages: list[MessageLike], judge_analysis: str) -> CompletionResult:
+    def _run_synth(
+        self,
+        messages: list[MessageLike],
+        judge_analysis: str,
+        candidates: list[PanelResponse] | None = None,
+        shown: list[int] | None = None,
+    ) -> CompletionResult:
         user = (
             f"Original task and context:\n{_conversation_text(messages)}\n\n"
             f"Judge's analysis:\n{judge_analysis}"
         )
+        if self.config.candidates_visible and candidates is not None:
+            # Exactly the labels and order the judge read (``shown``): the analysis cites "Answer B",
+            # and a synthesiser handed the panel renumbered in arrival order, with vendor slugs,
+            # could not tell which answer that was, and would see the names blind mode withholds.
+            user += f"\n\nCandidate answers:\n{_render_panel(candidates, shown)}"
         return self._bounded_call(
             [Message(role="system", content=_SYNTH_SYSTEM), Message(role="user", content=user)],
             model=self.config.synthesizer, temperature=self.config.temperature,
