@@ -115,6 +115,11 @@ _EDITABLE_SETTINGS = {
     # person who wanted to bound what unattended jobs spend had to find it in the source. It brakes
     # ONLY scheduled jobs (`chimera/scheduler/job_runner.py`), and the Usage screen says so on the row.
     "CHIMERA_DAILY_USD_CAP",
+    # Whether a typed dollar ceiling is STRICT (the owner's decision of 2026-10-05, off by default):
+    # on, a call starts only when its worst case still fits, so a run never passes the ceiling.
+    # Read when each run builds its budget, so no APPLIES_WHEN entry: it applies from the next run.
+    # Owner-only (`bridge_routes.GUARD_SETTINGS`): it changes a limit.
+    "CHIMERA_STRICT_SPEND_CAP",
     # Whether the machine is held awake while there is work (`chimera/core/keep_awake.py`), and
     # whether that still holds on battery. Read on the keeper's every tick, so no APPLIES_WHEN entry.
     "CHIMERA_KEEP_AWAKE",
@@ -213,6 +218,16 @@ _EDITABLE_SETTINGS = {
     # allow`, which says yes to everything escalated — a setting only reachable by reading the source
     # would make the blunt answer the only discoverable one.
     "CHIMERA_EGRESS_ALLOW",
+    # Study 30, S30-27 and S30-28: two governance rules that ship off until their benches recommend
+    # them (`bench/exfil_url`, `bench/shell_fetch`). Writable through `PATCH /config` only, for now:
+    # `GET /config` does not report them and the Settings screen has no control, so today they are
+    # still a choice for someone who reads the source — an earlier version of this comment claimed
+    # the opposite (study 30 review). A read-side field and a control need new i18n keys in every
+    # language and a regenerated schema, which belongs with the change that recommends a default,
+    # not with the change that only adds the rules. Both only add questions, and both are
+    # owner-only (`bridge_routes.GUARD_SETTINGS`): switching one off is the direction that widens.
+    "CHIMERA_EXFIL_HOST_PATH",
+    "CHIMERA_SHELL_FETCH_GUARD",
     # Literal provenance checks for outbound/write arguments. Experimental, deterministic, and OFF
     # until the preregistered injection benchmark is published; owner-only because it adds reviews.
     "CHIMERA_TAINT_ROPE_LITE",
@@ -261,6 +276,11 @@ _EDITABLE_SETTINGS = {
     # Whether the agent's read tools may read Chimera's own `.env` (owner's decision, 2026-10-04).
     # On by default. Owner-only (`bridge_routes.PRIVACY_SETTINGS`): on is the direction that loosens.
     "CHIMERA_AGENT_READS_OWN_ENV",
+    # Lifecycle hooks (owner's decision, 2026-10-05; `docs/hooks-threat-model.md`). Off by default.
+    # Owner-only (`bridge_routes.GUARD_SETTINGS`): on, a hook can only tighten, but turning hooks
+    # off removes the guards the owner wrote, and the host switch lets shell hooks leave the sandbox.
+    "CHIMERA_HOOKS",
+    "CHIMERA_HOOKS_HOST_EXEC",
 }
 # The settings that turn a tool ON, which the Tools screen switches (`chimera/tools/conditional.py`).
 # Named there, once, and read here, so the screen can never offer a switch this endpoint refuses.
@@ -306,6 +326,9 @@ APPLIES_WHEN: dict[str, str] = {
     # underneath it would make its transcript describe two different agents.
     "CHIMERA_CASCADE": NEXT_CONVERSATION,
     "CHIMERA_GUARD_CHAT": NEXT_CONVERSATION,
+    # Read when a run's taint ledger is built, and a chat builds one for the whole conversation.
+    "CHIMERA_EXFIL_HOST_PATH": NEXT_CONVERSATION,
+    "CHIMERA_SHELL_FETCH_GUARD": NEXT_CONVERSATION,
     "CHIMERA_CHAT_MEMORY": NEXT_CONVERSATION,
     # Read once, when `default_registry` constructs the browser tool — and the tool then keeps the
     # Chromium it launched for as long as it lives. Re-reading the value could not pull a window
@@ -341,6 +364,10 @@ APPLIES_WHEN: dict[str, str] = {
     # a chat already running keeps the instrument it started with; the next one reads the new pair.
     # `POST /api/decide` and the `decide` tool rebuild on the next call.
     "CHIMERA_DECISION_BACKEND": NEXT_CONVERSATION,
+    # Read where the registry is assembled (`govern_step`): per conversation in the chat, per turn on
+    # the Code screen, per job on cron. "Next conversation" is the scope true on all of them.
+    "CHIMERA_HOOKS": NEXT_CONVERSATION,
+    "CHIMERA_HOOKS_HOST_EXEC": NEXT_CONVERSATION,
     "CHIMERA_DECISION_MODEL": NEXT_CONVERSATION,
     # These start something at boot — a daemon thread and a set of MCP subprocesses. Re-reading the
     # value would not undo that, so the honest answer is the relaunch, not a re-read.
@@ -621,7 +648,7 @@ def read_config(settings: Settings, *, env_path: Path | None = None) -> dict[str
         # `GET /api/code/pack`, per folder.
         "project_pack": {"enabled": settings.project_pack},
         # The day's dollar ceiling, as set; `None` is no cap. Scheduled jobs only — see SpendCfgOut.
-        "spend": {"daily_usd_cap": settings.daily_usd_cap},
+        "spend": {"daily_usd_cap": settings.daily_usd_cap, "strict_cap": settings.strict_spend_cap},
         # The owner's keep-awake choice. What the keeper is DOING is `GET /api/keep-awake`.
         "keep_awake": {
             "mode": settings.keep_awake,
@@ -663,6 +690,10 @@ def read_config(settings: Settings, *, env_path: Path | None = None) -> dict[str
             "approval_webhook_set": bool(settings.approval_webhook.strip()),
             # Whether the agent may propose a pull request at all. Every proposal asks the owner.
             "pull_requests": settings.pull_requests,
+            # The owner's lifecycle hooks and whether a shell hook may run on the host
+            # (`docs/hooks-threat-model.md`). Both off by default; both owner-only.
+            "hooks": settings.hooks,
+            "hooks_host_exec": settings.hooks_host_exec,
             # The destinations the owner declared as not-a-way-out. A plain list, not a secret:
             # it is a statement the owner made and has to be able to read back, and a row that
             # cannot show what it holds is a row nobody can correct.
@@ -988,6 +1019,8 @@ def _check_branch_prefix(value: str) -> None:
 #: refusal: one the app would fail to start on, or one that would be saved and silently do nothing.
 _VALUE_CHECKS: dict[str, Callable[[str], None]] = {
     "CHIMERA_DAILY_USD_CAP": _check_daily_cap,
+    # A boolean the app would fail to start on if it were saved as anything else.
+    "CHIMERA_STRICT_SPEND_CAP": _check_boolean("CHIMERA_STRICT_SPEND_CAP"),
     "CHIMERA_KEEP_AWAKE": _check_keep_awake,
     "CHIMERA_BROWSER_SITES": _check_browser_sites,
     "CHIMERA_BROWSER_LOCAL_PORTS": _check_browser_ports,
@@ -1000,6 +1033,8 @@ _VALUE_CHECKS: dict[str, Callable[[str], None]] = {
     "CHIMERA_DEFER_TOOLS": _check_boolean("CHIMERA_DEFER_TOOLS"),
     "CHIMERA_MCP_DEFER": _check_boolean("CHIMERA_MCP_DEFER"),
     "CHIMERA_PROJECT_PACK": _check_boolean("CHIMERA_PROJECT_PACK"),
+    "CHIMERA_EXFIL_HOST_PATH": _check_boolean("CHIMERA_EXFIL_HOST_PATH"),
+    "CHIMERA_SHELL_FETCH_GUARD": _check_boolean("CHIMERA_SHELL_FETCH_GUARD"),
     # CHIMERA_WORKTREE_DIR is checked in `patch_config` itself: its check needs the workspace.
     "CHIMERA_SANDBOX_NETWORK": _check_sandbox_network,
     "CHIMERA_SHARING": _check_boolean("CHIMERA_SHARING"),
@@ -1008,6 +1043,8 @@ _VALUE_CHECKS: dict[str, Callable[[str], None]] = {
     "CHIMERA_OPENROUTER_ZDR": _check_boolean("CHIMERA_OPENROUTER_ZDR"),
     "CHIMERA_KEY_VAULT": _check_boolean("CHIMERA_KEY_VAULT"),
     "CHIMERA_AGENT_READS_OWN_ENV": _check_boolean("CHIMERA_AGENT_READS_OWN_ENV"),
+    "CHIMERA_HOOKS": _check_boolean("CHIMERA_HOOKS"),
+    "CHIMERA_HOOKS_HOST_EXEC": _check_boolean("CHIMERA_HOOKS_HOST_EXEC"),
     "CHIMERA_PULL_REQUESTS": _check_boolean("CHIMERA_PULL_REQUESTS"),
     "CHIMERA_BRANCH_PREFIX": _check_branch_prefix,
 }

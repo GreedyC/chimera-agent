@@ -321,6 +321,8 @@ def build_right_hand(
     ledger = TaintLedger(
         authority=settings.taint_authority,
         egress_allow=settings.egress_allow.split(","),
+        exfil_host_path=settings.exfil_host_path,
+        shell_fetch_guard=settings.shell_fetch_guard,
         rope_lite=settings.taint_rope_lite,
     )
     step = govern_step(
@@ -331,6 +333,7 @@ def build_right_hand(
         attended=True,
         audit_allows=False,
         lineage=ledger.lineage,
+        taint=ledger.record_fetch,
     )
     # A union, like the denial list above and for the same reason. There is no request posture on
     # this surface, so the request half of `assemble_registry`'s expression is absent and the two

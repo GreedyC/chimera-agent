@@ -295,6 +295,10 @@ SECTIONS: tuple[PromptSection, ...] = (
        "bench/harness_bench: repo-map −0.012, checklist +0.005, planner +0.003 (SD 0.073); "
        "measured on deepseek-v3.2, 23 tasks"),
     _i("solve.feedback_fragments", "chimera.core.autonomous:AutonomousAgent.run", "turn", ("S1",)),
+    _c("solve.recalled_facts_header", "chimera.core.autonomous:RECALLED_FACTS_HEADER", "volatile",
+       ("S1",), "unmeasured",
+       note="heads the long-term facts a solve run recalls; a tainted one carries the [unverified] "
+            "label. The memory-poison bench parses for these bytes by importing them"),
     _c("solve.diff_feedback_header", "chimera.core.autonomous:_DIFF_FEEDBACK_HEADER", "turn", ("S1",),
        "null", "bench/retry_lift (closed without proof: +6% and −4%); measured on mistral-small-3.2-24b"),
     _i("solve.recovery_briefs", "chimera.core.failure_class:targeted_feedback", "turn", ("S1",),
@@ -420,11 +424,11 @@ SECTIONS: tuple[PromptSection, ...] = (
        ("S9", "S11", "S12"), "unmeasured"),
     _i("governance.quarantine_user", "chimera.governance.quarantine:QuarantinedReader._prompt",
        "turn", ("S9", "S11", "S12")),
-    _c("fence.open", "chimera.governance.ledger_tool:FENCE_OPEN", "marker", _ALL, "measured",
+    _c("fence.open", "chimera.governance.sanitize:FENCE_OPEN", "marker", _ALL, "measured",
        "bench/right_hand_governance (0/12 → 12/12)"),
-    _c("fence.close", "chimera.governance.ledger_tool:FENCE_CLOSE", "marker", _ALL, "measured",
+    _c("fence.close", "chimera.governance.sanitize:FENCE_CLOSE", "marker", _ALL, "measured",
        "bench/right_hand_governance"),
-    _c("fence.wrapped", "chimera.governance.ledger_tool:fence", "marker", _ALL, "measured",
+    _c("fence.wrapped", "chimera.governance.sanitize:fence", "marker", _ALL, "measured",
        "bench/right_hand_governance", render=_fence_example),
     _c("fence.failure_note", "chimera.governance.ledger_tool:FENCED_FAILURE_NOTE", "marker", _ALL,
        "unmeasured",
@@ -481,6 +485,11 @@ SECTIONS: tuple[PromptSection, ...] = (
 #: in the test cannot be satisfied by quietly adding a name here.
 NOT_PROMPTS: dict[str, str] = {
     "chimera.api.plan_gate:REASON": "shown to the person on the approval card; no model reads it",
+    "chimera.governance.exec_facts:HEADER": (
+        "the title of the 'what this runs' block appended to a shell command's approval card and "
+        "read back for the record line; the approver is a person, the tool answers the model with "
+        "its own result or refusal, never this"
+    ),
     "chimera.tools.pull_request:REASON": (
         "the verdict reason on the pull-request approval question (card, chat or `chimera approve`);"
         " the tool answers the model with its own refusal text, never this one"

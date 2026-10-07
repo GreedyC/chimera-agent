@@ -20,6 +20,8 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, cast
 
+from chimera.eval import proportions
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 if str(ROOT) not in sys.path:
@@ -195,14 +197,7 @@ def run(out: Path, *, max_probes: int, cross_encoder: bool = False) -> None:
 
 def mcnemar_exact(b: int, c: int) -> float:
     """Two-sided exact McNemar on the discordant pairs: binomial(b + c, 0.5)."""
-    from math import comb
-
-    m = b + c
-    if m == 0:
-        return 1.0
-    k = min(b, c)
-    tail = sum(comb(m, i) for i in range(k + 1)) / 2**m
-    return float(min(1.0, 2 * tail))
+    return proportions.mcnemar_exact(b, c)
 
 
 def report(path: Path, *, reranker: str = "noul") -> None:

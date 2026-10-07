@@ -94,7 +94,7 @@ ne s'affiche donc que sous le serveur de développement Vite (`npm --prefix apps
   | 1 (`max_steps=8`) | 19 | 36,8 % | 36,8 % | +0,0 % | [−8,5 %, +8,5 %] | ns |
   | 2 (`max_steps=30`) | les mêmes 19 | 42,1 % | 57,9 % | +15,8 % | [−1,9 %, +15,8 %] | ns |
   | **3 (réplication)** | **41 inédites** | 34,1 % | 43,9 % | **+9,8 %** | [−3,5 %, +16,7 %] | ns |
-  | groupé *(secondaire)* | 60 | 36,7 % | 48,3 % | **+11,7 %** | **[+0,8 %, +16,4 %]** | **significatif** |
+  | groupé *(secondaire)* | 60 | 36,7 % | 48,3 % | **+11,7 %** | **[+0,8 %, +16,4 %]** | non significatif (test exact de McNemar p = 0,065) |
 
   Le +15,8 % de l'exécution 2 était un 3–0 sur trois paires informatives, et le pré-enregistrement lui
   donnait **une chance sur trois d'être exactement cela — un échantillon chanceux**, avec la
@@ -130,6 +130,8 @@ ne s'affiche donc que sous le serveur de développement Vite (`npm --prefix apps
   tel quel, et l'exécution 2 a livré la **rétractation qu'elle méritait** (le mécanisme que nous
   avions avancé pour ses correctifs vides était faux — le remède était le budget d'étapes).
   Source : [`bench/swe_bench/RESULTS.md`](bench/swe_bench/RESULTS.md), [`PREREGISTRATION.md`](bench/swe_bench/PREREGISTRATION.md).
+
+  ⚠️ **Audité, pas encore réévalué (étude 30, S30-35).** Cinq patchs résolus dans les runs 3 et 4 modifient aussi des fichiers de test. Les cinq modifications portent sur des fichiers que le harness réinitialise avant l'évaluation, et compter chacune comme un échec n'inverse aucun signe et ne retire aucune significativité ([l'audit](bench/swe_bench/RESULTS.md#audit-does-the-lift-rest-on-patches-that-edited-tests-study-30-s30-35)). Le gain **n'a pas encore été lu sous des tests plus forts** (les suites complètes des développeurs, SWE-ABS) ; ces évaluations sont dues, pas estimées.
 - **Terminal-Bench (humiliant).** A/B pré-enregistré N=40 sur le benchmark officiel, même modèle dans
   les deux bras (`deepseek-chat-v3.1`) : **7,5 % → 2,5 %** avec l'échafaudage, **Δ apparié −5,0 pts,
   IC 95 % [−5,0 %, +1,6 %] — non significatif**. L'échafaudage **n'a pas élevé un modèle déjà

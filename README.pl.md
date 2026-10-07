@@ -101,7 +101,7 @@ pokazuje — natywny instalator również nie.)
   | 1 (`max_steps=8`) | 19 | 36,8% | 36,8% | +0,0% | [−8,5%, +8,5%] | ni |
   | 2 (`max_steps=30`) | te same 19 | 42,1% | 57,9% | +15,8% | [−1,9%, +15,8%] | ni |
   | **3 (replikacja)** | **41 niewidzianych** | 34,1% | 43,9% | **+9,8%** | [−3,5%, +16,7%] | ni |
-  | zbiorczo *(drugorzędne)* | 60 | 36,7% | 48,3% | **+11,7%** | **[+0,8%, +16,4%]** | **istotne** |
+  | zbiorczo *(drugorzędne)* | 60 | 36,7% | 48,3% | **+11,7%** | **[+0,8%, +16,4%]** | nieistotne (dokładny test McNemara p = 0,065) |
 
   +15,8% z przebiegu 2 to było 3–0 na trzech informatywnych parach, a prerejestracja dawała temu
   **jedną szansę na trzy, że jest to dokładnie to — szczęśliwa próbka**, z wycofaniem zadeklarowanym
@@ -135,6 +135,8 @@ pokazuje — natywny instalator również nie.)
   **wycofanie, na które zasłużył** (mechanizm, który przypisywaliśmy jego pustym łatkom, był błędny —
   lekarstwem był budżet kroków).
   Źródło: [`bench/swe_bench/RESULTS.md`](bench/swe_bench/RESULTS.md), [`PREREGISTRATION.md`](bench/swe_bench/PREREGISTRATION.md).
+
+  ⚠️ **Zaudytowane, jeszcze nie ocenione ponownie (badanie 30, S30-35).** Pięć rozwiązanych poprawek w uruchomieniach 3 i 4 edytuje też pliki testów. Wszystkie pięć zmian dotyczy plików, które harness przywraca przed oceną, a liczenie każdej z nich jako porażki nie odwraca żadnego znaku ani nie odbiera żadnej istotności ([audyt](bench/swe_bench/RESULTS.md#audit-does-the-lift-rest-on-patches-that-edited-tests-study-30-s30-35)). Zysk **nie został jeszcze odczytany pod silniejszymi testami** (pełne zestawy testów deweloperów, SWE-ABS); te oceny są należne, nie szacowane.
 - **Terminal-Bench (otrzeźwiający).** Prerejestrowany test A/B przy N=40 na oficjalnym benchmarku, ten
   sam model w obu ramionach (`deepseek-chat-v3.1`): **7,5% → 2,5%** z rusztowaniem, sparowana
   **Δ −5,0pp, 95% CI [−5,0%, +1,6%] — nieistotna**. Rusztowanie **nie podniosło już kompetentnego

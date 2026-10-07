@@ -64,6 +64,8 @@ OWNER_ONLY: dict[str, tuple[str, str]] = {
     "CHIMERA_DECISION_BACKEND": ("local_logprob", "hosted_verbalized"),
     "CHIMERA_DECISION_MODEL": ("qwen3:4b", ""),
     "CHIMERA_DAILY_USD_CAP": ("1", ""),
+    # A strict spend ceiling (owner's decision, 2026-10-05): off lets a run pass the cap by a call.
+    "CHIMERA_STRICT_SPEND_CAP": ("true", "false"),
     # Reach (P5.2, P5.4).
     "CHIMERA_SANDBOX": ("docker", "local"),
     "CHIMERA_SANDBOX_NETWORK": ("none", "bridge"),
@@ -77,6 +79,9 @@ OWNER_ONLY: dict[str, tuple[str, str]] = {
     "CHIMERA_BRANCH_PREFIX": ("chimera", "feature"),
     # The project pack narrows (P7.6): switching it off hands back what the pack took away.
     "CHIMERA_PROJECT_PACK": ("true", "false"),
+    # Study 30, S30-27 and S30-28: each only adds questions, so off is the widening direction.
+    "CHIMERA_EXFIL_HOST_PATH": ("true", "false"),
+    "CHIMERA_SHELL_FETCH_GUARD": ("true", "false"),
     # Who may reach the agent: an empty list is anyone.
     "CHIMERA_APP_MESSAGING": ("false", "true"),
     "CHIMERA_DISCORD_ALLOWED_USERS": ("111", ""),
@@ -97,6 +102,10 @@ OWNER_ONLY: dict[str, tuple[str, str]] = {
     # Whether the agent's read tools may read Chimera's own .env (owner's decision, 2026-10-04):
     # on puts the provider keys within the model's reach, so a client may not turn it back on.
     "CHIMERA_AGENT_READS_OWN_ENV": ("false", "true"),
+    # The owner's lifecycle hooks (2026-10-05): off removes the guards the owner wrote, and the host
+    # companion lets a shell hook run outside the sandbox.
+    "CHIMERA_HOOKS": ("true", "false"),
+    "CHIMERA_HOOKS_HOST_EXEC": ("false", "true"),
     # Which repositories' issues may start a code-writing job (S30-69): empty is none.
     "CHIMERA_GITHUB_ISSUE_REPOSITORIES": ("", "acme/widget"),
 }

@@ -1,5 +1,5 @@
 ---
-source_sha256: a4a013be96904287074cc9859aaa710195511afc3c9b81627392342b7ef34e27
+source_sha256: 40077b594c1ec7a80eb5e6b35149255085c30cea4844b4598de1932f2f5de836
 ---
 
 # Connettere server MCP
@@ -111,6 +111,25 @@ I tool MCP sono ordinari oggetti `Tool`, quindi tutto si compone:
   del server). Passarle come dati recintati sotto taint è aperto, non fatto. Scartarle **non** è un confine contro il testo scritto dal server: nomi e
   descrizioni degli strumenti dello stesso server raggiungono il modello come il server li ha
   scritti, senza recinto; un server che colleghi è un server di cui il modello legge le parole.
+- **Fissaggio del manifest** — la prima volta che un server viene montato, nomi, descrizioni e
+  input schema dei suoi strumenti vengono memorizzati in `mcp_pins.json`, accanto a `mcp.json`. Se
+  un montaggio successivo elenca qualcosa di diverso, il server viene **trattenuto**: l'app,
+  `chimera serve` e i suoi bot (tutto ciò che monta tramite il pool MCP condiviso) non lo montano
+  finché non approvi la modifica, con il testo vecchio e quello nuovo in vista, tramite `chimera mcp
+  approve NOME` o la schermata MCP. `chimera mcp list` indica i server trattenuti. Gli strumenti
+  montati sono l'elenco che è stato controllato, quindi un server non può rispondere al controllo
+  con un testo e al modello con un altro. Aggiungere o rimuovere il server con `chimera mcp
+  add/remove` o dall'app ne dimentica il fissaggio (il montaggio successivo torna a essere il primo
+  contatto). Il fissaggio è fiducia al primo uso: coglie una descrizione che **cambia**, non una che
+  era ostile fin dall'inizio.
+  **Non coperta:** l'API Python qui sopra. `connect_stdio` monta ciò che il server elenca, e lo stesso
+  fa `autoload_into_registry` a meno che tu non gli passi `mcp_path`, il file di cui deve controllare
+  i fissaggi.
+- **Segnali di selezione** — `chimera mcp test` e la schermata MCP annotano gli strumenti con le frasi
+  che cercano di orientare quale strumento sceglie il modello ("always use this tool", "do not use
+  other tools", "ignore previous instructions", `<IMPORTANT>`), lette nella descrizione e in ogni
+  descrizione di parametro. Solo un'annotazione: non rifiuta nulla, e quanto spesso scatti su server
+  onesti non è stato misurato.
 
 ## Chimera *come* server MCP
 

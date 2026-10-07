@@ -92,7 +92,7 @@ sirve la compilación de producción y no la muestra; un instalador nativo, tamp
   | 1 (`max_steps=8`) | 19 | 36,8% | 36,8% | +0,0% | [−8,5%, +8,5%] | ns |
   | 2 (`max_steps=30`) | las mismas 19 | 42,1% | 57,9% | +15,8% | [−1,9%, +15,8%] | ns |
   | **3 (replicación)** | **41 inéditas** | 34,1% | 43,9% | **+9,8%** | [−3,5%, +16,7%] | ns |
-  | agrupado *(secundario)* | 60 | 36,7% | 48,3% | **+11,7%** | **[+0,8%, +16,4%]** | **significativo** |
+  | agrupado *(secundario)* | 60 | 36,7% | 48,3% | **+11,7%** | **[+0,8%, +16,4%]** | no significativo (McNemar exacto p = 0,065) |
 
   El +15,8% de la ejecución 2 fue un 3–0 en tres pares informativos, y la pre-registración le daba
   **una probabilidad de una entre tres de ser exactamente eso — una muestra afortunada**, con la
@@ -128,6 +128,8 @@ sirve la compilación de producción y no la muestra; un instalador nativo, tamp
   se publica sin cambios, y la ejecución 2 trajo la **retractación que se ganó** (el mecanismo que
   habíamos alegado para sus parches vacíos era erróneo — la cura era el presupuesto de pasos).
   Fuente: [`bench/swe_bench/RESULTS.md`](bench/swe_bench/RESULTS.md), [`PREREGISTRATION.md`](bench/swe_bench/PREREGISTRATION.md).
+
+  ⚠️ **Auditado, aún no recalificado (estudio 30, S30-35).** Cinco parches resueltos en las ejecuciones 3 y 4 también editan archivos de prueba. Las cinco ediciones están en archivos que el harness restablece antes de calificar, y contar cada una como fallo no invierte ningún signo ni retira ninguna significancia ([la auditoría](bench/swe_bench/RESULTS.md#audit-does-the-lift-rest-on-patches-that-edited-tests-study-30-s30-35)). La mejora **aún no se ha leído con pruebas más fuertes** (las suites completas del desarrollador, SWE-ABS); esas calificaciones están pendientes, no estimadas.
 - **Terminal-Bench (humillante).** A/B pre-registrado con N=40 sobre el benchmark oficial, mismo
   modelo en ambos brazos (`deepseek-chat-v3.1`): **7,5% → 2,5%** con el scaffold, **Δ pareado −5,0pp,
   IC 95% [−5,0%, +1,6%] — no significativo**. El scaffold **no elevó a un modelo ya competente** (no es

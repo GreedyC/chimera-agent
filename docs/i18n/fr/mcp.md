@@ -1,5 +1,5 @@
 ---
-source_sha256: a4a013be96904287074cc9859aaa710195511afc3c9b81627392342b7ef34e27
+source_sha256: 40077b594c1ec7a80eb5e6b35149255085c30cea4844b4598de1932f2f5de836
 ---
 
 # Connecter des serveurs MCP
@@ -113,6 +113,25 @@ Les outils MCP sont des objets `Tool` ordinaires, donc tout se compose :
   ouvert, pas fait. Les écarter n'est **pas** une frontière contre le texte écrit par le serveur : les
   noms et descriptions d'outils du même serveur atteignent le modèle tels que le serveur les a
   écrits, sans clôture ; un serveur que vous connectez est un serveur dont le modèle lit les mots.
+- **Épinglage du manifeste** — la première fois qu'un serveur est monté, les noms, descriptions et
+  input schemas de ses outils sont mémorisés dans `mcp_pins.json`, à côté de `mcp.json`. Si un
+  montage ultérieur liste quoi que ce soit de différent, le serveur est **retenu** : l'app,
+  `chimera serve` et ses bots (tout ce qui monte via le pool MCP partagé) ne le montent pas tant que
+  vous n'avez pas approuvé le changement, avec l'ancien et le nouveau texte affichés, via `chimera
+  mcp approve NOM` ou l'écran MCP. `chimera mcp list` signale les serveurs retenus. Les outils montés
+  sont la liste qui a été vérifiée : un serveur ne peut donc pas répondre à la vérification avec un
+  texte et au modèle avec un autre. Ajouter ou retirer le serveur via `chimera mcp add/remove` ou
+  l'app oublie son épinglage (le montage suivant redevient un premier contact). L'épinglage est une
+  confiance au premier usage : il détecte une description qui **change**, pas une qui était hostile
+  dès le départ.
+  **Non couvert :** l'API Python ci-dessus. `connect_stdio` monte ce que le serveur liste, et
+  `autoload_into_registry` aussi, sauf si vous lui passez `mcp_path`, le fichier dont il doit
+  vérifier les épinglages.
+- **Indices de sélection** — `chimera mcp test` et l'écran MCP annotent les outils avec les phrases
+  qui cherchent à orienter le choix d'outil du modèle (« always use this tool », « do not use other
+  tools », « ignore previous instructions », `<IMPORTANT>`), lues dans la description et dans chaque
+  description de paramètre. Une annotation seulement : elle ne refuse rien, et sa fréquence sur des
+  serveurs honnêtes n'a pas été mesurée.
 
 ## Chimera *en tant que* serveur MCP
 

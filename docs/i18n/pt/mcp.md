@@ -1,5 +1,5 @@
 ---
-source_sha256: a4a013be96904287074cc9859aaa710195511afc3c9b81627392342b7ef34e27
+source_sha256: 40077b594c1ec7a80eb5e6b35149255085c30cea4844b4598de1932f2f5de836
 ---
 
 # Conectando servidores MCP
@@ -109,6 +109,24 @@ As tools MCP são objetos `Tool` comuns, então tudo compõe:
   Repassá-las como dado cercado sob taint está em aberto, não feito. Descartá-las **não** é uma fronteira contra texto escrito pelo servidor:
   nomes e descrições de ferramentas do mesmo servidor chegam ao modelo como o servidor os escreveu,
   sem cerca; um servidor que você conecta é um servidor cujas palavras o modelo lê.
+- **Fixação do manifesto** — na primeira vez que um servidor é montado, os nomes, as descrições e os
+  input schemas das suas ferramentas ficam guardados em `mcp_pins.json`, ao lado de `mcp.json`. Se
+  uma montagem posterior listar qualquer coisa diferente, o servidor fica **retido**: o app, o
+  `chimera serve` e os seus bots (tudo o que monta pelo pool MCP compartilhado) não o montam até
+  você aprovar a mudança, com o texto antigo e o novo à vista, por `chimera mcp approve NOME` ou pela
+  tela MCP. `chimera mcp list` aponta os servidores retidos. As ferramentas montadas são a listagem
+  que foi conferida, então um servidor não consegue responder à conferência com um texto e ao
+  modelo com outro. Adicionar ou remover o servidor por `chimera mcp add/remove` ou pelo app esquece
+  a fixação (a próxima montagem volta a ser o primeiro contato). A fixação é confiança no primeiro
+  uso: pega uma descrição que **muda**, não uma que já era hostil desde o início.
+  **Sem essa trava:** a API Python acima. `connect_stdio` monta o que o servidor listar, e o mesmo
+  vale para `autoload_into_registry`, a menos que você passe `mcp_path`, o arquivo cujas fixações ele
+  deve conferir.
+- **Sinais de seleção** — `chimera mcp test` e a tela MCP anotam as ferramentas com frases que tentam
+  dirigir qual ferramenta o modelo escolhe ("always use this tool", "do not use other tools",
+  "ignore previous instructions", `<IMPORTANT>`), lidas na descrição e em cada descrição de
+  parâmetro. É só uma anotação: não recusa nada, e não foi medido com que frequência dispara em
+  servidores honestos.
 
 ## O Chimera *como* servidor MCP
 

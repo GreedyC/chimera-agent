@@ -654,6 +654,13 @@ class AutonomyCfgOut(BaseModel):
     pull_requests: bool = False
     """``CHIMERA_PULL_REQUESTS``: whether the agent has ``open_pull_request``. Off by default, and a
     server without the field is off. On or off, every pull request the agent proposes asks the owner."""
+    hooks: bool = False
+    """``CHIMERA_HOOKS``: whether the owner's lifecycle hooks (``<home>/chimera-hooks.json``) run
+    around tool calls. Off by default; on, a hook can only deny, ask or annotate
+    (`docs/hooks-threat-model.md`). A server without the field is off."""
+    hooks_host_exec: bool = False
+    """``CHIMERA_HOOKS_HOST_EXEC``: whether a shell hook may run on the host where no sandbox
+    isolates. Off by default: there, a shell hook is refused and the tool call with it."""
 
 
 class ServerCfgOut(BaseModel):
@@ -907,6 +914,13 @@ class SpendCfgOut(BaseModel):
     read as a ceiling on everything."""
 
     daily_usd_cap: float | None = None
+    strict_cap: bool = False
+    """Whether a typed dollar ceiling is strict (``CHIMERA_STRICT_SPEND_CAP``, off as shipped): on,
+    a call starts only when its worst case (every retry and fallback counted) still fits, so the
+    run's spend never passes the ceiling, and a fused or cascade run, which cannot be priced in
+    advance, does not start; off, the ceiling is an estimate and a run usually ends past it by about
+    one call. Unlike the daily cap above, it applies to every run with a ``max_usd``, and to no run
+    without one."""
 
 
 class KeepAwakeCfgOut(BaseModel):
@@ -2386,10 +2400,12 @@ class ApprovalAnswerIn(BaseModel):
 class ApprovalAnswerOut(BaseModel):
     ok: bool  # False when no question with that id is waiting — a stale click, 200, not a 404
     outcome: str | None = None
-    """For a settings suggestion only: ``applied`` | ``refused`` | ``stale`` (a key no longer holds
+    """For a settings suggestion: ``applied`` | ``refused`` | ``stale`` (a key no longer holds
     the value the card showed) | ``changed`` (the card's file changed after it was shown) |
     ``invalid`` (the value fails a check now) | ``expired``. Only
-    ``applied`` wrote anything. Absent for every other question, whose answer stays ``{ok}``."""
+    ``applied`` wrote anything. For any other question it is absent, except ``needs_code``: an
+    approval of a question another process asked, which this app cannot vouch for — ``detail`` is
+    then the ``chimera approve`` line that approves it with the code the owner was sent."""
 
     detail: str | None = None
     """The keys applied, the keys that moved, or the check that refused — for the sentence the
@@ -2905,6 +2921,43 @@ class McpLastTestOut(BaseModel):
     tested_at: float  # unix seconds
 
 
+class McpManifestChangeOut(BaseModel):
+    """One tool whose advertised description or parameters differ from what the owner approved."""
+
+    tool: str
+    change: str  # "added", "removed" or "changed"
+    description_changed: bool
+    schema_changed: bool  # the input schema, where parameter descriptions live
+    old_description: str  # "" for an added tool
+    new_description: str  # "" for a removed tool
+    # The whole input schema, as indented JSON ("" when absent). Shown, not summarised: parameter
+    # descriptions live here and the model reads them like the tool description.
+    old_schema: str = ""
+    new_schema: str = ""
+    # The server lists more than one tool with this name; only the first of them is mounted.
+    duplicate: bool = False
+    # Codes for phrases in the NEW text — description and every string of the schema — that try to
+    # steer tool choice (see McpToolOut.cues).
+    cues: list[str] = Field(default_factory=list)
+
+
+class McpManifestHeldOut(BaseModel):
+    """A server held from every mount because its tools changed since they were approved.
+
+    Study 30, S30-24. The diff is what the owner approves with POST /api/mcp/{name}/approve-manifest.
+    """
+
+    changes: list[McpManifestChangeOut]
+    seen_at: float  # unix seconds — when the changed listing was first seen
+    # Names the listing this diff shows. The approve route takes it back and answers 409 if the
+    # held listing changed since, so a click approves only text that was on the screen.
+    digest: str
+
+
+class McpApproveManifestRequest(BaseModel):
+    digest: str  # the McpManifestHeldOut.digest the owner was shown
+
+
 class McpServerOut(BaseModel):
     name: str
     command: str
@@ -2912,6 +2965,8 @@ class McpServerOut(BaseModel):
     env_keys: list[str]  # env variable NAMES only — the secret VALUES are never returned
     # Null when never tested, or when the config changed since (an edit forgets the old result).
     last_test: McpLastTestOut | None = None
+    # Null unless this server's tools changed since they were approved; then no run receives it.
+    manifest_held: McpManifestHeldOut | None = None
 
 
 class McpServersOut(BaseModel):
@@ -2922,6 +2977,9 @@ class McpServersOut(BaseModel):
 class McpToolOut(BaseModel):
     name: str
     description: str
+    # Codes for phrases in the description that try to steer which tool the model picks:
+    # "imperative", "exclusivity", "override", "emphasis". An annotation for the owner, never a gate.
+    cues: list[str] = Field(default_factory=list)
 
 
 class McpTestOut(BaseModel):
@@ -2933,8 +2991,9 @@ class McpTestOut(BaseModel):
     # started now gets none of these tools; null means the answer could not be read.
     reaches_agent: bool | None = None
     # WHY not, as an enum the app translates: "autoload_off" (the toggle is off, so no run is given
-    # these tools) or "added_after_connect" (the servers are connected once per process and this one
-    # arrived later, so it needs a restart). The remedies differ, which is why one flag is not
+    # these tools), "added_after_connect" (the servers are connected once per process and this one
+    # arrived later, so it needs a restart) or "manifest_held" (its tools changed since they were
+    # approved, and it is held until the owner approves the change). The remedies differ, which is why one flag is not
     # enough. An enum rather than a sentence because the app ships in ten languages. Null whenever
     # `reaches_agent` is not False.
     reaches_agent_reason: str | None = None

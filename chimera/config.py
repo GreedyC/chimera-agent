@@ -728,6 +728,18 @@ class Settings(BaseSettings):
     # turning it back on loosens privacy. Read per tool call, so it applies from the next one.
     agent_reads_own_env: bool = Field(default=True, validation_alias="CHIMERA_AGENT_READS_OWN_ENV")
 
+    # Lifecycle hooks (owner's decision, 2026-10-05; `docs/hooks-threat-model.md`). Off by default:
+    # until that decision the channel was closed on purpose (`docs/audits/sleeper-channels.md` row
+    # 13). On, the hooks in `<home>/chimera-hooks.json` run around every tool call of the
+    # assemblies that go through `govern_step` — and they can only tighten: deny, ask, annotate,
+    # never allow (`chimera/governance/hooks.py`). Owner-only: the bridge refuses both switches
+    # (`bridge_routes.GUARD_SETTINGS`). Read when a run's tools are assembled.
+    hooks: bool = Field(default=False, validation_alias="CHIMERA_HOOKS")
+    # Whether a SHELL hook may run on the host where no sandbox isolates (Windows, a Linux without
+    # bubblewrap, Docker with the daemon down). Off by default: there, a shell hook is refused and
+    # the tool call with it, because a hook the owner configured that cannot run is a missing guard.
+    hooks_host_exec: bool = Field(default=False, validation_alias="CHIMERA_HOOKS_HOST_EXEC")
+
     # `CHIMERA_REVIEW_MODEL` names the model `chimera review` reviews with. Empty (the default) lets
     # the command pick the first model measured as a reviewer whose family differs from the
     # author's (`MEASURED_REVIEWERS` in `chimera/review/family.py`, chosen by `bench/review_reviewer`),
@@ -975,11 +987,45 @@ class Settings(BaseSettings):
     # safe. Choosing it is your act, and it is the reason this defaults to empty.
     egress_allow: str = Field(default="", validation_alias="CHIMERA_EGRESS_ALLOW")
 
+    # Study 30, S30-27. The rule above reads the query string only, and only once the run is
+    # tainted: `https://SECRET.attacker.test/` and `https://attacker.test/SECRET/` went out, and in a
+    # run where the USER pasted the injection (arXiv 2610.01768) the query went out too. On, a fetch
+    # whose host labels, path segments or query carry a data-like value (16+ characters, mixed,
+    # high-entropy) that appears neither in the instruction nor in anything the run fetched is a
+    # question. OFF until measured: `bench/exfil_url/RESULTS.md` has the attack rate per channel and
+    # the false-question rate per class of benign URL, including the class it cannot help asking
+    # about (a commit hash the agent read from `git log`). Hosts in CHIMERA_EGRESS_ALLOW are exempt.
+    # Only the public web's fetch tools make a value "seen": a key in an email, a calendar entry or a
+    # connector's output is asked about. NOT covered: a fetch tool is what it judges, so the shell
+    # (`curl`, `wget`, `dig`, `python -c` in run_shell) sends a value out unasked — see RESULTS.md.
+    exfil_host_path: bool = Field(default=False, validation_alias="CHIMERA_EXFIL_HOST_PATH")
+
+    # Study 30, S30-28. `pip install <name>` is a question; `git clone <owner/repo the model
+    # guessed>` was not, and `run_shell` is not a fetch tool, so a cloned README or a page `curl`
+    # printed left the run clean (arXiv 2607.07433: 92.4% of owners hallucinated for recent
+    # repositories). On: a clone of a remote the user's instruction never named is a question; a
+    # shell `git clone` / `curl URL` / `wget URL` is recorded as a fetch, so its output taints the
+    # run like `http_get`'s; and a `pip install` card says what PyPI knows of each package (exists
+    # since when / does not exist / unknown offline — display only). OFF until measured:
+    # `bench/shell_fetch/RESULTS.md`.
+    shell_fetch_guard: bool = Field(default=False, validation_alias="CHIMERA_SHELL_FETCH_GUARD")
+
     # Let the chat build durable memory when the user explicitly asks ("remember that…"). Opt-in for
     # privacy: chatting should not silently persist unless you asked it to. Off = the prior behaviour
     # where the desktop chat never wrote memory. Only explicit requests are captured — never automatic
     # extraction, which would pollute the store.
     remember_from_chat: bool = Field(default=False, validation_alias="CHIMERA_CHAT_MEMORY")
+    # Study 30 S30-25: a tainted LESSON, PLAYBOOK BULLET or SKILL CARD recalled into an autonomous
+    # run (or a card into a fan-out's synthesis) taints that run, as a tainted memory fact does. A
+    # tainted card reaches retrieval only after a human approved it, approval keeping its provenance. Off by default, unlike the memory
+    # half, because nobody measured its price and the price compounds: an armed run records its own
+    # lesson tainted, so one tainted lesson keeps every later run on that task family armed, and the
+    # playbook renders its global top bullets whatever the task, so one tainted bullet arms every
+    # run. Off, the lesson and the bullet still wear the [unverified] label. The owner clears one
+    # with `chimera playbook vouch <id>` or `chimera lessons vouch <seq>`.
+    arm_on_recalled_lessons: bool = Field(
+        default=False, validation_alias="CHIMERA_ARM_ON_RECALLED_LESSONS"
+    )
     # Study 25 S13: after a chat or Code turn, one model call proposes facts the user STATED about
     # themselves, and the harness keeps only those it can trace to the user's own words
     # (`chimera.memory.extract`). The same switch quotes recalled facts with their source and date.
@@ -1074,11 +1120,17 @@ class Settings(BaseSettings):
     otel: bool = Field(default=False, validation_alias="CHIMERA_OTEL")
 
     # Are the files in the workspace trusted? Default True: `chimera solve` usually runs on YOUR OWN
-    # repo, and tainting every `read_file` would make `--taint` fire on every run (unusable). Set
-    # False when running against code you do NOT control — a third-party repo, a PR branch, anything
-    # downloaded — so a `read_file` of a poisoned source file taints the run like a fetched page does,
-    # arming the same tool-narrowing gate. Only takes effect under `--taint`. (The sandbox is still the
-    # real boundary for hostile code — see SECURITY.md.)
+    # repo, and tainting every `read_file` would make the taint gate fire on every run (unusable).
+    # Set False when running against code you do NOT control — a third-party repo, a PR branch,
+    # anything downloaded. What False does, and where:
+    # - `read_file` and `grep` output is fenced and taints the run like a fetched page, arming the
+    #   same tool-narrowing gate — wherever a taint ledger wraps the tools: under `--taint` on the
+    #   CLI, and always on the desktop Code surface, which builds a ledger for every turn. With no
+    #   ledger, False changes nothing for these two tools.
+    # - The repository's AGENTS.md is fenced and sanitised in the system prompt WHENEVER this is
+    #   False, ledger or not, and taints the run before step 1 wherever a ledger exists (study 30,
+    #   S30-26).
+    # (The sandbox is still the real boundary for hostile code — see SECURITY.md.)
     trust_workspace: bool = Field(default=True, validation_alias="CHIMERA_TRUST_WORKSPACE")
 
     # Should the CHAT agent be assembled with the same protections the coding turn gets — a posture
@@ -1202,6 +1254,21 @@ class Settings(BaseSettings):
     # happened" is indistinguishable from a dead daemon. A job marked `critical` is exempt — a
     # position guardian silenced at 2 p.m. until midnight costs more than it saves.
     daily_usd_cap: float | None = Field(default=None, validation_alias="CHIMERA_DAILY_USD_CAP")
+
+    # Whether a typed dollar ceiling (`max_usd` on a turn, a crew, a hierarchy, an autonomous run) is
+    # STRICT: a call is dispatched only when its worst case (prompt bounded by its bytes + completion
+    # bound, summed over every attempt the fallback chain and the key pool may make) still fits what
+    # is left, and attempts that failed after billing are charged, so the run's spend never passes
+    # the ceiling. Off (the default, and the owner's decision of 2026-10-05) keeps the reservation
+    # cap, which is an estimate: a run usually ends past the ceiling by about one call, and can pass
+    # it by more when the prompt estimate was low, calls ran together, or a call had no price. On, a
+    # call whose worst case cannot be priced is refused rather than run, and that is every FUSED or
+    # CASCADE run with a ceiling (they pick their models as they go), and a call with no completion
+    # bound. A run with no ceiling is untouched either way: the 2026-09-27 decision that
+    # limits are warnings stands, and this only decides how hard a ceiling the person typed holds.
+    # Owner-only (`bridge_routes.GUARD_SETTINGS`): it changes a limit. Read when each run builds its
+    # budget (`orchestration/budget.py`), so it applies from the next run.
+    strict_spend_cap: bool = Field(default=False, validation_alias="CHIMERA_STRICT_SPEND_CAP")
 
     # Who says yes when governance escalates an action to review: `ask` | `deny` | `allow`.
     #

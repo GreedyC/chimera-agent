@@ -181,7 +181,9 @@ class LocalLogprobBackend:
         (:func:`chimera.fusion.verified.grounded_state`, ON by default), whose ``answer`` field is
         model output and goes in unsanitised — its excerpts come from attachments, which were
         sanitised when they were saved. Open, needs measurement (study 30, S30-21(d)): each caller's
-        numbers with sanitised state, before sanitising is switched on or the band is.
+        numbers with sanitised state, before sanitising is switched on or the band is. The band's half
+        is registered in `bench/band_input` (S30-31: clean, forged-token, sanitised and comment-
+        envelope arms on the 55 items this map was fitted on); the run is owed.
         """
         messages = [
             {"role": "system", "content": self.system_text(question)},

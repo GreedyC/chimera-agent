@@ -97,7 +97,7 @@ it, and neither does a native installer.)
   | 1 (`max_steps=8`) | 19 | 36.8% | 36.8% | +0.0% | [−8.5%, +8.5%] | ns |
   | 2 (`max_steps=30`) | same 19 | 42.1% | 57.9% | +15.8% | [−1.9%, +15.8%] | ns |
   | **3 (replication)** | **41 unseen** | 34.1% | 43.9% | **+9.8%** | [−3.5%, +16.7%] | ns |
-  | pooled *(secondary)* | 60 | 36.7% | 48.3% | **+11.7%** | **[+0.8%, +16.4%]** | **significant** |
+  | pooled *(secondary)* | 60 | 36.7% | 48.3% | **+11.7%** | **[+0.8%, +16.4%]** | not significant (exact McNemar p = 0.065) |
 
   Run 2's +15.8% was a 3–0 sweep on three informative pairs, and the pre-registration gave it a
   **one-in-three chance of being exactly that — a lucky sample**, with the retraction pre-committed.
@@ -129,6 +129,8 @@ it, and neither does a native installer.)
   is published unchanged, and run 2 shipped the **retraction it earned** (the mechanism we had claimed
   for its empty patches was wrong — the cure was the step budget).
   Source: [`bench/swe_bench/RESULTS.md`](bench/swe_bench/RESULTS.md), [`PREREGISTRATION.md`](bench/swe_bench/PREREGISTRATION.md).
+
+  ⚠️ **Audited, not yet re-graded (study 30, S30-35).** Five resolved patches in runs 3 and 4 also edit test files. All five edits are to files the harness resets before grading, and counting every one of them as a failure flips no sign and withdraws no significance ([the audit](bench/swe_bench/RESULTS.md#audit-does-the-lift-rest-on-patches-that-edited-tests-study-30-s30-35)). The lift **has not yet been read under stronger tests** (the full developer suites, SWE-ABS); those gradings are owed, not estimated.
 - **Terminal-Bench (humbling).** Pre-registered N=40 A/B on the official benchmark, same model both
   arms (`deepseek-chat-v3.1`): **7.5% → 2.5%** with the scaffold, paired **Δ −5.0pp, 95% CI [−5.0%,
   +1.6%] — not significant**. The scaffold **did not lift an already-competent model** (this isn't the

@@ -180,11 +180,15 @@ class MessagingManager:
         send_tool = SendMessageTool(senders)
 
         def factory() -> ChatSession:
-            turn_ledger: Any = None
+            # The ledger `governed_profile` builds, kept so untrusted input reaches it: a tainted
+            # memory fact the recall hands this chat's prompt (study 30 S30-25) and an inbound voice
+            # transcript or image (S30-46) are recorded in it, so the narrowing arms as it would for
+            # a fetched page. `None` when governance is off and none is built.
+            bot_ledger: Any = None
 
             def _hold(ledger: Any) -> None:
-                nonlocal turn_ledger
-                turn_ledger = ledger
+                nonlocal bot_ledger
+                bot_ledger = ledger
 
             # A distinct surface name from the CLI's "platform": the audit log has to be able to say
             # WHICH way the bot was started, because only one of the two paths was ever governed and
@@ -239,12 +243,13 @@ class MessagingManager:
                 real_history=self._settings.chat_real_history,
                 # As in `_serve_platform`: the chat hears when a job it started has ended.
                 turn_note=lambda: finished_note(self._settings.home, self._workspace),
+                on_tainted_recall=None if bot_ledger is None else bot_ledger.record_fetch,
                 # Inbound voice/images (S30-46) enter this chat's ledger as untrusted, as on
                 # `_serve_platform`; `None` under governance off, where no ledger exists.
                 on_tainted_input=(
                     None
-                    if turn_ledger is None
-                    else lambda content: turn_ledger.record_fetch(
+                    if bot_ledger is None
+                    else lambda content: bot_ledger.record_fetch(
                         "inbound-media", content, requested_by="unknown"
                     )
                 ),
@@ -266,9 +271,14 @@ class MessagingManager:
             from chimera.server.attachments import turn_attachments
 
             attach = partial(turn_attachments, workspace=self._workspace)
+        from chimera.server.allowlist import is_listed_owner
+
         return MessageGateway(
             factory, warnings_in_reply=True, name_the_channel=True,
             intercept=ChatApprovals(self._settings, self._settings.home).intercept,
+            # As `_serve_platform`: a "remember that..." from anyone but the owner is written
+            # tainted and names its sender (study 30 S30-29).
+            owner_of=lambda message: is_listed_owner(self._settings, message),
             attach=attach,
         ).on_message
 

@@ -154,6 +154,14 @@ def _facts_of(*args: Any) -> dict[str, Any]:
     decision_id = getattr(head, "decision_id", "")
     if isinstance(decision_id, str) and decision_id:
         facts["decision_id"] = decision_id
+    # The programs and hooks the card named (`exec_facts`), onto the record: the record keeps the
+    # first 200 characters of the action, and the block is at its END by design. Read off the
+    # question's object, where the tool that resolved them put them, and NOT parsed back out of the
+    # action: the action holds a model-written command, and a command carrying a forged copy of the
+    # block's header put its own lines on the record (review of S30-30).
+    programs = getattr(head, "programs", None)
+    if isinstance(programs, (list, tuple)) and programs:
+        facts["programs"] = [str(line) for line in programs]
     return facts
 
 
@@ -175,6 +183,20 @@ def deny(ledger: ApprovalLedger | None = None) -> Approver:
     return approve
 
 
+#: The attribute :func:`allow` sets on the approver it returns. A question put to that approver is
+#: answered yes without anybody reading it, which is the right answer for the kernel's REVIEW under
+#: an owner who chose ``allow`` and the wrong one for a question the owner wrote themself — a hook's
+#: ``ask`` (`chimera/governance/hooks.py`). Marked on the function rather than inferred from the
+#: owner's setting, because the hooks reach several assemblies that build their approver in their own
+#: way (`solve`, `crew-isolated`, the app's chat), and the function is the one thing they all pass.
+ASKS_NOBODY = "chimera_asks_nobody"
+
+
+def asks_nobody(approver: Any) -> bool:
+    """Whether ``approver`` answers yes without asking anybody — :func:`allow`'s, or a wrapper of it."""
+    return bool(getattr(approver, ASKS_NOBODY, False))
+
+
 def allow(ledger: ApprovalLedger | None = None) -> Approver:
     """Grant everything. Opt-in, never a default, and still recorded.
 
@@ -189,6 +211,7 @@ def allow(ledger: ApprovalLedger | None = None) -> Approver:
             ledger.record(action or reason, approved=True)
         return True
 
+    setattr(approve, ASKS_NOBODY, True)
     return approve
 
 

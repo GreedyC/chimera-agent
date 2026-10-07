@@ -92,7 +92,7 @@ um instalador nativo.)
   | 1 (`max_steps=8`) | 19 | 36,8% | 36,8% | +0,0% | [−8,5%, +8,5%] | ns |
   | 2 (`max_steps=30`) | as mesmas 19 | 42,1% | 57,9% | +15,8% | [−1,9%, +15,8%] | ns |
   | **3 (replicação)** | **41 inéditas** | 34,1% | 43,9% | **+9,8%** | [−3,5%, +16,7%] | ns |
-  | agrupado *(secundário)* | 60 | 36,7% | 48,3% | **+11,7%** | **[+0,8%, +16,4%]** | **significativo** |
+  | agrupado *(secundário)* | 60 | 36,7% | 48,3% | **+11,7%** | **[+0,8%, +16,4%]** | não significativo (McNemar exato p = 0,065) |
 
   Os +15,8% da corrida 2 foram uma varrida de 3–0 em três pares informativos, e a pré-registração deu
   a isso uma **chance de um em três de ser exatamente isso — uma amostra de sorte**, com a retratação
@@ -127,6 +127,8 @@ um instalador nativo.)
   a **retratação que merecia** (o mecanismo que havíamos alegado para os patches vazios estava errado —
   a cura era o orçamento de passos).
   Fonte: [`bench/swe_bench/RESULTS.md`](bench/swe_bench/RESULTS.md), [`PREREGISTRATION.md`](bench/swe_bench/PREREGISTRATION.md).
+
+  ⚠️ **Auditado, ainda não re-avaliado (estudo 30, S30-35).** Cinco patches resolvidos nas execuções 3 e 4 também editam arquivos de teste. As cinco edições caem em arquivos que o harness restaura antes de avaliar, e contar cada uma como falha não inverte nenhum sinal nem retira nenhuma significância ([a auditoria](bench/swe_bench/RESULTS.md#audit-does-the-lift-rest-on-patches-that-edited-tests-study-30-s30-35)). O ganho **ainda não foi lido sob testes mais fortes** (as suítes completas do desenvolvedor, SWE-ABS); essas avaliações estão devidas, não estimadas.
 - **Terminal-Bench (humilhante).** A/B pré-registrado com N=40 no benchmark oficial, mesmo modelo nos
   dois braços (`deepseek-chat-v3.1`): **7,5% → 2,5%** com o scaffold, **Δ pareado −5,0pp, IC 95%
   [−5,0%, +1,6%] — não significativo**. O scaffold **não elevou um modelo já competente** (não é o

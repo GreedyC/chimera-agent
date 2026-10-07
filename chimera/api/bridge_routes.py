@@ -596,9 +596,21 @@ GUARD_SETTINGS = frozenset(
         "CHIMERA_DECISION_MODEL",
         # The only brake on what unattended jobs spend (`chimera/scheduler/job_runner.py`).
         "CHIMERA_DAILY_USD_CAP",
+        # Whether a typed dollar ceiling is strict (owner's decision, 2026-10-05). On only tightens,
+        # but a client that could switch it off would loosen a limit the owner chose to hold hard.
+        "CHIMERA_STRICT_SPEND_CAP",
         # The project-pack switch narrows: on, an accepted pack takes skills, servers and tools
         # away; switching it off hands them back (study 29, P7.6).
         "CHIMERA_PROJECT_PACK",
+        # Two rules that only add questions (study 30, S30-27 and S30-28): a client that could
+        # switch one off would take a question away from the owner.
+        "CHIMERA_EXFIL_HOST_PATH",
+        "CHIMERA_SHELL_FETCH_GUARD",
+        # The owner's lifecycle hooks (`docs/hooks-threat-model.md`). On, a hook only tightens; a
+        # client that could switch hooks off would remove the guards the owner wrote, and one that
+        # could switch the host companion on would let shell hooks run outside the sandbox.
+        "CHIMERA_HOOKS",
+        "CHIMERA_HOOKS_HOST_EXEC",
     }
 )
 
@@ -819,6 +831,38 @@ def full_only_keys_in(body: Any) -> list[str]:
     return sorted(found)
 
 
+#: The fields of a held MCP change that carry the server's own text. The hold exists to keep that
+#: text away from a model until the owner approves it, so a bridge caller — an agent driving the
+#: app — gets the shape of the change (tool, kind, which parts changed, the cues) and not the text.
+HELD_TEXT_FIELDS = frozenset({"old_description", "new_description", "old_schema", "new_schema"})
+
+
+def without_held_text(data: Any) -> Any:
+    """An ``/api/mcp`` listing with the server-written text of every ``manifest_held`` removed.
+
+    The owner's screen reads the same route and keeps the full diff; only the bridge's copy is cut.
+    ``scrub`` does not cover this: it masks credentials, and a poisoned description is not one.
+    """
+    if not isinstance(data, dict):
+        return data
+    servers = data.get("servers")
+    if not isinstance(servers, list):
+        return data
+    out = []
+    for server in servers:
+        held = server.get("manifest_held") if isinstance(server, dict) else None
+        if isinstance(held, dict) and isinstance(held.get("changes"), list):
+            changes = [
+                {k: v for k, v in c.items() if k not in HELD_TEXT_FIELDS}
+                if isinstance(c, dict)
+                else c
+                for c in held["changes"]
+            ]
+            server = {**server, "manifest_held": {**held, "changes": changes}}
+        out.append(server)
+    return {**data, "servers": out}
+
+
 def scrub(value: Any, secrets: Iterable[str] = ()) -> Any:
     """``value`` with credential-named fields removed and credential-shaped strings masked.
 
@@ -827,14 +871,17 @@ def scrub(value: Any, secrets: Iterable[str] = ()) -> Any:
     values and the common key shapes; and any exact ``secrets`` passed in — the bridge token — are
     masked wherever they appear.
     """
-    from chimera.core.redact import redact
+    from chimera.core import redact as redaction
 
     extra = sorted({s for s in secrets if s}, key=len, reverse=True)
 
     def text(s: str) -> str:
-        for secret in extra:
-            s = s.replace(secret, MASK)
-        return redact(s)
+        # The token is minted at runtime and is not in the environment, so `redact` does not know
+        # it: it gets the same net as a known secret here, encoded copies included. Masking it only
+        # verbatim let its base64 or hex through to the MCP client (study 30 review).
+        if extra:
+            s = redaction.mask_known(s, extra, encoded=redaction.MASK_ENCODED)
+        return redaction.redact(s)
 
     def walk(node: Any) -> Any:
         if isinstance(node, dict):

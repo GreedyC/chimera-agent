@@ -443,6 +443,17 @@
           ],
           "required": false,
           "type": "boolean"
+        },
+        {
+          "default": "''",
+          "help": "The question's code, from the message that asked. Needed to approve.",
+          "kind": "option",
+          "name": "code",
+          "opts": [
+            "--code"
+          ],
+          "required": false,
+          "type": "str"
         }
       ],
       "path": "approve"
@@ -3037,6 +3048,54 @@
       "path": "kanban"
     },
     {
+      "commands": [
+        {
+          "deprecated": false,
+          "help": "List the recorded lessons with their seq, newest last.",
+          "hidden": false,
+          "name": "show",
+          "params": [
+            {
+              "help": "Only the lessons learned under taint.",
+              "kind": "option",
+              "name": "tainted",
+              "opts": [
+                "--tainted"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ],
+          "path": "lessons show"
+        },
+        {
+          "deprecated": false,
+          "help": "Mark a lesson learned under taint as clean: its label goes and it no longer arms a run.",
+          "hidden": false,
+          "name": "vouch",
+          "params": [
+            {
+              "help": "The lesson's seq, from `chimera lessons show --tainted`.",
+              "kind": "argument",
+              "name": "seq",
+              "opts": [
+                "seq"
+              ],
+              "required": true,
+              "type": "int"
+            }
+          ],
+          "path": "lessons vouch"
+        }
+      ],
+      "deprecated": false,
+      "help": "Experience lessons the autonomous loop recalls into later runs on similar tasks.",
+      "hidden": false,
+      "name": "lessons",
+      "params": [],
+      "path": "lessons"
+    },
+    {
       "deprecated": false,
       "help": "SDLC crew: plan -> build -> test -> review with verify-or-revert. Requires a key.",
       "hidden": false,
@@ -3242,6 +3301,36 @@
             }
           ],
           "path": "mcp add"
+        },
+        {
+          "deprecated": false,
+          "help": "Show how a held server's tools changed since you approved them, and approve the change.\n\nA server whose tool descriptions or parameters changed since they were approved is not mounted\nby the app, `chimera serve` or its bots until approved here or on the app's MCP screen. File\nI/O only; the server is connected again on the next start.",
+          "hidden": false,
+          "name": "approve",
+          "params": [
+            {
+              "help": "The held server whose changed tools to approve.",
+              "kind": "argument",
+              "name": "name",
+              "opts": [
+                "name"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "help": "Approve without asking (the diff still prints).",
+              "kind": "option",
+              "name": "yes",
+              "opts": [
+                "--yes",
+                "-y"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ],
+          "path": "mcp approve"
         },
         {
           "deprecated": false,
@@ -4014,8 +4103,38 @@
           "help": "Print the current active playbook (top strategies by score).",
           "hidden": false,
           "name": "show",
-          "params": [],
+          "params": [
+            {
+              "help": "Show each bullet's id (for `playbook vouch`).",
+              "kind": "option",
+              "name": "ids",
+              "opts": [
+                "--ids"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ],
           "path": "playbook show"
+        },
+        {
+          "deprecated": false,
+          "help": "Mark a bullet learned under taint as clean: you have read it and it is yours to keep.\n\nIts [unverified] label goes and it no longer arms a run. `playbook add` with the same text\ncannot do this: it reinforces the bullet and keeps its provenance, so that a run restating a\npoisoned bullet does not launder it.",
+          "hidden": false,
+          "name": "vouch",
+          "params": [
+            {
+              "help": "The bullet's id, from `chimera playbook show --ids`.",
+              "kind": "argument",
+              "name": "item_id",
+              "opts": [
+                "item_id"
+              ],
+              "required": true,
+              "type": "str"
+            }
+          ],
+          "path": "playbook vouch"
         }
       ],
       "deprecated": false,

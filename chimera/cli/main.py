@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from chimera.core.autonomous import AutonomousResult
     from chimera.ecosystem import TrajectoryCollector
     from chimera.eval.scenarios import ScenarioOutcome, SessionBuilder, SessionRequest, SuiteReport
-    from chimera.evolution import Playbook
+    from chimera.evolution import ExperienceBuffer, Playbook
     from chimera.kanban import KanbanBoard
     from chimera.memory import EmbedFn, MemoryGraph, MemoryManager
     from chimera.memory.extract import MemoryExtractor
@@ -1395,9 +1395,14 @@ def agent(
         )
         if guard:
             from chimera.governance import AuditLog, TrustKernel, govern_registry
+            from chimera.governance.profile import owner_hooks
 
-            kernel = TrustKernel(audit=AuditLog(get_settings().home / "audit.jsonl"))
+            run_audit = AuditLog(get_settings().home / "audit.jsonl")
+            kernel = TrustKernel(audit=run_audit)
             registry = govern_registry(registry, kernel)
+            # The owner's hooks, which `govern_step` installs and this direct kernel used to skip:
+            # a guarded run carries them like every other guarded surface.
+            registry = owner_hooks(registry, settings=get_settings(), audit=run_audit)
         runner = Agent(
             backend, registry,
             attended(AgentConfig(
@@ -2060,9 +2065,16 @@ def _run_task_command(
     if not task_text:
         console.print("[dim]usage: /task <the hard ask>[/dim]")
         return
-    if budget is not None and budget.blocked():
-        console.print(render.budget_spent_line(str(budget.blocked())))
-        return
+    if budget is not None:
+        # `admit(None)`, not `blocked()`: a fused run picks its models and how many calls to make as
+        # it goes, so its worst case cannot be priced. Off this IS `blocked()`; under a strict
+        # ceiling (`CHIMERA_STRICT_SPEND_CAP`) it refuses with the sentence that says so, which is
+        # what the setting promises for every fused run with a ceiling. Asking only `blocked()`
+        # started the panel and charged it afterwards, past a ceiling the owner made strict.
+        why = budget.admit(None)
+        if why is not None:
+            console.print(render.budget_spent_line(str(why)))
+            return
     try:
         with console.status("[dim]full-power (fusion)…[/dim]"):
             fused = fusion_engine(gateway).complete([{"role": "user", "content": task_text}])
@@ -2264,6 +2276,9 @@ def chat(
             # The setting existed and no terminal surface passed it, so "remember that…" was
             # answered "Got it, I'll remember" and wrote nothing, with the flag on or off.
             remember_from_chat=settings.remember_from_chat,
+            # A tainted fact recalled into this conversation arms its ledger like a fetched page
+            # (study 30 S30-25): the [unverified] label alone narrows nothing.
+            on_tainted_recall=hand.ledger.record_fetch,
             real_history=settings.chat_real_history,
             # Recall narrowed to the folder this conversation is open on, exactly as the coding
             # turn does it. `--workspace` decided which files the tools could touch and said
@@ -2490,6 +2505,9 @@ def assist(
         graph=_recall_graph(mem),
         profile=_session_profile(mem),
         remember_from_chat=settings.remember_from_chat,
+        # A tainted fact recalled into this conversation arms its ledger like a fetched page
+        # (study 30 S30-25): the [unverified] label alone narrows nothing.
+        on_tainted_recall=hand.ledger.record_fetch,
         real_history=settings.chat_real_history,
         # Same narrowing as `chat` and the coding turn: this folder's facts plus the ones that
         # belong everywhere. Both terminal surfaces take a `--workspace` and neither used it here.
@@ -2820,6 +2838,9 @@ def tui(
             graph=_recall_graph(mem),
             profile=_session_profile(mem),
             remember_from_chat=settings.remember_from_chat,
+            # A tainted fact recalled into this conversation arms its ledger like a fetched page
+            # (study 30 S30-25): the [unverified] label alone narrows nothing.
+            on_tainted_recall=hand.ledger.record_fetch,
             real_history=settings.chat_real_history,
             # Recall narrowed to the folder this app was opened on, exactly as `chat` and `assist`
             # do it. This surface takes a `--workspace` too, and until now that argument decided
@@ -3013,6 +3034,9 @@ def serve(
                     message, workspace=workspace_path
                 )
             ),
+            # The same ledger learns of a tainted fact the recall hands the prompt (study 30
+            # S30-25), so the narrowing arms as it would for a fetched page.
+            on_tainted_recall=None if turn_ledger is None else turn_ledger.record_fetch,
             # Inbound voice/images (S30-46): the transcript is untrusted, so it enters the run's
             # ledger as a fetch nobody named — `unknown` arms the narrowing under both modes.
             on_tainted_input=(
@@ -3034,7 +3058,15 @@ def serve(
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
 
-    message_gateway = MessageGateway(factory)
+    from chimera.server.allowlist import owner_on
+
+    # One gateway for three routes. The WhatsApp webhook is a chat bot, so a "remember that..."
+    # from a number the owner did not list is written tainted and names it (study 30 S30-29), the
+    # same as on the platform bots; the HTTP `/chat` route and the scheduler's webhooks have no
+    # sender to judge and the rule answers `None` for them. Read live, as the allowlist is.
+    message_gateway = MessageGateway(
+        factory, owner_of=lambda message: owner_on("whatsapp", get_settings(), message)
+    )
     a2a_pair = _build_a2a(backend, model, max_steps, workspace_path, host, port) if a2a else None
     from chimera.scheduler.github_issue import (
         GitHubIssueJob,
@@ -3538,6 +3570,9 @@ def desktop_app(
                     message, workspace=workspace_path
                 )
             ),
+            # The same ledger learns of a tainted fact the recall hands the prompt (study 30
+            # S30-25), so the narrowing arms as it would for a fetched page.
+            on_tainted_recall=None if chat_ledger is None else chat_ledger.record_fetch,
             # The other end of the same lifetime problem. The approver above closed over this
             # announcer when the registry was built; `chat_stream` needs to reach it when a turn
             # starts, and the session is the only object both of them hold.
@@ -4102,6 +4137,9 @@ def _serve_platform(
                     message, workspace=workspace_path
                 )
             ),
+            # The same ledger learns of a tainted fact the recall hands the prompt (study 30
+            # S30-25), so the narrowing arms as it would for a fetched page.
+            on_tainted_recall=None if turn_ledger is None else turn_ledger.record_fetch,
             # Inbound voice/images (S30-46): the transcript is untrusted, so it enters the run's
             # ledger as a fetch nobody named — `unknown` arms the narrowing under both modes.
             on_tainted_input=(
@@ -4113,9 +4151,14 @@ def _serve_platform(
             ),
         )
 
+    from chimera.server.allowlist import is_listed_owner
+
     gateway = MessageGateway(
         factory, warnings_in_reply=True, name_the_channel=True,
         intercept=_chat_approvals(settings, adapter.platform),
+        # Who the owner is, so a "remember that..." from anyone else is written tainted and
+        # names its sender (study 30 S30-29). Read live, as the allowlist is.
+        owner_of=lambda message: is_listed_owner(get_settings(), message),
         attach=_turn_attachments(adapter, settings, workspace_path),
     )
     console.print(
@@ -5376,6 +5419,9 @@ def solve(
     # never chose for it. None for a plain `chimera solve`, which keeps every default it had.
     inherited = _CONVERSATION_GOVERNANCE.get()
     approvals = inherited.approvals if inherited is not None else ApprovalLedger()
+    # Whether any attempt of this solve consumed untrusted content, read after `_run_solve` by the
+    # playbook curation below: the ledger is built inside it, per workspace attempt.
+    run_tainted: list[bool] = []
 
     def _run_solve(ws: Path) -> AutonomousResult:
         from chimera.tools.write_region import WriteRegion
@@ -5461,14 +5507,26 @@ def solve(
                 attended=True,
                 audit_allows=False,
                 lineage=inherited.ledger.lineage,
+                taint=inherited.ledger.record_fetch,
             ).registry
         elif guard:
             from chimera.governance import TrustKernel, govern_registry
+            from chimera.governance.profile import owner_hooks
 
+            solve_audit = AuditLog(settings.home / "audit.jsonl")
             registry = govern_registry(
-                registry,
-                TrustKernel(audit=AuditLog(settings.home / "audit.jsonl")),
-                approve=approve,
+                registry, TrustKernel(audit=solve_audit), approve=approve
+            )
+
+            def hook_taint(source: str, text: str) -> object:
+                # The ledger is built just below, outside the hooks; read at call time so what a
+                # shell hook says still taints this run, as it does inside `govern_step`.
+                return ledger.record_fetch(source, text) if ledger is not None else None
+
+            # The owner's hooks: a solve outside a conversation never reached `govern_step`, so a
+            # `pre_tool` deny the owner wrote did not stop it.
+            registry = owner_hooks(
+                registry, settings=settings, audit=solve_audit, approve=approve, taint=hook_taint
             )
         ledger = None
         if taint:
@@ -5485,6 +5543,8 @@ def solve(
                 else TaintLedger(
                     authority=settings.taint_authority,
                     egress_allow=settings.egress_allow.split(","),
+                    exfil_host_path=settings.exfil_host_path,
+                    shell_fetch_guard=settings.shell_fetch_guard,
                     rope_lite=settings.taint_rope_lite,
                 )
             )
@@ -5673,6 +5733,9 @@ def solve(
             ),
         )
         outcome = auto.run(task, thread_id=thread)
+        # Read from the agent, not the ledger: without `--taint` there is no ledger, and a tainted
+        # recall must still store the curated bullets tainted (S30-25).
+        run_tainted.append(auto.run_tainted())
         if _worker_cfg.tool_router is not None:
             # How much the intervention ACTED, beside what it cost (§2r). Written by the surface
             # that built the router, because that is the object that knows when the run ended.
@@ -5782,7 +5845,10 @@ def solve(
         # fixing diff), not just verdict+final-answer — so the curator distils process pitfalls.
         outcome_text = _curation_outcome(result, from_errors=settings.playbook_curate_from_errors)
         applied = PlaybookCurator(BackendDeltaProposer(gateway, model)).curate(
-            stored_playbook, task, outcome_text
+            stored_playbook, task, outcome_text,
+            # A run that consumed untrusted content (a fetch, or since S30-25 a tainted recall)
+            # adds bullets that every later run reads: they are stored tainted and labelled.
+            tainted=any(run_tainted),
         )
         _save_playbook(stored_playbook)
         console.print(
@@ -5942,6 +6008,10 @@ def solve_batch(
     # and a shared ledger could only say "somebody wasn't". `crew-isolated` shares one because its
     # workers share a task.
     worker_approvals: dict[str, ApprovalLedger] = {}
+    from chimera.governance.profile import owner_hooks
+
+    # One audit for every worker's `hook` receipts: the file the Security screen reads.
+    hooks_audit = AuditLog(settings.home / "audit.jsonl")
 
     def make_runner(name: str, one_task: str) -> Callable[[Path], AutonomousResult]:
         def run(ws: Path) -> AutonomousResult:
@@ -5950,6 +6020,8 @@ def solve_batch(
             ledger = TaintLedger(
                 authority=settings.taint_authority,
                 egress_allow=settings.egress_allow.split(","),
+                exfil_host_path=settings.exfil_host_path,
+                shell_fetch_guard=settings.shell_fetch_guard,
                 rope_lite=settings.taint_rope_lite,
             )
             ledger.set_instruction(one_task, workspace=ws)
@@ -5968,27 +6040,35 @@ def solve_batch(
             # is the same line, per worker rather than shared, because these tasks are independent.
             approvals = ApprovalLedger()
             worker_approvals[name] = approvals
+            worker_approve = approver_for(
+                settings.approval_mode,
+                approvals,
+                home=settings.home,
+                audit=AuditLog(settings.home / "audit.jsonl"),
+                # Where the question is SENT. `home` alone makes it durable — written to disk,
+                # answerable by `chimera approve` — but a durable question nobody is told about
+                # is a 900 s wait ending in the same refusal, N workers deep. `deliverer_for`
+                # returns None when this deployment has configured no webhook, in which case
+                # that is exactly what happens; see the note in the command's docstring.
+                deliver=deliverer_for(settings),
+                # And how long it waits for the answer. The durable default is fifteen minutes
+                # PER QUESTION, which is a reasonable pause for one `solve` and an afternoon for
+                # four workers asking a dozen times each. `CHIMERA_APPROVAL_WAIT` is the number
+                # this deployment already chose for the same question on the API path.
+                wait_seconds=settings.approval_wait,
+            )
+            # The owner's hooks, inside the ledger like every other assembly that has one, asking
+            # this worker's approver. This command builds its protection without `govern_step`, so
+            # an owner's `pre_tool` deny on `git push` did not reach a batch worker at all — the
+            # push ran, with no `hook` receipt, while the threat model listed no exception for it.
             registry = ledger_registry(
-                default_registry(ws),
+                owner_hooks(
+                    default_registry(ws), settings=settings, audit=hooks_audit,
+                    approve=worker_approve, taint=ledger.record_fetch,
+                ),
                 ledger,
                 narrow_on_taint=taint,
-                approve=approver_for(
-                    settings.approval_mode,
-                    approvals,
-                    home=settings.home,
-                    audit=AuditLog(settings.home / "audit.jsonl"),
-                    # Where the question is SENT. `home` alone makes it durable — written to disk,
-                    # answerable by `chimera approve` — but a durable question nobody is told about
-                    # is a 900 s wait ending in the same refusal, N workers deep. `deliverer_for`
-                    # returns None when this deployment has configured no webhook, in which case
-                    # that is exactly what happens; see the note in the command's docstring.
-                    deliver=deliverer_for(settings),
-                    # And how long it waits for the answer. The durable default is fifteen minutes
-                    # PER QUESTION, which is a reasonable pause for one `solve` and an afternoon for
-                    # four workers asking a dozen times each. `CHIMERA_APPROVAL_WAIT` is the number
-                    # this deployment already chose for the same question on the API path.
-                    wait_seconds=settings.approval_wait,
-                ),
+                approve=worker_approve,
             )
             worker = Agent(
                 backend,
@@ -6114,6 +6194,9 @@ def crew_isolated(
         approver_for(settings.approval_mode, home=settings.home,
                      audit=AuditLog(settings.home / "audit.jsonl"))
     )
+    from chimera.governance.profile import owner_hooks
+
+    hooks_audit = AuditLog(settings.home / "audit.jsonl")
 
     def make_factory(wname: str, prompt: str) -> Callable[[Path], Any]:
         def factory(ws: Path) -> Any:
@@ -6121,14 +6204,23 @@ def crew_isolated(
                 shared=shared_taint,
                 authority=settings.taint_authority,
                 egress_allow=settings.egress_allow.split(","),
+                exfil_host_path=settings.exfil_host_path,
+                shell_fetch_guard=settings.shell_fetch_guard,
                 rope_lite=settings.taint_rope_lite,
             )
             # Both halves are the person's own words: the shared task and this worker's brief.
             ledger.set_instruction(f"{task}\n{prompt}", workspace=ws)
             ledgers[wname] = ledger
+            shared_approve = aprovacoes.approver()
+            # The owner's hooks, inside the ledger and asking the crew's shared approver — the same
+            # gap `solve-batch` had: built without `govern_step`, so the owner's hooks never ran here.
             return ledger_registry(
-                default_registry(ws), ledger,
-                approve=aprovacoes.approver(), narrow_on_taint=taint,
+                owner_hooks(
+                    default_registry(ws), settings=settings, audit=hooks_audit,
+                    approve=shared_approve, taint=ledger.record_fetch,
+                ),
+                ledger,
+                approve=shared_approve, narrow_on_taint=taint,
             )
 
         return factory
@@ -6918,10 +7010,72 @@ def _curation_outcome(result: AutonomousResult, *, from_errors: bool) -> str:
 
 
 @playbook_app.command("show")
-def playbook_show() -> None:
+def playbook_show(
+    ids: bool = typer.Option(False, "--ids", help="Show each bullet's id (for `playbook vouch`)."),
+) -> None:
     """Print the current active playbook (top strategies by score)."""
-    text = _load_playbook().render(max_items=100)
-    console.print(text or "[dim]Playbook is empty — add bullets or curate from a run outcome.[/dim]")
+    text = _load_playbook().render(max_items=100, with_ids=ids)
+    console.print(
+        escape(text) if text else "[dim]Playbook is empty — add bullets or curate from a run outcome.[/dim]"
+    )
+
+
+@playbook_app.command("vouch")
+def playbook_vouch(
+    item_id: str = typer.Argument(..., help="The bullet's id, from `chimera playbook show --ids`."),
+) -> None:
+    """Mark a bullet learned under taint as clean: you have read it and it is yours to keep.
+
+    Its [unverified] label goes and it no longer arms a run. `playbook add` with the same text
+    cannot do this: it reinforces the bullet and keeps its provenance, so that a run restating a
+    poisoned bullet does not launder it.
+    """
+    playbook = _load_playbook()
+    item = playbook.vouch(item_id)
+    if item is None:
+        console.print(f"[red]No bullet with id {escape(item_id)}.[/red]")
+        raise typer.Exit(code=1)
+    _save_playbook(playbook)
+    console.print(f"[green]Vouched[/green] {escape(item.id)}: {escape(item.content)}")
+
+
+lessons_app = typer.Typer(
+    help="Experience lessons the autonomous loop recalls into later runs on similar tasks.",
+    no_args_is_help=True,
+)
+app.add_typer(lessons_app, name="lessons")
+
+
+def _lessons_buffer() -> ExperienceBuffer:
+    from chimera.evolution import ExperienceBuffer
+
+    return ExperienceBuffer(get_settings().home / "experience.json")
+
+
+@lessons_app.command("show")
+def lessons_show(
+    tainted: bool = typer.Option(False, "--tainted", help="Only the lessons learned under taint."),
+) -> None:
+    """List the recorded lessons with their seq, newest last."""
+    rows = [e for e in _lessons_buffer().all() if not tainted or e.provenance == "tainted"]
+    if not rows:
+        console.print("[dim]No lessons recorded.[/dim]")
+        return
+    for exp in rows:
+        mark = " [yellow][unverified][/yellow]" if exp.provenance == "tainted" else ""
+        detail = f" — {escape(exp.detail[:120])}" if exp.detail else ""
+        console.print(f"{exp.seq:>5}  [{exp.outcome}] {escape(exp.task[:80])}{detail}{mark}")
+
+
+@lessons_app.command("vouch")
+def lessons_vouch(
+    seq: int = typer.Argument(..., help="The lesson's seq, from `chimera lessons show --tainted`."),
+) -> None:
+    """Mark a lesson learned under taint as clean: its label goes and it no longer arms a run."""
+    if not _lessons_buffer().vouch(seq):
+        console.print(f"[red]No lesson with seq {seq}.[/red]")
+        raise typer.Exit(code=1)
+    console.print(f"[green]Vouched[/green] lesson {seq}.")
 
 
 @playbook_app.command("add")
@@ -7118,6 +7272,9 @@ def approve(
     show: bool = typer.Option(
         False, "--show", help="Print the whole question — the full action — and answer nothing."
     ),
+    code: str = typer.Option(
+        "", "--code", help="The question's code, from the message that asked. Needed to approve."
+    ),
 ) -> None:
     """Answer a decision the agent is waiting on, from anywhere.
 
@@ -7131,7 +7288,7 @@ def approve(
     as consent produces a record of an approval nobody gave.
     """
     from chimera.governance.pending import answer as responder
-    from chimera.governance.pending import answer_stats
+    from chimera.governance.pending import answer_stats, code_shown
     from chimera.governance.pending import pending as esperando
     from chimera.interface import render
 
@@ -7159,7 +7316,20 @@ def approve(
             # text that will be published, and answering from this table alone would approve the
             # first 120 characters of it.
             console.print("[dim]read the whole question: chimera approve <id> --show[/dim]")
-            console.print("[dim]answer with: chimera approve <id> --yes | --no[/dim]")
+            console.print("[dim]answer with: chimera approve <id> --yes --code <code> | --no[/dim]")
+            # Where the code is. Not here: anything this command can print from the queue, the
+            # agent's shell could read from it too, and the code is what tells the two apart.
+            console.print(
+                "[dim]the code is in the message that asked (or the output of the process that "
+                "asked); refusing needs none[/dim]"
+            )
+            # Except where it is not: a question the app asked with no channel has its code only in
+            # the app's memory, and one asked with no terminal and no channel has it nowhere. Said
+            # per id, so nobody goes looking for a message that was never sent.
+            for p in aguardando:
+                why_not = _NOT_APPROVABLE_HERE.get(code_shown(home, p.id))
+                if why_not:
+                    console.print(f"[dim]{p.id}: {why_not}[/dim]")
         # The operating metrics of this mechanism, because a gate whose questions nobody answers
         # behaves exactly like no gate while its block rate still reads perfect. Printed here, on
         # the command a person runs to answer, so the person answering is the one who sees whether
@@ -7222,10 +7392,50 @@ def approve(
             raise typer.Exit(code=1)
         console.print(f"[green]refused[/green] {request_id}")
         return
-    if not responder(home, request_id, yes, via="cli"):
+    why_not = _NOT_APPROVABLE_HERE.get(code_shown(home, request_id)) if yes else None
+    if why_not:
+        # Said before asking for a code that does not exist anywhere the person can read it.
+        console.print(f"[yellow]{request_id}: {why_not}[/yellow]")
+        raise typer.Exit(code=1)
+    if yes and not code.strip():
+        # Asked BEFORE anything is written, and never filled from this process's memory: in real
+        # use this command is a separate process and has none, and a test that ran it in-process
+        # must not see a different command (study 30, S30-30). An answer file that approves is
+        # honoured only with the code the owner was sent, so a shell that can write files cannot
+        # approve; this line is how the owner hands it over.
+        console.print(
+            "[yellow]approving needs the question's code: chimera approve "
+            f"{request_id} --yes --code <code>. It is in the message that asked (or in the output "
+            "of the process that asked). Refusing needs none: --no[/yellow]"
+        )
+        raise typer.Exit(code=1)
+    if not responder(home, request_id, yes, via="cli", code=code.strip() if yes else None):
         console.print(f"[yellow]no question waiting with id {request_id}[/yellow]")
         raise typer.Exit(code=1)
-    console.print(f"[green]{'approved' if yes else 'refused'}[/green] {request_id}")
+    if yes:
+        # The asker checks the code; a wrong one refuses the question, once, and it is recorded.
+        console.print(
+            f"[green]answered[/green] {request_id}: approved if the code is right "
+            "(a wrong code refuses the question)"
+        )
+        return
+    console.print(f"[green]refused[/green] {request_id}")
+
+
+#: Why ``chimera approve <id> --yes`` cannot work, by where the question's code was shown
+#: (`pending.code_shown`). Study 30, S30-30: before this the command sent a person looking for the
+#: code in "the message that asked" for a question that had no message and printed no code.
+_NOT_APPROVABLE_HERE = {
+    "screen": (
+        "asked by the app with no channel; its code was shown nowhere, so only the app's own card "
+        "can approve it. Refusing works from here: --no"
+    ),
+    "nowhere": (
+        "the process that asked had no terminal and no channel, so its code was shown nowhere and "
+        "it cannot be approved — only refused (--no) or left to time out. Set "
+        "CHIMERA_APPROVAL_WEBHOOK so the next one reaches you"
+    ),
+}
 
 
 secrets_app = typer.Typer(help="Keep provider keys in the OS vault instead of a file.", no_args_is_help=True)
@@ -8015,12 +8225,18 @@ def mcp_list() -> None:
     if not servers:
         console.print("[dim]no MCP servers configured — add one with `chimera mcp add`[/dim]")
         return
+    from chimera.integrations.mcp_pins import held_change
+
     table = Table(title="MCP servers", show_header=True, header_style="bold")
-    for col in ("name", "transport", "env"):
+    for col in ("name", "transport", "env", "tools"):
         table.add_column(col)
     for s in servers:
         cmd = s.url or " ".join([s.command, *s.args])
-        table.add_row(s.name, cmd, ", ".join(sorted(s.env)) or "-")
+        # Held is the one state worth a column: a server that silently stopped reaching any run
+        # because its tools changed is otherwise indistinguishable from one that works.
+        held = held_change(_mcp_path(), s.name) is not None
+        estado = f"[yellow]held — `chimera mcp approve {s.name}`[/yellow]" if held else "-"
+        table.add_row(s.name, cmd, ", ".join(sorted(s.env)) or "-", estado)
     console.print(table)
 
 
@@ -8060,12 +8276,77 @@ def mcp_test(
     if not tools:
         console.print(f"[yellow]{name} connected but exposed no tools[/yellow]")
         return
+    from chimera.integrations.mcp_pins import tool_cues
+
     table = Table(title=f"{name}: {len(tools)} tool(s)", show_header=True, header_style="bold")
     table.add_column("tool")
     table.add_column("description")
+    table.add_column("cues")
     for tool in tools:
-        table.add_row(tool["name"], tool["description"])
+        # The server's text, so escaped: a description is not ours to interpret as console markup.
+        # Read over the parameter descriptions too, as the held diff is: at first sight a pin is
+        # taken on trust, so this table is the only review a server hostile from day one gets.
+        cues = tool_cues(tool["description"], tool.get("input_schema"))
+        table.add_row(
+            escape(tool["name"]),
+            escape(tool["description"]),
+            f"[yellow]{', '.join(cues)}[/yellow]" if cues else "-",
+        )
     console.print(table)
+
+
+@mcp_app.command("approve")
+def mcp_approve(
+    name: str = typer.Argument(..., help="The held server whose changed tools to approve."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Approve without asking (the diff still prints)."),
+) -> None:
+    """Show how a held server's tools changed since you approved them, and approve the change.
+
+    A server whose tool descriptions or parameters changed since they were approved is not mounted
+    by the app, `chimera serve` or its bots until approved here or on the app's MCP screen. File
+    I/O only; the server is connected again on the next start.
+    """
+    from chimera.integrations.mcp_pins import StaleApproval, approve_change, held_change
+
+    held = held_change(_mcp_path(), name)
+    if held is None:
+        console.print(f"[yellow]nothing held for {escape(name)}[/yellow]")
+        raise typer.Exit(code=1)
+    for change in held["changes"]:
+        console.print(f"[bold]{escape(change['tool'])}[/bold] — {change['change']}")
+        if change["duplicate"]:
+            console.print("  [yellow]listed more than once; only the first is mounted[/yellow]")
+        if change["change"] != "added" and change["description_changed"]:
+            console.print(f"  [red]- {escape(change['old_description'])}[/red]")
+        if change["change"] != "removed" and change["description_changed"]:
+            console.print(f"  [green]+ {escape(change['new_description'])}[/green]")
+        # The parameters themselves, not "parameters changed": a parameter description is text the
+        # model reads, and approving it unseen is the rubber stamp this command exists to avoid.
+        if change["schema_changed"]:
+            if change["change"] != "added" and change["old_schema"]:
+                console.print("  [red]- parameters:[/red]")
+                console.print(f"[red]{escape(change['old_schema'])}[/red]")
+            if change["change"] != "removed" and change["new_schema"]:
+                console.print("  [green]+ parameters:[/green]")
+                console.print(f"[green]{escape(change['new_schema'])}[/green]")
+        if change["cues"]:
+            console.print(
+                f"  [yellow]steering cues in the new text: {', '.join(change['cues'])}[/yellow]"
+            )
+    if not yes and not typer.confirm("Approve these changes?", default=False):
+        console.print("[dim]left held[/dim]")
+        raise typer.Exit(code=1)
+    try:
+        # The digest of what was printed above: if a mount elsewhere replaced the held listing while
+        # the question was on screen, this approves nothing rather than the unseen replacement.
+        approve_change(_mcp_path(), name, held["digest"])
+    except StaleApproval:
+        console.print(
+            f"[yellow]{escape(name)} changed again while you were reading; nothing approved. "
+            "Run the command again to see the new diff.[/yellow]"
+        )
+        raise typer.Exit(code=1) from None
+    console.print(f"[green]approved[/green] {escape(name)} — it connects on the next start")
 
 
 @mcp_app.command("desktop")
@@ -9307,6 +9588,23 @@ def memory_poison() -> None:
             "— text that quotes an attack in order to explain it. A pattern matcher on content "
             "cannot tell the quote from the command."
         )
+
+    # The second hop (study 30 S30-25, pre-registered 2026-10-05): a clean run recalls the fact,
+    # writes back what it concluded, and a third run recalls that. Same threshold as above.
+    from chimera.eval.memory_poison import run_two_hop
+
+    # Both configurations: with a ledger (`--taint`) and without one, which is how most callers
+    # build the agent and the one the first reading of this row never exercised.
+    for with_ledger in (True, False):
+        hop = run_two_hop(with_ledger=with_ledger)
+        hop_passed, hop_why = hop.gate()
+        console.print(
+            f"[{'green' if hop_passed else 'red'}]two hops: {'pass' if hop_passed else 'FAIL'}[/] — {hop_why}"
+        )
+        if hop.unmarked():
+            console.print(
+                f"[yellow]Survives one clean rewrite with no origin:[/yellow] {', '.join(hop.unmarked())}"
+            )
 
 
 @app.command("probe-select")

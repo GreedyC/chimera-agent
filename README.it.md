@@ -93,7 +93,7 @@ produzione e non la mostra, e nemmeno un installer nativo.)
   | 1 (`max_steps=8`) | 19 | 36,8% | 36,8% | +0,0% | [−8,5%, +8,5%] | ns |
   | 2 (`max_steps=30`) | le stesse 19 | 42,1% | 57,9% | +15,8% | [−1,9%, +15,8%] | ns |
   | **3 (replica)** | **41 mai viste** | 34,1% | 43,9% | **+9,8%** | [−3,5%, +16,7%] | ns |
-  | aggregato *(secondario)* | 60 | 36,7% | 48,3% | **+11,7%** | **[+0,8%, +16,4%]** | **significativo** |
+  | aggregato *(secondario)* | 60 | 36,7% | 48,3% | **+11,7%** | **[+0,8%, +16,4%]** | non significativo (McNemar esatto p = 0,065) |
 
   Il +15,8% dell'esecuzione 2 era un 3–0 su tre coppie informative, e la pre-registrazione gli dava
   **una probabilità su tre di essere esattamente questo — un campione fortunato**, con la
@@ -129,6 +129,8 @@ produzione e non la mostra, e nemmeno un installer nativo.)
   l'esecuzione 2 ha portato la **ritrattazione che si era meritata** (il meccanismo che avevamo
   sostenuto per le sue patch vuote era sbagliato — la cura era il budget di passi).
   Fonte: [`bench/swe_bench/RESULTS.md`](bench/swe_bench/RESULTS.md), [`PREREGISTRATION.md`](bench/swe_bench/PREREGISTRATION.md).
+
+  ⚠️ **Verificato, non ancora rivalutato (studio 30, S30-35).** Cinque patch risolte nelle run 3 e 4 modificano anche file di test. Tutte e cinque le modifiche sono in file che l'harness ripristina prima della valutazione, e contare ciascuna come fallimento non inverte alcun segno né ritira alcuna significatività ([l'audit](bench/swe_bench/RESULTS.md#audit-does-the-lift-rest-on-patches-that-edited-tests-study-30-s30-35)). Il guadagno **non è ancora stato letto con test più forti** (le suite complete degli sviluppatori, SWE-ABS); quelle valutazioni sono dovute, non stimate.
 - **Terminal-Bench (ridimensionante).** A/B pre-registrato con N=40 sul benchmark ufficiale, stesso
   modello in entrambi i bracci (`deepseek-chat-v3.1`): **7,5% → 2,5%** con lo scaffold, **Δ appaiato
   −5,0pp, IC 95% [−5,0%, +1,6%] — non significativo**. Lo scaffold **non ha sollevato un modello già

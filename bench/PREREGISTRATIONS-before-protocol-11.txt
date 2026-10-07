@@ -1,0 +1,158 @@
+# Pre-registrations written before bench/PROTOCOL.md §11-§14 (2026-10-05). Frozen: this list may
+# shrink (a registration amended to answer §11-§14 leaves it), never grow.
+# 2026-10-06, integration of study-30 phase 1: the list was frozen on the branch that wrote
+# §11-§14 (7bbb22ae), which could not see the twelve registrations committed on sibling branches
+# and on main whose history does NOT contain 7bbb22ae (checked with git merge-base --is-ancestor
+# for each adding commit). They were written without the sections to answer, so they are added
+# once, here; the list is frozen again at the new length and may only shrink from now on.
+# 2026-10-06, merge of origin/main (study-30 phases 2 and 3) into the integration branch: thirteen
+# more, squash-merged on main from branches cut before §11-§14 reached main — the protocol still
+# lives only on this branch, so none of their adding commits descends from 7bbb22ae (checked the
+# same way). Added once; frozen again at the new length. Once this branch lands on main, every
+# new registration is cut from a tree that has the sections and the list can only shrink.
+# 2026-10-07, merge of origin/main (#835, #837): two more, squash-merged on main from branches
+# cut before §11-§14 reached main (neither adding commit descends from 7bbb22ae, checked the same
+# way): bench/jev_decisions/PREREGISTRATION-luna-clef.md and
+# bench/intern_decision_local/PREREGISTRATION.md. Added once; frozen again at the new length.
+bench/answer_in_reasoning/PREREGISTRATION.md
+bench/anthropomorphism_census/PREREGISTRATION.md
+bench/band_input/PREREGISTRATION.md
+bench/blind_audit/PREREGISTRATION.md
+bench/brief_contract/PREREGISTRATION.md
+bench/browser_element_list/PREREGISTRATION-situation.md
+bench/browser_element_list/PREREGISTRATION-walls-v2.md
+bench/browser_element_list/PREREGISTRATION.md
+bench/browser_situation/PREREGISTRATION.md
+bench/browser_taint_cards/PREREGISTRATION.md
+bench/browser_viewport_tasks/PREREGISTRATION-step3.md
+bench/browser_viewport_tasks/PREREGISTRATION.md
+bench/cache_confound/PREREGISTRATION.md
+bench/chat_history/PREREGISTRATION.md
+bench/claim_vs_diff/PREREGISTRATION.md
+bench/compaction/PREREGISTRATION.md
+bench/context_curve/PREREGISTRATION.md
+bench/context_rot/PREREGISTRATION.md
+bench/context_rot/PREREGISTRATION_pinned.md
+bench/cost_routing/PREREGISTRATION.md
+bench/decision_readout/PREREGISTRATION.md
+bench/decomposer_survival/PREREGISTRATION.md
+bench/default_model/PREREGISTRATION.md
+bench/denylist_bypass/PREREGISTRATION-oats.md
+bench/denylist_bypass/PREREGISTRATION.md
+bench/directive_boundary/PREREGISTRATION.md
+bench/edit_format_by_model/PREREGISTRATION.md
+bench/edit_tools/PREREGISTRATION.md
+bench/empty_commitments/PREREGISTRATION.md
+bench/encoded_secrets/PREREGISTRATION.md
+bench/exfil_url/PREREGISTRATION.md
+bench/explorer_census/PREREGISTRATION.md
+bench/facts_in_state/PREREGISTRATION.md
+bench/facts_in_state_pooled/PREREGISTRATION.md
+bench/facts_in_state_v2/PREREGISTRATION.md
+bench/facts_in_state_v3/PREREGISTRATION.md
+bench/false_success/PREREGISTRATION.md
+bench/fusion_admissibility/PREREGISTRATION.md
+bench/fusion_aggregate/PREREGISTRATION.md
+bench/fusion_paired/PREREGISTRATION.md
+bench/fusion_synth_candidates/PREREGISTRATION.md
+bench/governance_judge/PREREGISTRATION-ambiguous.md
+bench/governance_judge/PREREGISTRATION.md
+bench/grounded_question_classifier/PREREGISTRATION_fresh.md
+bench/grounded_task_declines/PREREGISTRATION.md
+bench/harness_bench/PREREGISTRATION-partitions.md
+bench/harness_bench/PREREGISTRATION.md
+bench/hierarchy_equal_calls/PREREGISTRATION.md
+bench/injection/PREREGISTRATION-rope-lite.md
+bench/injection/PREREGISTRATION.md
+bench/injection/PREREGISTRATION_agents_md.md
+bench/injection/PREREGISTRATION_attended.md
+bench/intern_decision_local/PREREGISTRATION.md
+bench/jev_decisions/PREREGISTRATION-luna-clef.md
+bench/jev_decisions/PREREGISTRATION-one-schema.md
+bench/jev_decisions/PREREGISTRATION-review.md
+bench/jev_decisions/PREREGISTRATION-tier-b.md
+bench/jev_decisions/PREREGISTRATION.md
+bench/jevbench_local/PREREGISTRATION.md
+bench/judge_blind/PREREGISTRATION.md
+bench/judge_blind_hard/PREREGISTRATION.md
+bench/judge_blind_prose/PREREGISTRATION-resolution.md
+bench/judge_blind_prose/PREREGISTRATION.md
+bench/judge_blind_qa/PREREGISTRATION.md
+bench/judge_capability_clause/PREREGISTRATION.md
+bench/learning_lift/PREREGISTRATION.md
+bench/llm_benchmarks/PREREGISTRATION.md
+bench/local_lift/PREREGISTRATION.md
+bench/long_state_floor/PREREGISTRATION.md
+bench/loopsbench/PREREGISTRATION.md
+bench/manager_advisory/PREREGISTRATION.md
+bench/manager_diff/PREREGISTRATION.md
+bench/manager_p/PREREGISTRATION.md
+bench/mcp_error_text/PREREGISTRATION.md
+bench/memory_extraction/PREREGISTRATION.md
+bench/memory_gate_cost/PREREGISTRATION.md
+bench/memory_graph/PREREGISTRATION.md
+bench/memory_poison/PREREGISTRATION.md
+bench/memory_prune/PREREGISTRATION.md
+bench/memory_recall/PREREGISTRATION.md
+bench/memory_selection/PREREGISTRATION.md
+bench/memory_staleness/PREREGISTRATION.md
+bench/other_rule/PREREGISTRATION.md
+bench/overseer_battery/PREREGISTRATION.md
+bench/parallel_tools/PREREGISTRATION_backends.md
+bench/perturbation_floor/PREREGISTRATION-wrappers.md
+bench/perturbation_floor/PREREGISTRATION.md
+bench/premise_capitulation/PREREGISTRATION.md
+bench/project_pack/PREREGISTRATION.md
+bench/prompt_overlays/PREREGISTRATION.md
+bench/rag/PREREGISTRATION.md
+bench/rag_rerank/PREREGISTRATION-cross-encoder.md
+bench/rag_rerank/PREREGISTRATION.md
+bench/recipient_provenance/PREREGISTRATION.md
+bench/refusal_shape/PREREGISTRATION.md
+bench/report_defect/PREREGISTRATION.md
+bench/retry_lift/PREREGISTRATION.md
+bench/review_confidence_cut/PREREGISTRATION.md
+bench/review_judge/PREREGISTRATION-arms.md
+bench/review_judge/PREREGISTRATION-full.md
+bench/review_judge/PREREGISTRATION-grounds.md
+bench/review_judge/PREREGISTRATION-h11.md
+bench/review_judge/PREREGISTRATION-rubric.md
+bench/review_judge/PREREGISTRATION.md
+bench/review_reviewer/PREREGISTRATION.md
+bench/review_seeded/PREREGISTRATION.md
+bench/right_hand_governance/PREREGISTRATION-app-chat.md
+bench/right_hand_governance/PREREGISTRATION.md
+bench/role_routing/PREREGISTRATION.md
+bench/scenarios/PREREGISTRATION-v3.md
+bench/scenarios/PREREGISTRATION.md
+bench/sharded_recap/PREREGISTRATION.md
+bench/shell_fetch/PREREGISTRATION.md
+bench/spec_test_vacuity/PREREGISTRATION.md
+bench/spoken_standard/PREREGISTRATION.md
+bench/spot_noul/PREREGISTRATION.md
+bench/stale_consent/PREREGISTRATION.md
+bench/startup/PREREGISTRATION.md
+bench/stop_gate/PREREGISTRATION.md
+bench/study30_reanalyses/PREREGISTRATION.md
+bench/swe_bench/PREREGISTRATION.md
+bench/test_gate_two_sided/PREREGISTRATION.md
+bench/tool_defer/PREREGISTRATION.md
+bench/tool_loop_escalation/PREREGISTRATION.md
+bench/tool_loop_fix/PREREGISTRATION.md
+bench/tool_loop_fork/PREREGISTRATION.md
+bench/tool_loop_near_args/PREREGISTRATION.md
+bench/tool_loop_silent_failure/PREREGISTRATION.md
+bench/tool_router/PREREGISTRATION.md
+bench/tool_router_hint/PREREGISTRATION.md
+bench/unattended_claims/PREREGISTRATION.md
+bench/useful_context/PREREGISTRATION.md
+bench/useful_context/PREREGISTRATION_large.md
+bench/useful_context/PREREGISTRATION_luna.md
+bench/verified_cascade/PREREGISTRATION-controls.md
+bench/verified_cascade/PREREGISTRATION.md
+bench/verifier_by_uncertainty/PREREGISTRATION.md
+bench/verifier_integrity/PREREGISTRATION.md
+bench/voice_addressee/PREREGISTRATION.md
+bench/wake_gate/PREREGISTRATION.md
+bench/web_research/PREREGISTRATION.md
+bench/wire_reconcile/PREREGISTRATION.md
