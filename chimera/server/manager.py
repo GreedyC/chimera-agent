@@ -136,13 +136,16 @@ class MessagingManager:
             adapter = DiscordAdapter(
                 token, allowed_users=allowed,
                 attach_files=attach_enabled(self._settings, platform), workspace=self._workspace,
+                inbound_media=self._settings.chat_inbound_media,
             )
             adapter.pairing_flow = pairing
             return adapter
         if platform == "telegram":
             from chimera.server import TelegramAdapter
 
-            telegram_adapter = TelegramAdapter(token, allowed_users=allowed)
+            telegram_adapter = TelegramAdapter(
+                token, allowed_users=allowed, inbound_media=self._settings.chat_inbound_media,
+            )
             telegram_adapter.pairing_flow = pairing
             return telegram_adapter
         raise ValueError(f"unknown messaging platform: {platform!r}")
@@ -177,6 +180,12 @@ class MessagingManager:
         send_tool = SendMessageTool(senders)
 
         def factory() -> ChatSession:
+            turn_ledger: Any = None
+
+            def _hold(ledger: Any) -> None:
+                nonlocal turn_ledger
+                turn_ledger = ledger
+
             # A distinct surface name from the CLI's "platform": the audit log has to be able to say
             # WHICH way the bot was started, because only one of the two paths was ever governed and
             # a rollout reading those counts needs to tell them apart.
@@ -185,6 +194,7 @@ class MessagingManager:
                 settings=self._settings,
                 home=self._settings.home,
                 surface=f"app-messaging:{platform}",
+                on_ledger=_hold,
                 # A `voice` tool, exactly as `_serve_platform` does: send_message is this surface's
                 # reason to exist, so a denylist aimed at shell must not take it away — and it is
                 # the one tool that writes to an ARBITRARY chat, so the kernel and the taint ledger
@@ -229,6 +239,15 @@ class MessagingManager:
                 real_history=self._settings.chat_real_history,
                 # As in `_serve_platform`: the chat hears when a job it started has ended.
                 turn_note=lambda: finished_note(self._settings.home, self._workspace),
+                # Inbound voice/images (S30-46) enter this chat's ledger as untrusted, as on
+                # `_serve_platform`; `None` under governance off, where no ledger exists.
+                on_tainted_input=(
+                    None
+                    if turn_ledger is None
+                    else lambda content: turn_ledger.record_fetch(
+                        "inbound-media", content, requested_by="unknown"
+                    )
+                ),
             )
 
         # The same interceptor `chimera serve` installs (`cli/main._chat_approvals`): an approval
